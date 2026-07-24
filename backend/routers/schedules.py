@@ -156,11 +156,15 @@ async def get_absent_students(
 def check_leave_conflicts(db: Session, schedule: Schedule) -> List[str]:
     conflicts = []
     
+    # 将排课日期+时间组合成完整的 datetime 用于精确时间段比对
+    schedule_start = datetime.combine(schedule.start_date, datetime.strptime(schedule.start_time, "%H:%M").time())
+    schedule_end = datetime.combine(schedule.end_date, datetime.strptime(schedule.end_time, "%H:%M").time())
+    
     teacher_leaves = db.query(Leave).filter(
         Leave.leave_type == "teacher",
         Leave.teacher_id == schedule.teacher_id,
-        Leave.start_date <= schedule.end_date,
-        Leave.end_date >= schedule.start_date
+        Leave.start_date < schedule_end,
+        Leave.end_date > schedule_start
     ).all()
     
     for leave in teacher_leaves:
@@ -174,8 +178,8 @@ def check_leave_conflicts(db: Session, schedule: Schedule) -> List[str]:
         student_leaves = db.query(Leave).filter(
             Leave.leave_type == "student",
             Leave.student_id == student.id,
-            Leave.start_date <= schedule.end_date,
-            Leave.end_date >= schedule.start_date
+            Leave.start_date < schedule_end,
+            Leave.end_date > schedule_start
         ).all()
         
         for leave in student_leaves:

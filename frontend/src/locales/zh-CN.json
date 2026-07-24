@@ -2654,6 +2654,8 @@
   },
   "calendar": {
     "scheduleCalendar": "排课日历",
+    "legendConflict": "红框代表该课程安排存在资源冲突",
+    "legendLeave": "紫框代表该课程安排存在学员请假",
     "searchType": "搜索类型",
     "all": "全部",
     "teacher": "导师",

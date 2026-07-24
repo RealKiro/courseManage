@@ -3776,7 +3776,13 @@ const showCompleteDialog = async (schedule) => {
     const scheduleDate = schedule.start_date
     const scheduleStartTime = schedule.start_time
     const scheduleEndTime = schedule.end_time
-    window.logger.log(`开始检测请假记录 - 课程日期: ${scheduleDate}, 时间: ${scheduleStartTime}-${scheduleEndTime}`)
+    const scheduleEndDate = schedule.end_date || scheduleDate
+    
+    // 将排课日期+时间组合成完整的 Date 对象
+    const scheduleStart = new Date(`${scheduleDate}T${scheduleStartTime}:00`)
+    const scheduleEnd = new Date(`${scheduleEndDate}T${scheduleEndTime}:00`)
+    
+    window.logger.log(`开始检测请假记录 - 课程时间: ${scheduleStart.toISOString()} 至 ${scheduleEnd.toISOString()}`)
     
     for (let item of completeForm.value.studentAttendance) {
       try {
@@ -3793,33 +3799,15 @@ const showCompleteDialog = async (schedule) => {
         window.logger.log(`学员 ${item.name} (ID: ${item.id}) 的请假记录数量: ${leaves.length}`)
         
         const matchedLeave = leaves.find(leave => {
-          // 处理不同的日期格式
-          let leaveStartDate, leaveEndDate
+          let leaveStart = new Date(leave.start_date)
+          let leaveEnd = new Date(leave.end_date)
           
-          if (typeof leave.start_date === 'string') {
-            leaveStartDate = new Date(leave.start_date)
-          } else {
-            leaveStartDate = new Date(leave.start_date)
-          }
+          // 精确时间段重叠判断：A.start < B.end AND A.end > B.start
+          const isTimeOverlap = leaveStart < scheduleEnd && leaveEnd > scheduleStart
           
-          if (typeof leave.end_date === 'string') {
-            leaveEndDate = new Date(leave.end_date)
-          } else {
-            leaveEndDate = new Date(leave.end_date)
-          }
+          window.logger.log(`  请假记录: ${leaveStart.toISOString()} 至 ${leaveEnd.toISOString()}, 原因: ${leave.reason}, 时间重叠: ${isTimeOverlap}`)
           
-          const scheduleStart = new Date(scheduleDate)
-          
-          // 设置时间为当天开始和结束，以便正确比较
-          leaveStartDate.setHours(0, 0, 0, 0)
-          leaveEndDate.setHours(23, 59, 59, 999)
-          scheduleStart.setHours(0, 0, 0, 0)
-          
-          const isDateInRange = scheduleStart >= leaveStartDate && scheduleStart <= leaveEndDate
-          
-          window.logger.log(`  请假记录: ${leave.start_date} 至 ${leave.end_date}, 原因: ${leave.reason}, 日期匹配: ${isDateInRange}`)
-          
-          return isDateInRange
+          return isTimeOverlap
         })
         
         if (matchedLeave) {

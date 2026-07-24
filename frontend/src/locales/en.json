@@ -2646,6 +2646,8 @@
   },
   "calendar": {
     "scheduleCalendar": "Schedule Calendar",
+    "legendConflict": "Red border: Resource conflict",
+    "legendLeave": "Purple border: Student leave",
     "searchType": "Search Type",
     "all": "All",
     "teacher": "Teacher",

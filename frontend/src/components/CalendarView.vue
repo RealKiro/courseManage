@@ -6,6 +6,15 @@
       <template #header>
         <div class="card-header">
           <span>{{ t('calendar.scheduleCalendar') }}</span>
+          <el-tooltip effect="dark" placement="bottom" raw-content>
+            <template #content>
+              <div style="line-height: 1.8;">
+                <div><span style="display:inline-block;width:24px;height:12px;border:3px solid #F56C6C;background:#F56C6C;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendConflict') }}</div>
+                <div><span style="display:inline-block;width:24px;height:12px;border:3px solid #9C27B0;background:#9C27B0;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendLeave') }}</div>
+              </div>
+            </template>
+            <el-icon :size="18" style="color: #909399; cursor: pointer; margin-left: 6px; vertical-align: middle;"><InfoFilled /></el-icon>
+          </el-tooltip>
           <div class="header-actions">
             <el-select v-model="searchType" :placeholder="t('calendar.searchType')" style="width: 100px; margin-right: 10px;" clearable @change="handleSearchTypeChange">
               <el-option :label="t('calendar.all')" value="all" />
@@ -99,7 +108,8 @@
                 :key="schedule.id"
                 class="schedule-item"
                 :class="{
-                  'has-conflict': schedule.has_conflict,
+                  'has-conflict': schedule.has_conflict && !isLeaveOnlyConflict(schedule),
+                  'has-leave-conflict': isLeaveOnlyConflict(schedule),
                   'is-multi-row': schedule.isMultiRow
                 }"
                 :style="getScheduleStyle(schedule)"
@@ -1050,7 +1060,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, User, Plus } from '@element-plus/icons-vue'
+import { ChatDotRound, User, Plus, InfoFilled } from '@element-plus/icons-vue'
 import api from '@/utils/api'
 import dayjs from 'dayjs'
 import weekday from 'dayjs/plugin/weekday'
@@ -1549,6 +1559,14 @@ const getScheduleStyle = (schedule) => {
   }
 }
 
+const isLeaveOnlyConflict = (schedule) => {
+  if (!schedule.has_conflict || !schedule.conflict_reason) return false
+  const reason = schedule.conflict_reason
+  const hasLeaveConflict = reason.includes('请假')
+  const hasResourceConflict = reason.includes('教室') || reason.includes('导师') || reason.includes('教师') || reason.includes('班级') || reason.includes('学员')
+  return hasLeaveConflict && !hasResourceConflict
+}
+
 const getScheduleTitle = (schedule) => {
   switch (viewType.value) {
     case 'teacher':
@@ -1934,8 +1952,13 @@ const handleCompleteSchedule = async () => {
     const scheduleDate = currentSchedule.value.start_date
     const scheduleStartTime = currentSchedule.value.start_time
     const scheduleEndTime = currentSchedule.value.end_time
+    const scheduleEndDate = currentSchedule.value.end_date || scheduleDate
     
-    window.logger.log(`开始检测请假记录 - 课程日期: ${scheduleDate}, 时间: ${scheduleStartTime}-${scheduleEndTime}`)
+    // 将排课日期+时间组合成完整的 Date 对象
+    const scheduleStart = new Date(`${scheduleDate}T${scheduleStartTime}:00`)
+    const scheduleEnd = new Date(`${scheduleEndDate}T${scheduleEndTime}:00`)
+    
+    window.logger.log(`开始检测请假记录 - 课程时间: ${scheduleStart.toISOString()} 至 ${scheduleEnd.toISOString()}`)
     
     for (let item of completeForm.value.studentAttendance) {
       try {
@@ -1952,33 +1975,15 @@ const handleCompleteSchedule = async () => {
         window.logger.log(`学员 ${item.name} (ID: ${item.id}) 的请假记录数量: ${leaves.length}`)
         
         const matchedLeave = leaves.find(leave => {
-          // 处理不同的日期格式
-          let leaveStartDate, leaveEndDate
+          let leaveStart = new Date(leave.start_date)
+          let leaveEnd = new Date(leave.end_date)
           
-          if (typeof leave.start_date === 'string') {
-            leaveStartDate = new Date(leave.start_date)
-          } else {
-            leaveStartDate = new Date(leave.start_date)
-          }
+          // 精确时间段重叠判断：A.start < B.end AND A.end > B.start
+          const isTimeOverlap = leaveStart < scheduleEnd && leaveEnd > scheduleStart
           
-          if (typeof leave.end_date === 'string') {
-            leaveEndDate = new Date(leave.end_date)
-          } else {
-            leaveEndDate = new Date(leave.end_date)
-          }
+          window.logger.log(`  请假记录: ${leaveStart.toISOString()} 至 ${leaveEnd.toISOString()}, 原因: ${leave.reason}, 时间重叠: ${isTimeOverlap}`)
           
-          const scheduleStart = new Date(scheduleDate)
-          
-          // 设置时间为当天开始和结束，以便正确比较
-          leaveStartDate.setHours(0, 0, 0, 0)
-          leaveEndDate.setHours(23, 59, 59, 999)
-          scheduleStart.setHours(0, 0, 0, 0)
-          
-          const isDateInRange = scheduleStart >= leaveStartDate && scheduleStart <= leaveEndDate
-          
-          window.logger.log(`  请假记录: ${leave.start_date} 至 ${leave.end_date}, 原因: ${leave.reason}, 日期匹配: ${isDateInRange}`)
-          
-          return isDateInRange
+          return isTimeOverlap
         })
         
         if (matchedLeave) {
@@ -3098,6 +3103,10 @@ const removeExtraStudent = async (studentId) => {
 
 .schedule-item.has-conflict {
   border: 2px solid #F56C6C;
+}
+
+.schedule-item.has-leave-conflict {
+  border: 3px solid #9C27B0;
 }
 
 .schedule-item.is-multi-row {
