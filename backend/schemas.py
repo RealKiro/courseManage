@@ -567,6 +567,7 @@ class StudentFeeCreate(BaseModel):
     is_active: bool = Field(True, description="是否启用")
 
 class StudentFeeUpdate(BaseModel):
+    course_id: Optional[int] = None
     start_date: Optional[datetime] = None
     hourly_fee: Optional[float] = None
     alert_threshold: Optional[float] = None

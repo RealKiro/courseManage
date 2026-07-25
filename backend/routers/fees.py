@@ -708,6 +708,8 @@ def update_student_fee(
         log_operation(db, "费用管理", "更新课时费记录失败", f"课时费记录ID {fee_id} 不存在", current_user.username, "WARNING")
         raise HTTPException(status_code=404, detail="课时费记录不存在")
     
+    if fee.course_id is not None:
+        db_fee.course_id = fee.course_id
     if fee.start_date is not None:
         db_fee.start_date = fee.start_date
     if fee.hourly_fee is not None:

@@ -629,7 +629,7 @@
         </el-tab-pane>
 
         <el-tab-pane :label="t('schedules.conflictCourses')" name="conflicts">
-          <el-table :data="conflictSchedules" stripe v-loading="loading">
+          <el-table :data="schedules" stripe v-loading="loading">
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column :label="t('schedules.course')" width="120">
               <template #default="{ row }">
@@ -674,6 +674,16 @@
               </template>
             </el-table-column>
           </el-table>
+          <el-pagination
+            v-model:current-page="pagination.currentPage"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="[15, 25, 50, 100]"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+            style="margin-top: 20px; justify-content: center; display: flex;"
+          />
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -2786,6 +2796,7 @@ const handleSizeChange = (size) => {
 }
 
 const handleTabChange = () => {
+  pagination.value.currentPage = 1
   if (activeTab.value === 'conflicts') {
     filterHasConflict.value = true
   } else {
@@ -5710,7 +5721,4 @@ watch(schedules, () => {
     min-width: 28px;
     height: 28px;
     line-height: 28p;
-    font-size: 12px;
-  }
-}
-</style>
+  

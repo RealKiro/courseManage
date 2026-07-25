@@ -2022,15 +2022,15 @@ def complete_schedule(
                 student = db.query(Student).filter(Student.id == student_id).first()
                 if student:
                     # 将Date类型转换为DateTime类型用于创建请假记录
-                    from datetime import datetime as dt_datetime
+                    from datetime import datetime as dt_datetime, time as dt_time
                     start_time = db_schedule.start_time  # "HH:MM"
                     end_time = db_schedule.end_time      # "HH:MM"
                     start_h, start_m = map(int, start_time.split(':'))
                     end_h, end_m = map(int, end_time.split(':'))
                     start_datetime = dt_datetime.combine(db_schedule.start_date, 
-                                                          dt_datetime.time(start_h, start_m))
+                                                          dt_time(start_h, start_m))
                     end_datetime = dt_datetime.combine(db_schedule.end_date, 
-                                                        dt_datetime.time(end_h, end_m))
+                                                        dt_time(end_h, end_m))
                     
                     # 检查是否已存在该学员在此日期范围的请假记录
                     existing_leave = db.query(Leave).filter(
@@ -2076,15 +2076,15 @@ def complete_schedule(
         # 如果没有提供出勤状态，先检测学员是否有请假记录，然后设置默认状态
         for student in active_students:
             # 将Date类型转换为DateTime类型用于查询
-            from datetime import datetime as dt_datetime
+            from datetime import datetime as dt_datetime, time as dt_time
             start_time = db_schedule.start_time  # "HH:MM"
             end_time = db_schedule.end_time      # "HH:MM"
             start_h, start_m = map(int, start_time.split(':'))
             end_h, end_m = map(int, end_time.split(':'))
             start_datetime = dt_datetime.combine(db_schedule.start_date, 
-                                                  dt_datetime.time(start_h, start_m))
+                                                  dt_time(start_h, start_m))
             end_datetime = dt_datetime.combine(db_schedule.end_date, 
-                                                dt_datetime.time(end_h, end_m))
+                                                dt_time(end_h, end_m))
             
             # 检查学员是否有对应日期的请假记录
             student_leave = db.query(Leave).filter(
@@ -2141,9 +2141,9 @@ def complete_schedule(
                     start_h, start_m = map(int, start_time.split(':'))
                     end_h, end_m = map(int, end_time.split(':'))
                     start_datetime = dt_datetime.combine(db_schedule.start_date, 
-                                                          dt_datetime.time(start_h, start_m))
+                                                          dt_time(start_h, start_m))
                     end_datetime = dt_datetime.combine(db_schedule.end_date, 
-                                                        dt_datetime.time(end_h, end_m))
+                                                        dt_time(end_h, end_m))
                     student_leave = db.query(Leave).filter(
                         Leave.leave_type == "student",
                         Leave.student_id == extra_student_id,

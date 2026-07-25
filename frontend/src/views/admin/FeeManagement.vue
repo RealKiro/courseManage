@@ -319,8 +319,15 @@
         <el-form-item :label="t('fee.student')">
           <span>{{ currentFee.student_name }}</span>
         </el-form-item>
-        <el-form-item :label="t('fee.course')">
-          <span>{{ currentFee.course_name }}</span>
+        <el-form-item :label="t('fee.course')" prop="course_id">
+          <el-select v-model="editForm.course_id" filterable :placeholder="t('fee.selectCourse')" style="width: 100%">
+            <el-option
+              v-for="course in courses"
+              :key="course.id"
+              :label="course.parent_course_name ? course.parent_course_name + ' > ' + course.name : course.name"
+              :value="course.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item :label="t('fee.startDate')" prop="start_date">
           <el-date-picker
@@ -432,7 +439,7 @@
           />
         </el-form-item>
         <el-form-item :label="t('fee.refundMethod')" prop="refund_method">
-          <el-select v-model="refundForm.refund_method" :placeholder="t('fee.selectRefundMethod')" style="width: 100%">
+          <el-select v-model="refundForm.refund_method" :placeholder="t('f  ee.selectRefundMethod')" style="width: 100%">
             <el-option :label="t('fee.wechat')" value="微信" />
             <el-option :label="t('fee.alipay')" value="支付宝" />
             <el-option :label="t('fee.cash')" value="现金" />
@@ -775,6 +782,7 @@ const calculateActualAmount = () => {
 const editDialogVisible = ref(false)
 const editFormRef = ref(null)
 const editForm = ref({
+  course_id: null,
   start_date: null,
   hourly_fee: 100,
   alert_threshold: 5,
@@ -782,6 +790,7 @@ const editForm = ref({
 })
 
 const editFormRules = {
+  course_id: [{ required: true, message: t('fee.selectCourse'), trigger: 'change' }],
   start_date: [{ required: true, message: t('fee.selectStartDate'), trigger: 'change' }],
   hourly_fee: [{ required: true, message: t('fee.hourlyFeeRequired'), trigger: 'blur' }],
   alert_threshold: [{ required: true, message: t('fee.alertThresholdRequired'), trigger: 'blur' }]
@@ -1201,6 +1210,7 @@ const showEditDialog = (row) => {
   }
   
   editForm.value = {
+    course_id: row.course_id,
     start_date: startDateStr,
     hourly_fee: row.hourly_fee,
     alert_threshold: row.alert_threshold,
@@ -1216,6 +1226,7 @@ const handleEdit = async () => {
     if (valid) {
       try {
         const updateData = {
+          course_id: editForm.value.course_id,
           start_date: editForm.value.start_date ? new Date(editForm.value.start_date).toISOString() : null,
           hourly_fee: editForm.value.hourly_fee,
           alert_threshold: editForm.value.alert_threshold,
