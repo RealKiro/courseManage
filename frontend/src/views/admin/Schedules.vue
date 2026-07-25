@@ -2786,6 +2786,11 @@ const handleSizeChange = (size) => {
 }
 
 const handleTabChange = () => {
+  if (activeTab.value === 'conflicts') {
+    filterHasConflict.value = true
+  } else {
+    filterHasConflict.value = null
+  }
   fetchSchedules()
 }
 
