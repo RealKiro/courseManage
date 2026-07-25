@@ -49,6 +49,20 @@
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column :label="t('users.onlineStatus')" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="isOnline(row.last_active)" type="success" size="small" effect="dark">
+              {{ t('users.online') }}
+            </el-tag>
+            <span v-else style="color: #909399;">{{ t('users.offline') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="last_active" :label="t('users.lastActive')" width="180">
+          <template #default="{ row }">
+            <span v-if="row.last_active">{{ formatDate(row.last_active) }}</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" :label="t('users.createdAt')" width="180">
           <template #default="{ row }">
             {{ formatDate(row.created_at) }}
@@ -321,6 +335,13 @@ const handlePasswordChange = async () => {
 
 const formatDate = (date) => {
   return new Date(date).toLocaleString('zh-CN')
+}
+
+const isOnline = (lastActive) => {
+  if (!lastActive) return false
+  const now = new Date()
+  const last = new Date(lastActive)
+  return (now - last) < 15 * 60 * 1000
 }
  
 const getRoleType = (role) => {

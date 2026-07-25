@@ -9,8 +9,14 @@
           <el-tooltip effect="dark" placement="bottom" raw-content>
             <template #content>
               <div style="line-height: 1.8;">
+                <div style="font-weight: bold; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 4px;">边框含义：</div>
                 <div><span style="display:inline-block;width:24px;height:12px;border:3px solid #F56C6C;background:#F56C6C;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendConflict') }}</div>
                 <div><span style="display:inline-block;width:24px;height:12px;border:3px solid #9C27B0;background:#9C27B0;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendLeave') }}</div>
+                <div style="font-weight: bold; margin-top: 8px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 4px;">填充含义：</div>
+                <div><span style="display:inline-block;width:24px;height:12px;background:#409EFF;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendPending') }}</div>
+                <div><span style="display:inline-block;width:24px;height:12px;background:#67C23A;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendCompleted') }}</div>
+                <div><span style="display:inline-block;width:24px;height:12px;background:#E6A23C;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendPostponed') }}</div>
+                <div><span style="display:inline-block;width:24px;height:12px;background:#909399;vertical-align:middle;margin-right:6px;"></span>{{ t('calendar.legendCancelled') }}</div>
               </div>
             </template>
             <el-icon :size="18" style="color: #909399; cursor: pointer; margin-left: 6px; vertical-align: middle;"><InfoFilled /></el-icon>
@@ -1562,9 +1568,10 @@ const getScheduleStyle = (schedule) => {
 const isLeaveOnlyConflict = (schedule) => {
   if (!schedule.has_conflict || !schedule.conflict_reason) return false
   const reason = schedule.conflict_reason
-  const hasLeaveConflict = reason.includes('请假')
-  const hasResourceConflict = reason.includes('教室') || reason.includes('导师') || reason.includes('教师') || reason.includes('班级') || reason.includes('学员')
-  return hasLeaveConflict && !hasResourceConflict
+  const parts = reason.split(';').map(p => p.trim()).filter(p => p.length > 0)
+  const hasLeave = parts.some(p => p.includes('请假'))
+  const hasNonLeave = parts.some(p => !p.includes('请假'))
+  return hasLeave && !hasNonLeave
 }
 
 const getScheduleTitle = (schedule) => {
@@ -1954,9 +1961,14 @@ const handleCompleteSchedule = async () => {
     const scheduleEndTime = currentSchedule.value.end_time
     const scheduleEndDate = currentSchedule.value.end_date || scheduleDate
     
-    // 将排课日期+时间组合成完整的 Date 对象
-    const scheduleStart = new Date(`${scheduleDate}T${scheduleStartTime}:00`)
-    const scheduleEnd = new Date(`${scheduleEndDate}T${scheduleEndTime}:00`)
+    // 将排课日期+时间组合成完整的 Date 对象（使用 setHours 避免字符串拼接导致的时区歧义）
+    const scheduleStart = new Date(scheduleDate)
+    const [sStartH, sStartM] = scheduleStartTime.split(':').map(Number)
+    scheduleStart.setHours(sStartH, sStartM, 0, 0)
+    
+    const scheduleEnd = new Date(scheduleEndDate)
+    const [sEndH, sEndM] = scheduleEndTime.split(':').map(Number)
+    scheduleEnd.setHours(sEndH, sEndM, 0, 0)
     
     window.logger.log(`开始检测请假记录 - 课程时间: ${scheduleStart.toISOString()} 至 ${scheduleEnd.toISOString()}`)
     
@@ -1975,11 +1987,11 @@ const handleCompleteSchedule = async () => {
         window.logger.log(`学员 ${item.name} (ID: ${item.id}) 的请假记录数量: ${leaves.length}`)
         
         const matchedLeave = leaves.find(leave => {
-          let leaveStart = new Date(leave.start_date)
-          let leaveEnd = new Date(leave.end_date)
+          const leaveStart = new Date(leave.start_date)
+          const leaveEnd = new Date(leave.end_date)
           
           // 精确时间段重叠判断：A.start < B.end AND A.end > B.start
-          const isTimeOverlap = leaveStart < scheduleEnd && leaveEnd > scheduleStart
+          const isTimeOverlap = leaveStart.getTime() < scheduleEnd.getTime() && leaveEnd.getTime() > scheduleStart.getTime()
           
           window.logger.log(`  请假记录: ${leaveStart.toISOString()} 至 ${leaveEnd.toISOString()}, 原因: ${leave.reason}, 时间重叠: ${isTimeOverlap}`)
           

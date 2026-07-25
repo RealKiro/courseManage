@@ -478,6 +478,7 @@ class User(UserBase):
     teacher_id: Optional[int] = None
     is_admin: bool
     must_change_password: bool = False
+    last_active: Optional[datetime] = None
     created_at: datetime
 
     class Config:

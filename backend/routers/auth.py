@@ -447,6 +447,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         log_operation(db, "用户认证", "验证凭据", f"用户 {username} 不存在，无法验证凭据", username, "ERROR")
         raise credentials_exception
+    user.last_active = datetime.now()
+    db.commit()
     return user
 
 def get_current_superadmin_user(current_user: User = Depends(get_current_user)):
@@ -567,6 +569,9 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     access_token = create_access_token(
         data={"sub": user.username}, db=db
     )
+    
+    user.last_active = datetime.now()
+    db.commit()
     
     # 检查是否为超级导师
     is_subject_teacher_flag = is_subject_teacher(db, user)

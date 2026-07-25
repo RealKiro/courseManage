@@ -18,6 +18,7 @@ def get_leaves(
     leave_type: Optional[str] = None,
     teacher_id: Optional[int] = None,
     student_id: Optional[int] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Leave)
@@ -27,6 +28,15 @@ def get_leaves(
         query = query.filter(Leave.teacher_id == teacher_id)
     if student_id:
         query = query.filter(Leave.student_id == student_id)
+    if search:
+        from sqlalchemy import or_
+        query = query.outerjoin(Teacher, Leave.teacher_id == Teacher.id).outerjoin(Student, Leave.student_id == Student.id).filter(
+            or_(
+                Leave.reason.ilike(f'%{search}%'),
+                Teacher.name.ilike(f'%{search}%'),
+                Student.name.ilike(f'%{search}%')
+            )
+        )
     
     total = query.count()
     leaves = query.offset(skip).limit(limit).all()

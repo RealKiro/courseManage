@@ -83,6 +83,12 @@ async def startup_event():
     
     init_scheduler()
     
+    # 启动时重新计算所有排课的冲突状态，修正历史错误数据
+    try:
+        recalculate_conflicts_on_startup()
+    except Exception as e:
+        logger.error(f"启动时冲突重算失败: {e}")
+    
     from routers.database import _sync_backup_scheduler
     _sync_backup_scheduler()
     
@@ -158,6 +164,10 @@ def run_migrations():
         if 'must_change_password' not in columns:
             with engine.connect() as conn:
                 conn.execute(text('ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT FALSE'))
+                conn.commit()
+        if 'last_active' not in columns:
+            with engine.connect() as conn:
+                conn.execute(text('ALTER TABLE users ADD COLUMN last_active TIMESTAMP NULL'))
                 conn.commit()
     if 'settings' in insp.get_table_names():
         columns = [col['name'] for col in insp.get_columns('settings')]
@@ -420,8 +430,6 @@ def recalculate_conflicts_on_startup():
         db.rollback()
     finally:
         db.close()
-
-recalculate_conflicts_on_startup()
 
 def add_auto_backup_config_column():
     inspector = inspect(engine)

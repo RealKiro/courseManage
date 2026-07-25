@@ -220,6 +220,7 @@ class User(Base):
     teacher_id = Column(Integer, ForeignKey('teachers.id'), nullable=True)
     is_admin = Column(Boolean, default=False)  # 保留兼容性
     must_change_password = Column(Boolean, default=False)
+    last_active = Column(DateTime, nullable=True, comment="最后活跃时间")
     created_at = Column(DateTime, default=datetime.now)
     
     # 定义反向关系，方便查询

@@ -82,7 +82,7 @@
           <el-option :label="t('leaves.teacherLeave')" value="teacher" />
           <el-option :label="t('leaves.studentLeave')" value="student" />
         </el-select>
-        <el-select v-model="teacherFilter" :placeholder="t('leaves.selectTeacher')" clearable style="width: 200px" @change="handleFilterChange">
+        <el-select v-model="teacherFilter" :placeholder="t('leaves.selectTeacher')" clearable filterable style="width: 200px" @change="handleFilterChange">
           <el-option
             v-for="teacher in teachers"
             :key="teacher.id"
@@ -90,7 +90,7 @@
             :value="teacher.id"
           />
         </el-select>
-        <el-select v-model="studentFilter" :placeholder="t('leaves.selectStudent')" clearable style="width: 200px" @change="handleFilterChange">
+        <el-select v-model="studentFilter" :placeholder="t('leaves.selectStudent')" clearable filterable style="width: 200px" @change="handleFilterChange">
           <el-option
             v-for="student in students"
             :key="student.id"
@@ -98,6 +98,7 @@
             :value="student.id"
           />
         </el-select>
+        <el-input v-model="keywordFilter" :placeholder="t('leaves.keywordPlaceholder')" clearable style="width: 200px" @clear="handleFilterChange" @keyup.enter="handleFilterChange" @blur="handleFilterChange" />
         <el-col :span="2">
           <el-form-item label-width="0">
             <el-button @click="resetFilters" style="width: 50px">{{ t('common.reset') }}</el-button>
@@ -257,6 +258,7 @@ const formRef = ref(null)
 const leaveTypeFilter = ref('')
 const teacherFilter = ref(null)
 const studentFilter = ref(null)
+const keywordFilter = ref('')
 const leaves = ref([])
 const teachers = ref([])
 const students = ref([])
@@ -348,6 +350,9 @@ const fetchLeaves = async () => {
     if (studentFilter.value) {
       params.student_id = studentFilter.value
     }
+    if (keywordFilter.value) {
+      params.search = keywordFilter.value
+    }
     const response = await api.get('/leaves', { params })
     leaves.value = response.data.items
     pagination.value.total = response.data.total
@@ -389,6 +394,7 @@ const resetFilters = () => {
   leaveTypeFilter.value = ''
   teacherFilter.value = null
   studentFilter.value = null
+  keywordFilter.value = ''
   pagination.value.currentPage = 1
   fetchLeaves()
 }
