@@ -1160,10 +1160,24 @@ const completeRules = computed(() => {
   if (teacher && teacher.no_feedback_required) {
     return {}
   }
+  
+  const meaningfulContentValidator = (rule, value, callback) => {
+    const trimmed = (value || '').trim()
+    if (!trimmed) {
+      callback(new Error(t('calendar.validation.inputContent')))
+      return
+    }
+    if (!/[\u4e00-\u9fa5a-zA-Z]/.test(trimmed)) {
+      callback(new Error(t('calendar.validation.meaningfulContent')))
+      return
+    }
+    callback()
+  }
+  
   return {
-    content: [{ required: true, message: t('calendar.validation.inputContent'), trigger: 'blur' }],
-    homework: [{ required: true, message: t('calendar.validation.inputHomework'), trigger: 'blur' }],
-    note: [{ required: true, message: t('calendar.validation.inputNote'), trigger: 'blur' }]
+    content: [{ required: true, validator: meaningfulContentValidator, trigger: 'blur' }],
+    homework: [{ required: true, validator: meaningfulContentValidator, trigger: 'blur' }],
+    note: [{ required: true, validator: meaningfulContentValidator, trigger: 'blur' }]
   }
 })
 

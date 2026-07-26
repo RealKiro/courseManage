@@ -2918,6 +2918,7 @@
       "inputContent": "请输入课程内容",
       "inputHomework": "请输入作业内容",
       "inputNote": "请输入注意事项",
+      "meaningfulContent": "必须输入具体有效的内容，否则课时无效",
       "selectStartDate": "请选择开始日期",
       "selectEndDate": "请选择结束日期",
       "selectStartTime": "请选择开始时间",

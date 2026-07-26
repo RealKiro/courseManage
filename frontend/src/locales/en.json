@@ -2910,6 +2910,7 @@
       "inputContent": "Please enter course content",
       "inputHomework": "Please enter homework",
       "inputNote": "Please enter notes",
+      "meaningfulContent": "Please enter meaningful content, otherwise class hours will be invalid",
       "selectStartDate": "Please select start date",
       "selectEndDate": "Please select end date",
       "selectStartTime": "Please select start time",
