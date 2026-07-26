@@ -1120,7 +1120,7 @@ const showAddDialog = async () => {
   }
   
   // 初始化 selectedDays 和 selectedTimeSlots
-  selectedDays.value = [1, 2, 3, 4, 5, 6, 7]
+  selectedDays.value = [6, 7]
   selectedTimeSlots.value = ['08:00-10:00', '10:00-12:00', '13:30-15:30', '15:30-17:30', '17:30-19:30', '19:00-21:00', '19:30-21:30']
   
   dialogVisible.value = true
@@ -1262,7 +1262,7 @@ const showEditDialog = async (row) => {
   if (row.available_days) {
     selectedDays.value = row.available_days.split(',').map(d => parseInt(d.trim()))
   } else {
-    selectedDays.value = [1, 2, 3, 4, 5, 6, 7]
+    selectedDays.value = [6, 7]
   }
   
   if (row.available_time_slots) {

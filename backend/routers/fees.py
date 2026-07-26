@@ -161,10 +161,13 @@ def get_student_fees(
                     "contact_phone": teacher.contact_phone,
                     "email": teacher.email
                 })
+        # 获取该科目下所有兄弟科目ID（含自身），用于跨子科目查询缴费/退费/消耗记录
+        fee_child_course_ids = _get_child_course_ids(db, fee.course_id)
+        
         # 重新计算总实收金额：所有收费记录的实缴金额总和
         payment_logs = db.query(FeeLog).filter(
             FeeLog.student_id == fee.student_id,
-            FeeLog.course_id == fee.course_id,
+            FeeLog.course_id.in_(fee_child_course_ids),
             FeeLog.log_type == "payment"
         ).all()
         calculated_total_actual_amount = sum(log.amount for log in payment_logs)
@@ -175,7 +178,7 @@ def get_student_fees(
         # 计算总退费金额：所有退费记录的金额总和
         refund_logs = db.query(FeeLog).filter(
             FeeLog.student_id == fee.student_id,
-            FeeLog.course_id == fee.course_id,
+            FeeLog.course_id.in_(fee_child_course_ids),
             FeeLog.log_type == "refund"
         ).all()
         total_refund_amount = sum(abs(log.amount) for log in refund_logs)
@@ -183,7 +186,7 @@ def get_student_fees(
         # 计算已消耗课时
         consumed_logs = db.query(FeeLog).filter(
             FeeLog.student_id == fee.student_id,
-            FeeLog.course_id == fee.course_id,
+            FeeLog.course_id.in_(fee_child_course_ids),
             FeeLog.log_type == "consume"
         ).all()
         consumed_hours = sum(log.hours for log in consumed_logs)
@@ -257,10 +260,13 @@ def get_student_fee(
     student = db.query(Student).filter(Student.id == fee.student_id).first()
     course = db.query(Course).filter(Course.id == fee.course_id).first()
     
+    # 获取该科目下所有兄弟科目ID（含自身），用于跨子科目查询缴费/退费/消耗记录
+    child_course_ids = _get_child_course_ids(db, fee.course_id)
+    
     # 重新计算总实收金额：所有收费记录的实缴金额总和
     payment_logs = db.query(FeeLog).filter(
         FeeLog.student_id == fee.student_id,
-        FeeLog.course_id == fee.course_id,
+        FeeLog.course_id.in_(child_course_ids),
         FeeLog.log_type == "payment"
     ).all()
     calculated_total_actual_amount = sum(log.amount for log in payment_logs)
@@ -271,7 +277,7 @@ def get_student_fee(
     # 计算总退费金额：所有退费记录的金额总和
     refund_logs = db.query(FeeLog).filter(
         FeeLog.student_id == fee.student_id,
-        FeeLog.course_id == fee.course_id,
+        FeeLog.course_id.in_(child_course_ids),
         FeeLog.log_type == "refund"
     ).all()
     total_refund_amount = sum(abs(log.amount) for log in refund_logs)
@@ -279,7 +285,7 @@ def get_student_fee(
     # 计算已消耗课时
     consumed_logs = db.query(FeeLog).filter(
         FeeLog.student_id == fee.student_id,
-        FeeLog.course_id == fee.course_id,
+        FeeLog.course_id.in_(child_course_ids),
         FeeLog.log_type == "consume"
     ).all()
     consumed_hours = sum(log.hours for log in consumed_logs)
@@ -421,7 +427,7 @@ def create_student_fee(
             # 检查是否已经创建了消耗日志
             existing_log = db.query(FeeLog).filter(
                 FeeLog.student_id == fee.student_id,
-                FeeLog.course_id == fee.course_id,
+                FeeLog.course_id.in_(_get_child_course_ids(db, fee.course_id)),
                 FeeLog.schedule_id == schedule.id,
                 FeeLog.log_type == "consume"
             ).first()
@@ -578,7 +584,7 @@ def debug_auto_consume(
         # 检查是否已有消耗日志
         existing_log = db.query(FeeLog).filter(
             FeeLog.student_id == student_id,
-            FeeLog.course_id == course_id,
+            FeeLog.course_id.in_(_get_child_course_ids(db, course_id)),
             FeeLog.schedule_id == schedule.id,
             FeeLog.log_type == "consume"
         ).first()
@@ -648,7 +654,7 @@ def trigger_auto_consume(
             # 检查是否已经创建了消耗日志
             existing_log = db.query(FeeLog).filter(
                 FeeLog.student_id == fee.student_id,
-                FeeLog.course_id == fee.course_id,
+                FeeLog.course_id.in_(_get_child_course_ids(db, fee.course_id)),
                 FeeLog.schedule_id == schedule.id,
                 FeeLog.log_type == "consume"
             ).first()
@@ -726,10 +732,13 @@ def update_student_fee(
     student = db.query(Student).filter(Student.id == db_fee.student_id).first()
     course = db.query(Course).filter(Course.id == db_fee.course_id).first()
     
+    # 获取该科目下所有兄弟科目ID（含自身），用于跨子科目查询缴费/退费/消耗记录
+    update_child_course_ids = _get_child_course_ids(db, db_fee.course_id)
+    
     # 重新计算总实收金额：所有收费记录的实缴金额总和
     payment_logs = db.query(FeeLog).filter(
         FeeLog.student_id == db_fee.student_id,
-        FeeLog.course_id == db_fee.course_id,
+        FeeLog.course_id.in_(update_child_course_ids),
         FeeLog.log_type == "payment"
     ).all()
     calculated_total_actual_amount = sum(log.amount for log in payment_logs)
@@ -740,7 +749,7 @@ def update_student_fee(
     # 计算总退费金额：所有退费记录的金额总和
     refund_logs = db.query(FeeLog).filter(
         FeeLog.student_id == db_fee.student_id,
-        FeeLog.course_id == db_fee.course_id,
+        FeeLog.course_id.in_(update_child_course_ids),
         FeeLog.log_type == "refund"
     ).all()
     total_refund_amount = sum(abs(log.amount) for log in refund_logs)
@@ -748,7 +757,7 @@ def update_student_fee(
     # 计算已消耗课时
     consumed_logs = db.query(FeeLog).filter(
         FeeLog.student_id == db_fee.student_id,
-        FeeLog.course_id == db_fee.course_id,
+        FeeLog.course_id.in_(update_child_course_ids),
         FeeLog.log_type == "consume"
     ).all()
     consumed_hours = sum(log.hours for log in consumed_logs)
@@ -1025,7 +1034,7 @@ def get_fee_logs(
     if student_id is not None:
         query = query.filter(FeeLog.student_id == student_id)
     if course_id is not None:
-        query = query.filter(FeeLog.course_id == course_id)
+        query = query.filter(FeeLog.course_id.in_(_get_child_course_ids(db, course_id)))
     if log_type is not None:
         query = query.filter(FeeLog.log_type == log_type)
     
@@ -1503,7 +1512,7 @@ def export_fee_logs(
     if student_id is not None:
         query = query.filter(FeeLog.student_id == student_id)
     if course_id is not None:
-        query = query.filter(FeeLog.course_id == course_id)
+        query = query.filter(FeeLog.course_id.in_(_get_child_course_ids(db, course_id)))
     if search:
         # 搜索学员姓名或科目名称
         query = query.join(Student).join(Course).filter(

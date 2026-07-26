@@ -26,7 +26,7 @@ schedule_student = Table(
     Column('id', Integer, primary_key=True, index=True),
     Column('schedule_id', Integer, ForeignKey('schedules.id'), nullable=False, index=True),
     Column('student_id', Integer, ForeignKey('students.id'), nullable=False, index=True),
-    Column('attendance_status', String(20), default='present', comment="出勤状态：present-出席, absent-缺席, leave-请假, makeup-补课"),
+    Column('attendance_status', String(20), default='pending', comment="出勤状态：pending-未知, present-出席, absent-缺席, leave-请假"),
     Column('absence_reason', Text, nullable=True, comment="缺勤原因"),
     Column('makeup_status', String(20), nullable=True, comment="补课状态：pending-待补课, completed-已补课, declined-不补课"),
     Column('makeup_schedule_id', Integer, nullable=True, comment="补课课程ID（关联到schedules表的id）"),

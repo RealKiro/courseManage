@@ -1441,6 +1441,7 @@
     "present": "Present",
     "absent": "Absent",
     "leave": "Leave",
+    "unknown": "Unknown",
     "feedback": "Feedback",
     "selectCourse": "Select Course",
     "selectTeacher": "Select Teacher",
@@ -2759,6 +2760,7 @@
     "present": "Present",
     "onLeave": "Leave",
     "absent": "Absent",
+    "unknown": "Unknown",
     "activeStudents": "Active Students",
     "activeStudentsNone": "Active Students (None)",
     "inactiveStudents": "Inactive Students",
@@ -2923,7 +2925,12 @@
       "selectTeacher": "Please select teacher",
       "selectClass": "Please select class"
     },
-    "wordCheck": "Word Check"
+    "wordCheck": "Word Check",
+    "screenshot": "Screenshot",
+    "screenshotTip": "Click to capture the entire schedule calendar (including filter conditions and horizontally scrolled content) as an image",
+    "screenshotSuccess": "Screenshot saved",
+    "screenshotFailed": "Screenshot failed, please retry",
+    "screenshotNoData": "No schedule calendar data to screenshot"
   },
   "floatingSphere": {
     "title": "Quick Actions",

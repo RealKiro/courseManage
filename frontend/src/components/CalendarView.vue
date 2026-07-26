@@ -21,6 +21,12 @@
             </template>
             <el-icon :size="18" style="color: #909399; cursor: pointer; margin-left: 6px; vertical-align: middle;"><InfoFilled /></el-icon>
           </el-tooltip>
+          <el-tooltip :content="t('calendar.screenshotTip')" placement="bottom">
+            <el-button type="warning" @click="handleScreenshot" :loading="isScreenshotting" size="small" style="margin-left: 6px;">
+              <el-icon><Camera /></el-icon>
+              {{ t('calendar.screenshot') }}
+            </el-button>
+          </el-tooltip>
           <div class="header-actions">
             <el-select v-model="searchType" :placeholder="t('calendar.searchType')" style="width: 100px; margin-right: 10px;" clearable @change="handleSearchTypeChange">
               <el-option :label="t('calendar.all')" value="all" />
@@ -331,10 +337,10 @@
                 <el-table-column :label="t('calendar.attendanceStatus')" width="100">
                   <template #default="{ row }">
                     <el-tag 
-                      :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : 'danger'"
+                      :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
                       size="small"
                     >
-                      {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : t('calendar.absent') }}
+                      {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
                     </el-tag>
                   </template>
                 </el-table-column>
@@ -1066,12 +1072,13 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChatDotRound, User, Plus, InfoFilled } from '@element-plus/icons-vue'
+import { ChatDotRound, User, Plus, InfoFilled, Camera } from '@element-plus/icons-vue'
 import api from '@/utils/api'
 import dayjs from 'dayjs'
 import weekday from 'dayjs/plugin/weekday'
 import 'dayjs/locale/zh-cn'
 import { Lunar, Solar } from 'lunar-javascript'
+import html2canvas from 'html2canvas'
 import { useI18n } from 'vue-i18n'
 
 dayjs.extend(weekday)
@@ -1082,6 +1089,7 @@ const currentUser = ref(null)
 const calendarContainerRef = ref(null)
 const topScrollbarRef = ref(null)
 const scrollContentWidth = ref(0)
+const isScreenshotting = ref(false)
 
 const props = defineProps({
   dateRange: {
@@ -1939,7 +1947,7 @@ const handleCompleteSchedule = async () => {
       completeForm.value.studentAttendance = response.data.scheduled_students.map(s => ({
         id: s.id,
         name: s.name,
-        status: s.attendance_status || 'present',
+        status: s.attendance_status || 'pending',
         absenceReason: '',
         isLocked: false  // 添加锁定标记
       }))
@@ -1949,7 +1957,7 @@ const handleCompleteSchedule = async () => {
       completeForm.value.studentAttendance = classStudents.map(student => ({
         id: student.id,
         name: student.name,
-        status: 'present',
+        status: 'pending',
         absenceReason: '',
         isLocked: false  // 添加锁定标记
       }))
@@ -2018,7 +2026,7 @@ const handleCompleteSchedule = async () => {
     completeForm.value.studentAttendance = classStudents.map(student => ({
       id: student.id,
       name: student.name,
-      status: 'present',
+      status: 'pending',
       absenceReason: '',
       isLocked: false
     }))
@@ -2892,6 +2900,141 @@ const removeExtraStudent = async (studentId) => {
   } catch (error) {
     window.logger.error('移除临时增员学员失败:', error)
     ElMessage.error(t('calendar.operationFailed'))
+  }
+}
+
+const handleScreenshot = async () => {
+  const calendarEl = document.querySelector('.calendar-view')
+  if (!calendarEl) {
+    ElMessage.warning(t('calendar.screenshotNoData'))
+    return
+  }
+
+  const containerEl = calendarEl.querySelector('.calendar-container')
+  const fullWidth = containerEl ? containerEl.scrollWidth : calendarEl.scrollWidth
+  const fullHeight = containerEl ? containerEl.scrollHeight : calendarEl.scrollHeight
+
+  isScreenshotting.value = true
+
+  try {
+    await nextTick()
+
+    const canvas = await html2canvas(calendarEl, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      windowWidth: fullWidth + 100,
+      windowHeight: fullHeight + 200,
+      onclone: (clonedDoc) => {
+        const clonedCalendar = clonedDoc.querySelector('.calendar-view')
+        if (!clonedCalendar) return
+
+        const clonedContainer = clonedCalendar.querySelector('.calendar-container')
+        if (clonedContainer) {
+          clonedContainer.style.overflow = 'visible'
+          clonedContainer.style.overflowX = 'visible'
+          clonedContainer.style.width = (fullWidth + 80) + 'px'
+          clonedContainer.style.maxWidth = 'none'
+        }
+
+        const clonedTimeColumn = clonedCalendar.querySelector('.time-column')
+        if (clonedTimeColumn) {
+          clonedTimeColumn.style.position = 'relative'
+          clonedTimeColumn.style.left = 'auto'
+        }
+
+        const clonedDatesColumn = clonedCalendar.querySelector('.dates-column')
+        if (clonedDatesColumn) {
+          clonedDatesColumn.style.flex = 'none'
+          clonedDatesColumn.style.width = fullWidth + 'px'
+        }
+
+        const clonedTopScrollbar = clonedCalendar.querySelector('.top-scrollbar')
+        if (clonedTopScrollbar) {
+          clonedTopScrollbar.style.display = 'none'
+        }
+
+        const clonedCells = clonedCalendar.querySelectorAll('.schedule-cell')
+        clonedCells.forEach(cell => {
+          cell.style.overflow = 'visible'
+          cell.style.overflowX = 'visible'
+          cell.style.maxHeight = 'none'
+        })
+
+        const clonedDateHeaders = clonedCalendar.querySelectorAll('.date-header')
+        clonedDateHeaders.forEach(header => {
+          header.style.flex = 'none'
+          header.style.minWidth = '120px'
+          header.style.width = '120px'
+        })
+
+        const clonedScheduleCells = clonedCalendar.querySelectorAll('.schedule-cell')
+        clonedScheduleCells.forEach(cell => {
+          cell.style.flex = 'none'
+          cell.style.minWidth = '100px'
+          cell.style.width = '100px'
+        })
+
+        const allTags = clonedCalendar.querySelectorAll('.el-tag')
+        allTags.forEach(tag => {
+          const span = clonedDoc.createElement('span')
+          span.textContent = tag.textContent
+          span.style.display = 'inline-block'
+          span.style.padding = '2px 8px'
+          span.style.borderRadius = '4px'
+          span.style.fontSize = '12px'
+          span.style.lineHeight = '20px'
+          span.style.border = '1px solid'
+          span.style.whiteSpace = 'nowrap'
+
+          if (tag.classList.contains('el-tag--success')) {
+            span.style.backgroundColor = '#f0f9eb'
+            span.style.borderColor = '#e1f3d8'
+            span.style.color = '#67c23a'
+          } else if (tag.classList.contains('el-tag--warning')) {
+            span.style.backgroundColor = '#fdf6ec'
+            span.style.borderColor = '#faecd8'
+            span.style.color = '#e6a23c'
+          } else if (tag.classList.contains('el-tag--info')) {
+            span.style.backgroundColor = '#f4f4f5'
+            span.style.borderColor = '#e9e9eb'
+            span.style.color = '#909399'
+          } else if (tag.classList.contains('el-tag--danger')) {
+            span.style.backgroundColor = '#fef0f0'
+            span.style.borderColor = '#fde2e2'
+            span.style.color = '#f56c6c'
+          } else if (tag.classList.contains('el-tag--primary')) {
+            span.style.backgroundColor = '#ecf5ff'
+            span.style.borderColor = '#d9ecff'
+            span.style.color = '#409eff'
+          } else {
+            span.style.backgroundColor = '#f4f4f5'
+            span.style.borderColor = '#e9e9eb'
+            span.style.color = '#909399'
+          }
+
+          tag.parentNode.replaceChild(span, tag)
+        })
+      }
+    })
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const timestamp = dayjs().format('YYYYMMDD_HHmmss')
+    link.download = `schedule_calendar_${timestamp}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    ElMessage.success(t('calendar.screenshotSuccess'))
+  } catch (error) {
+    window.logger.error('截图失败:', error)
+    ElMessage.error(t('calendar.screenshotFailed'))
+  } finally {
+    isScreenshotting.value = false
   }
 }
 </script>

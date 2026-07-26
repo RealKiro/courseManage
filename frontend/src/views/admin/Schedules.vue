@@ -391,10 +391,10 @@
                         </el-tooltip>
                         <el-tag v-if="student.is_extra" type="warning" size="small" effect="dark">{{ t('schedules.extraStudent') }}</el-tag>
                         <el-tag 
-                          :type="student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : 'danger'"
+                          :type="student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : student.attendance_status === 'pending' ? 'info' : 'danger'"
                           size="small"
                         >
-                          {{ student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : t('schedules.absent') }}
+                          {{ student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : student.attendance_status === 'pending' ? t('schedules.unknown') : t('schedules.absent') }}
                         </el-tag>
                       </div>
                     </div>
@@ -466,10 +466,10 @@
                           <div v-for="student in row.scheduled_students" :key="student.id" style="margin-bottom: 4px; display: flex; align-items: center;">
                             <span style="flex: 1;">{{ student.name }}</span>
                             <el-tag 
-                              :type="student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : 'danger'"
+                              :type="student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : student.attendance_status === 'pending' ? 'info' : 'danger'"
                               size="small"
                             >
-                              {{ student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : t('schedules.absent') }}
+                              {{ student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : student.attendance_status === 'pending' ? t('schedules.unknown') : t('schedules.absent') }}
                             </el-tag>
                             <el-tag v-if="student.makeup_status === 'completed'" type="success" size="small" style="margin-left: 4px;">{{ t('schedules.makeupCompleted') }}</el-tag>
                             <el-tag v-else-if="student.makeup_status === 'declined'" type="info" size="small" style="margin-left: 4px;">{{ t('schedules.makeupDeclined') }}</el-tag>
@@ -5720,5 +5720,7 @@ watch(schedules, () => {
   .el-pagination :deep(.el-pager li) {
     min-width: 28px;
     height: 28px;
-    line-height: 28p;
-  
+    line-height: 28px;
+  }
+}
+</style>

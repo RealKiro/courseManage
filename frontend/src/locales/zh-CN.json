@@ -1449,6 +1449,7 @@
     "present": "出席",
     "absent": "缺席",
     "leave": "请假",
+    "unknown": "未知",
     "feedback": "反馈",
     "selectCourse": "选择科目",
     "selectTeacher": "选择导师",
@@ -2767,6 +2768,7 @@
     "present": "出勤",
     "onLeave": "请假",
     "absent": "缺席",
+    "unknown": "未知",
     "activeStudents": "在读学员",
     "activeStudentsNone": "在读学员（无）",
     "inactiveStudents": "非在读学员",
@@ -2931,7 +2933,12 @@
       "selectTeacher": "请选择导师",
       "selectClass": "请选择班级"
     },
-    "wordCheck": "单词检查"
+    "wordCheck": "单词检查",
+    "screenshot": "截图",
+    "screenshotTip": "点击截图可将整个排课日历内容（包括筛选条件和横向滚动区域）保存为图片",
+    "screenshotSuccess": "截图已保存",
+    "screenshotFailed": "截图失败，请重试",
+    "screenshotNoData": "暂无排课日历数据可截图"
   },
   "floatingSphere": {
     "title": "快捷操作",
