@@ -1084,7 +1084,7 @@ import { useI18n } from 'vue-i18n'
 dayjs.extend(weekday)
 dayjs.locale('zh-cn')
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const currentUser = ref(null)
 const calendarContainerRef = ref(null)
 const topScrollbarRef = ref(null)
@@ -1167,7 +1167,8 @@ const completeRules = computed(() => {
       callback(new Error(t('calendar.validation.inputContent')))
       return
     }
-    if (!/[\u4e00-\u9fa5a-zA-Z]/.test(trimmed)) {
+    const pattern = locale.value === 'zh-CN' ? /[\u4e00-\u9fa5]/ : /[\u4e00-\u9fa5a-zA-Z]/
+    if (!pattern.test(trimmed)) {
       callback(new Error(t('calendar.validation.meaningfulContent')))
       return
     }
