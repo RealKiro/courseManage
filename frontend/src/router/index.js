@@ -272,4 +272,14 @@ router.beforeEach((to, from, next) => {
   }
 })
 
+router.onError((error, to) => {
+  console.error('[Router] 路由组件加载失败:', error, '目标路由:', to.fullPath)
+  if (error.message && error.message.includes('Failed to fetch dynamically imported module')) {
+    console.error('[Router] 动态导入失败，可能是构建产物缺失或网络问题')
+    import('element-plus').then(({ ElMessage }) => {
+      ElMessage.error('页面加载失败，请刷新重试')
+    })
+  }
+})
+
 export default router

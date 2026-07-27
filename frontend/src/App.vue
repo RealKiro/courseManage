@@ -142,11 +142,12 @@ const isLoggedIn = computed(() => {
 
 const canAccessDashboard = computed(() => {
   if (!currentUser.value) return false
-  if (!hasFeature(licenseFeatures.DASHBOARD_VIEW)) return false
   
   if (['super_admin', 'system_admin'].includes(currentUser.value.role)) {
     return true
   }
+  
+  if (!hasFeature(licenseFeatures.DASHBOARD_VIEW)) return false
   
   if (currentUser.value.role === 'course_admin' && currentUser.value.teacher_id) {
     return operationManagers.value.includes(currentUser.value.teacher_id)
@@ -255,9 +256,9 @@ const goToScheduleView = () => {
 }
 
 const goToDashboardView = () => {
-  console.log('[App] 点击运营大屏按钮, 开始导航到 /admin/dashboard-view')
+  console.log('[App] 点击运营大屏按钮, canAccessDashboard:', canAccessDashboard.value, 'currentUser:', currentUser.value?.role, 'hasFeature:', hasFeature(licenseFeatures.DASHBOARD_VIEW))
   router.push('/admin/dashboard-view').then(() => {
-    console.log('[App] 导航完成')
+    console.log('[App] 导航完成, 当前路由:', router.currentRoute.value.path)
   }).catch(err => {
     console.error('[App] 导航失败:', err)
   })
