@@ -52,6 +52,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PIP_INDEX_URL=https://pypi.org/simple
+            PIP_TRUSTED_HOST=pypi.org
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
