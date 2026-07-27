@@ -1072,6 +1072,8 @@ import api from '@/utils/api'
 import { hasFeature } from '@/utils/license'
 import { useI18n } from 'vue-i18n'
 
+console.log('[DashboardView] ========== 组件模块开始加载 ==========')
+document.title = '[DashboardView] 组件已加载'
 
 const { t, locale } = useI18n()
 const router = useRouter()

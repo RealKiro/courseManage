@@ -133,7 +133,13 @@ const routes = [
   {
     path: '/admin/dashboard-view',
     name: 'DashboardView',
-    component: () => import('@/views/admin/DashboardView.vue'),
+    component: () => import('@/views/admin/DashboardView.vue').then(m => {
+      console.log('[Router] DashboardView组件加载成功, keys:', Object.keys(m), 'hasDefault:', !!m.default)
+      return m
+    }).catch(e => {
+      console.error('[Router] DashboardView组件加载失败:', e.message, e.stack)
+      throw e
+    }),
     meta: { requiresAuth: true, requiresOperationManager: true, requiresLicense: true, licenseFeature: 'dashboard_view' }
   },
   {

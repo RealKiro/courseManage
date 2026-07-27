@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Lock, Unlock, Reading, ArrowLeft, Monitor, DataAnalysis, Link, ChatDotRound, UserFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
@@ -116,6 +116,10 @@ import { licenseState, hasFeature, loadLicenseStatus, FEATURES as licenseFeature
 const { t, locale } = useI18n()
 const router = useRouter()
 const route = useRoute()
+
+watch(() => route.path, (newPath) => {
+  console.log('[App] 路由变化:', newPath, 'matched:', route.matched.length, 'components:', route.matched.map(r => r.name))
+}, { immediate: true })
 
 const elementLocale = computed(() => locale.value === 'en' ? en : zhCn)
 const currentLocale = computed(() => locale.value)
