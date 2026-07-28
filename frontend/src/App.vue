@@ -105,6 +105,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Lock, Unlock, Reading, ArrowLeft, Monitor, DataAnalysis, Link, ChatDotRound, UserFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import en from 'element-plus/dist/locale/en.mjs'
