@@ -135,9 +135,15 @@ const routes = [
     name: 'DashboardView',
     component: () => import('@/views/admin/DashboardView.vue').then(m => {
       console.log('[Router] DashboardView组件加载成功, keys:', Object.keys(m), 'hasDefault:', !!m.default)
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.success('DashboardView动态导入成功! hasDefault:' + !!m.default)
+      })
       return m
     }).catch(e => {
       console.error('[Router] DashboardView组件加载失败:', e.message, e.stack)
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.error('DashboardView动态导入失败! ' + e.message)
+      })
       throw e
     }),
     meta: { requiresAuth: true, requiresOperationManager: true, requiresLicense: true, licenseFeature: 'dashboard_view' }
@@ -173,6 +179,9 @@ router.beforeEach((to, from, next) => {
     // 超级管理员和系统管理员可以绕过license功能检查直接访问运营大屏
     if (to.path === '/admin/dashboard-view' && user && ['super_admin', 'system_admin'].includes(user.role)) {
       console.log('[Router] 超级管理员/系统管理员，绕过license检查直接进入运营大屏')
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.info('路由守卫: 超级管理员放行, role=' + user.role)
+      })
       next()
       return
     }
@@ -280,11 +289,11 @@ router.beforeEach((to, from, next) => {
 
 router.onError((error, to) => {
   console.error('[Router] 路由组件加载失败:', error, '目标路由:', to.fullPath)
+  import('element-plus').then(({ ElMessage }) => {
+    ElMessage.error('路由组件加载失败! 路由:' + to.fullPath + ' 错误:' + error.message)
+  })
   if (error.message && error.message.includes('Failed to fetch dynamically imported module')) {
     console.error('[Router] 动态导入失败，可能是构建产物缺失或网络问题')
-    import('element-plus').then(({ ElMessage }) => {
-      ElMessage.error('页面加载失败，请刷新重试')
-    })
   }
 })
 

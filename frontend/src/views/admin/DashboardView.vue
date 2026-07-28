@@ -1074,6 +1074,9 @@ import { useI18n } from 'vue-i18n'
 
 console.log('[DashboardView] ========== 组件模块开始加载 ==========')
 document.title = '[DashboardView] 组件已加载'
+import('element-plus').then(({ ElMessage }) => {
+  ElMessage.success('DashboardView组件已加载!')
+})
 
 const { t, locale } = useI18n()
 const router = useRouter()

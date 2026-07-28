@@ -24,7 +24,7 @@ RUN printf '%s\n' \
   "    minify: 'terser'," \
   "    terserOptions: {" \
   "      compress: {" \
-  "        drop_console: true," \
+  "        drop_console: false," \
   "        drop_debugger: true," \
   "      }," \
   "      mangle: {" \
