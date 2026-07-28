@@ -337,17 +337,30 @@
                 <el-table-column :label="t('calendar.attendanceStatus')" width="130">
                   <template #default="{ row }">
                     <template v-if="currentSchedule.execution_status === 'completed' && canEditCompletedSchedule">
-                      <el-select
-                        :model-value="row.attendance_status"
-                        size="small"
-                        style="width: 100px"
-                        @change="(val) => handleAttendanceChange(row, val)"
-                      >
-                        <el-option value="present" :label="t('calendar.present')" />
-                        <el-option value="absent" :label="t('calendar.absent')" />
-                        <el-option value="leave" :label="t('calendar.onLeave')" />
-                        <el-option value="pending" :label="t('calendar.unknown')" />
-                      </el-select>
+                      <template v-if="editingAttendanceStudentId === row.id">
+                        <el-select
+                          v-model="row.attendance_status"
+                          size="small"
+                          style="width: 100px"
+                          @change="(val) => { handleAttendanceChange(row, val); editingAttendanceStudentId = null; }"
+                          @blur="editingAttendanceStudentId = null"
+                        >
+                          <el-option value="present" :label="t('calendar.present')" />
+                          <el-option value="absent" :label="t('calendar.absent')" />
+                          <el-option value="leave" :label="t('calendar.onLeave')" />
+                          <el-option value="pending" :label="t('calendar.unknown')" />
+                        </el-select>
+                      </template>
+                      <template v-else>
+                        <el-tag 
+                          :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
+                          size="small"
+                          @click="editingAttendanceStudentId = row.id"
+                          style="cursor: pointer"
+                        >
+                          {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
+                        </el-tag>
+                      </template>
                     </template>
                     <template v-else>
                       <el-tag 
@@ -1087,29 +1100,29 @@
     <!-- 编辑已完训课程反馈弹窗 -->
     <el-dialog v-model="editFeedbackDialogVisible" :title="t('calendar.editFeedback')" width="600px" draggable>
       <el-form :model="editFeedbackForm" label-width="120px">
-        <el-form-item :label="t('calendar.contentFeedback')">
+        <el-form-item :label="t('calendar.content')">
           <el-input
-            v-model="editFeedbackForm.content_feedback"
-            type="textarea"
-            :rows="4"
-            :placeholder="t('calendar.editFeedbackPlaceholder')"
-          />
-        </el-form-item>
-        <el-form-item :label="t('calendar.wordCheck')">
-          <el-input
-            v-model="editFeedbackForm.word_check"
+            v-model="editFeedbackForm.content"
             type="textarea"
             :rows="3"
-            :placeholder="t('calendar.editWordCheckPlaceholder')"
+            :placeholder="t('calendar.inputContent')"
           />
         </el-form-item>
-        <el-form-item :label="t('calendar.renewalIntention')">
-          <el-select v-model="editFeedbackForm.renewal_intention" style="width: 100%" :placeholder="t('calendar.renewalIntentionPlaceholder')">
-            <el-option value="high" :label="t('calendar.renewalHigh')" />
-            <el-option value="medium" :label="t('calendar.renewalMedium')" />
-            <el-option value="low" :label="t('calendar.renewalLow')" />
-            <el-option value="none" :label="t('calendar.renewalNone')" />
-          </el-select>
+        <el-form-item :label="t('calendar.homework')">
+          <el-input
+            v-model="editFeedbackForm.homework"
+            type="textarea"
+            :rows="3"
+            :placeholder="t('calendar.inputHomework')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('calendar.note')">
+          <el-input
+            v-model="editFeedbackForm.note"
+            type="textarea"
+            :rows="3"
+            :placeholder="t('calendar.inputNote')"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -1160,10 +1173,11 @@ const executionStatusDialogVisible = ref(false)
 const executionStatusType = ref('')
 const editFeedbackDialogVisible = ref(false)
 const editFeedbackLoading = ref(false)
+const editingAttendanceStudentId = ref(null)
 const editFeedbackForm = ref({
-  content_feedback: '',
-  word_check: '',
-  renewal_intention: ''
+  content: '',
+  homework: '',
+  note: ''
 })
 const viewType = ref(props.viewType)
 const dateRange = ref([])
@@ -2020,10 +2034,14 @@ const showExecutionStatusDetails = (type) => {
 // 显示编辑已完训课程反馈弹窗
 const showEditFeedbackDialog = () => {
   if (!currentSchedule.value) return
+  const feedbackParts = parseContentFeedback(currentSchedule.value.content_feedback || '')
+  const contentPart = feedbackParts.find(p => p.label === t('calendar.contentLabel'))
+  const homeworkPart = feedbackParts.find(p => p.label === t('calendar.homeworkLabel'))
+  const notePart = feedbackParts.find(p => p.label === t('calendar.noteLabel'))
   editFeedbackForm.value = {
-    content_feedback: currentSchedule.value.content_feedback || '',
-    word_check: currentSchedule.value.word_check || '',
-    renewal_intention: currentSchedule.value.renewal_intention || ''
+    content: contentPart ? contentPart.content : '',
+    homework: homeworkPart ? homeworkPart.content : '',
+    note: notePart ? notePart.content : ''
   }
   editFeedbackDialogVisible.value = true
 }
@@ -2033,10 +2051,9 @@ const handleSaveFeedback = async () => {
   if (!currentSchedule.value) return
   editFeedbackLoading.value = true
   try {
+    const contentFeedback = `${t('calendar.contentLabel')}：${editFeedbackForm.value.content}|${t('calendar.homeworkLabel')}：${editFeedbackForm.value.homework}|${t('calendar.noteLabel')}：${editFeedbackForm.value.note}`
     await api.put(`/schedules/${currentSchedule.value.id}`, {
-      content_feedback: editFeedbackForm.value.content_feedback,
-      word_check: editFeedbackForm.value.word_check,
-      renewal_intention: editFeedbackForm.value.renewal_intention
+      content_feedback: contentFeedback
     })
     ElMessage.success(t('calendar.feedbackSaved'))
     editFeedbackDialogVisible.value = false
