@@ -2049,6 +2049,21 @@ const showEditFeedbackDialog = () => {
 // 保存反馈修改
 const handleSaveFeedback = async () => {
   if (!currentSchedule.value) return
+  const feedbackParts = parseContentFeedback(currentSchedule.value.content_feedback || '')
+  const contentPart = feedbackParts.find(p => p.label === t('calendar.contentLabel'))
+  const homeworkPart = feedbackParts.find(p => p.label === t('calendar.homeworkLabel'))
+  const notePart = feedbackParts.find(p => p.label === t('calendar.noteLabel'))
+  const originalContent = contentPart ? contentPart.content : ''
+  const originalHomework = homeworkPart ? homeworkPart.content : ''
+  const originalNote = notePart ? notePart.content : ''
+  if (
+    editFeedbackForm.value.content === originalContent &&
+    editFeedbackForm.value.homework === originalHomework &&
+    editFeedbackForm.value.note === originalNote
+  ) {
+    ElMessage.warning(t('calendar.noContentUpdate'))
+    return
+  }
   editFeedbackLoading.value = true
   try {
     const contentFeedback = `${t('calendar.contentLabel')}：${editFeedbackForm.value.content}|${t('calendar.homeworkLabel')}：${editFeedbackForm.value.homework}|${t('calendar.noteLabel')}：${editFeedbackForm.value.note}`
@@ -2057,7 +2072,6 @@ const handleSaveFeedback = async () => {
     })
     ElMessage.success(t('calendar.feedbackSaved'))
     editFeedbackDialogVisible.value = false
-    // 刷新当前课程数据
     await fetchScheduleDetail(currentSchedule.value.id)
   } catch (error) {
     ElMessage.error(error.response?.data?.detail || t('calendar.saveFailed'))

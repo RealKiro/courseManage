@@ -2940,7 +2940,9 @@
     "feedbackSaved": "Feedback saved successfully",
     "attendanceUpdated": "Attendance updated successfully",
     "saveFailed": "Save failed",
-    "updateFailed": "Update failed"
+    "updateFailed": "Update failed",
+    "save": "Save",
+    "noContentUpdate": "No content updates, no need to save"
   },
   "floatingSphere": {
     "title": "Quick Actions",

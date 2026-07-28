@@ -2948,7 +2948,9 @@
     "feedbackSaved": "反馈保存成功",
     "attendanceUpdated": "出勤状态更新成功",
     "saveFailed": "保存失败",
-    "updateFailed": "更新失败"
+    "updateFailed": "更新失败",
+    "save": "保存",
+    "noContentUpdate": "无内容更新，无需保存"
   },
   "floatingSphere": {
     "title": "快捷操作",
