@@ -1398,6 +1398,17 @@
           <el-form-item :label="t('schedules.note')" prop="note">
             <el-input v-model="editFeedbackForm.note" type="textarea" :rows="3" :placeholder="t('schedules.inputNoteContent')" />
           </el-form-item>
+          <el-form-item :label="t('schedules.wordCheck')">
+            <el-input v-model="editFeedbackForm.word_check" type="textarea" :rows="3" :placeholder="t('schedules.inputWordCheck')" />
+          </el-form-item>
+          <el-form-item :label="t('schedules.renewalIntention')">
+            <el-select v-model="editFeedbackForm.renewal_intention" :placeholder="t('schedules.selectRenewalIntention')" style="width: 100%">
+              <el-option value="high" :label="t('schedules.renewalHigh')" />
+              <el-option value="medium" :label="t('schedules.renewalMedium')" />
+              <el-option value="low" :label="t('schedules.renewalLow')" />
+              <el-option value="none" :label="t('schedules.renewalNone')" />
+            </el-select>
+          </el-form-item>
           
           <el-divider>{{ t('schedules.studentAttendanceStatus') }}</el-divider>
           <el-table :data="editFeedbackForm.studentAttendance" border max-height="300">
@@ -2181,6 +2192,8 @@ const editFeedbackForm = ref({
   content: '',
   homework: '',
   note: '',
+  word_check: '',
+  renewal_intention: '',
   postpone_reason: '',
   cancel_reason: '',
   studentAttendance: []
@@ -2189,6 +2202,8 @@ const originalEditFeedbackForm = ref({
   content: '',
   homework: '',
   note: '',
+  word_check: '',
+  renewal_intention: '',
   postpone_reason: '',
   cancel_reason: '',
   studentAttendance: []
@@ -2256,6 +2271,8 @@ const showEditFeedbackDialog = async (schedule, type) => {
         content: feedback.find(f => f.rawLabel === '内容')?.content || '',
         homework: feedback.find(f => f.rawLabel === '作业')?.content || '',
         note: feedback.find(f => f.rawLabel === '注意')?.content || '',
+        word_check: schedule.word_check || '',
+        renewal_intention: schedule.renewal_intention || '',
         postpone_reason: '',
         cancel_reason: '',
         studentAttendance: []
@@ -2265,6 +2282,8 @@ const showEditFeedbackDialog = async (schedule, type) => {
         content: '',
         homework: '',
         note: '',
+        word_check: schedule.word_check || '',
+        renewal_intention: schedule.renewal_intention || '',
         postpone_reason: '',
         cancel_reason: '',
         studentAttendance: []
@@ -2347,7 +2366,9 @@ const handleEditFeedback = async () => {
           const isContentChanged = 
             editFeedbackForm.value.content !== originalEditFeedbackForm.value.content ||
             editFeedbackForm.value.homework !== originalEditFeedbackForm.value.homework ||
-            editFeedbackForm.value.note !== originalEditFeedbackForm.value.note
+            editFeedbackForm.value.note !== originalEditFeedbackForm.value.note ||
+            editFeedbackForm.value.word_check !== originalEditFeedbackForm.value.word_check ||
+            editFeedbackForm.value.renewal_intention !== originalEditFeedbackForm.value.renewal_intention
           
           // 检查出勤状态是否改变
           const isAttendanceChanged = 
@@ -2360,7 +2381,9 @@ const handleEditFeedback = async () => {
           
           // 更新课程反馈
           await api.put(`/schedules/${scheduleId}`, {
-            content_feedback: contentFeedback
+            content_feedback: contentFeedback,
+            word_check: editFeedbackForm.value.word_check,
+            renewal_intention: editFeedbackForm.value.renewal_intention
           })
           
           // 更新学员出勤状态
@@ -3016,6 +3039,11 @@ const canEditSchedule = (row) => {
   // 超级管理员可以编辑所有课程
   if (currentUser.value.role === 'super_admin') return true
   
+  // 完训内容管理导师可以编辑已完训的课程
+  if (isCompletedTrainingManager() && (row.execution_status === 'completed' || row.execution_status === 'postponed' || row.execution_status === 'cancelled')) {
+    return true
+  }
+  
   // 超级导师可以编辑所有课程（需要根据站点设置判断）
   if (currentUser.value.is_subject_teacher) {
     // 如果课程状态不是completed/postponed/cancelled，可以编辑
@@ -3043,11 +3071,28 @@ const canEditSchedule = (row) => {
   return false
 }
 
+const isCompletedTrainingManager = () => {
+  if (!currentUser.value || !currentUser.value.teacher_id) return false
+  const managersStr = localStorage.getItem('completed_training_managers')
+  if (!managersStr) return false
+  try {
+    const managers = JSON.parse(managersStr)
+    return Array.isArray(managers) && managers.includes(currentUser.value.teacher_id)
+  } catch (e) {
+    return false
+  }
+}
+
 const canDeleteSchedule = (row) => {
   if (!currentUser.value) return false
   
   // 超级管理员可以删除所有课程
   if (currentUser.value.role === 'super_admin') return true
+  
+  // 完训内容管理导师可以删除已完训的课程
+  if (isCompletedTrainingManager() && (row.execution_status === 'completed' || row.execution_status === 'postponed' || row.execution_status === 'cancelled')) {
+    return true
+  }
   
   // 超级导师可以删除所有课程（需要根据站点设置判断）
   if (currentUser.value.is_subject_teacher) {

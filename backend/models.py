@@ -183,6 +183,8 @@ class Schedule(Base):
     conflict_reason = Column(Text)
     execution_status = Column(String(20), default="pending", comment="执行状态：pending-待执行, completed-完训, postponed-延期, cancelled-取消")
     content_feedback = Column(Text, default="", comment="课程反馈：内容|作业|注意|；格式说明：用|分隔，如：内容：我是谁？我来自哪里？我往那里去？|作业：今天布置的10道题|注意：注意第三题的解题思路")
+    word_check = Column(Text, default="", comment="单词检查反馈")
+    renewal_intention = Column(String(20), default="", comment="续报意愿：high-高, medium-中, low-低, none-无")
     cancel_reason = Column(Text, default="", comment="取消原因")
     postpone_reason = Column(Text, default="", comment="延期原因")
     homework_regular = Column(Text, default="", comment="常规作业")

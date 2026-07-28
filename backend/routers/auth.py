@@ -61,12 +61,37 @@ def is_subject_teacher(db: Session, current_user: User) -> bool:
     
     return current_user.teacher_id in super_teacher_ids
 
+def is_completed_training_manager(db: Session, current_user: User) -> bool:
+    """检查当前用户是否为完训内容管理导师"""
+    import json
+    if not current_user.teacher_id:
+        return False
+    
+    settings = db.query(Settings).first()
+    if not settings or not settings.completed_training_managers:
+        return False
+    
+    try:
+        raw_data = json.loads(settings.completed_training_managers)
+        if isinstance(raw_data, list):
+            manager_ids = [int(x) for x in raw_data]
+        else:
+            manager_ids = []
+    except (json.JSONDecodeError, TypeError, ValueError):
+        manager_ids = []
+    
+    return current_user.teacher_id in manager_ids
+
 def can_edit_completed_schedule(db: Session, current_user: User, schedule_execution_status: str) -> bool:
     """检查用户是否可以编辑已完成/延期/取消的课程安排"""
     if schedule_execution_status not in ['completed', 'postponed', 'cancelled']:
         return True
     
     if current_user.role == 'super_admin':
+        return True
+    
+    # 完训内容管理导师可以编辑已完训的课程安排
+    if is_completed_training_manager(db, current_user):
         return True
     
     if not is_subject_teacher(db, current_user):
@@ -87,6 +112,10 @@ def can_delete_completed_schedule(db: Session, current_user: User, schedule_exec
         return True
     
     if current_user.role == 'super_admin':
+        return True
+    
+    # 完训内容管理导师可以删除已完训的课程安排
+    if is_completed_training_manager(db, current_user):
         return True
     
     if not is_subject_teacher(db, current_user):
@@ -480,6 +509,21 @@ def get_current_course_admin_user(current_user: User = Depends(get_current_user)
             detail="权限不足"
         )
     return current_user
+
+def get_current_course_admin_or_completed_training_manager(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """课程管理员或完训内容管理导师权限检查"""
+    if current_user.role in ['super_admin', 'course_admin']:
+        return current_user
+    if is_completed_training_manager(db, current_user):
+        return current_user
+    log_operation(None, "用户认证", "检查课程管理员/完训内容管理导师权限", f"权限不足，当前角色: {current_user.role}", current_user.username, "WARNING")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="权限不足"
+    )
     
 def get_current_system_audit_user(current_user: User = Depends(get_current_user)):
     """系统审计员权限检查"""

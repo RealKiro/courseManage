@@ -223,6 +223,10 @@ def run_migrations():
                 conn.execute(text("ALTER TABLE settings ADD COLUMN contact_email VARCHAR(100) DEFAULT ''"))
                 conn.execute(text("ALTER TABLE settings ADD COLUMN contact_wechat VARCHAR(100) DEFAULT ''"))
                 conn.commit()
+        if 'completed_training_managers' not in columns:
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE settings ADD COLUMN completed_training_managers TEXT DEFAULT '[]'"))
+                conn.commit()
 
 run_migrations()
 
@@ -360,6 +364,28 @@ def add_homework_columns():
     else:
         print("字段 homework_images 已存在于表 schedules")
 
+def add_word_check_and_renewal_intention():
+    """添加课程安排表的单词检查和续报意愿字段"""
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    columns = [col['name'] for col in inspector.get_columns('schedules')]
+    
+    if 'word_check' not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE schedules ADD COLUMN word_check TEXT DEFAULT ''"))
+            conn.commit()
+        print("已添加字段 word_check 到表 schedules")
+    else:
+        print("字段 word_check 已存在于表 schedules")
+    
+    if 'renewal_intention' not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE schedules ADD COLUMN renewal_intention VARCHAR(20) DEFAULT ''"))
+            conn.commit()
+        print("已添加字段 renewal_intention 到表 schedules")
+    else:
+        print("字段 renewal_intention 已存在于表 schedules")
+
 # 在应用启动时执行迁移
 add_execution_status_column()
 add_cancel_reason_column()
@@ -373,6 +399,7 @@ add_smart_command_examples()
 add_operation_managers()
 add_schedule_type()
 add_performance_indexes()
+add_word_check_and_renewal_intention()
 migrate_add_ldap_config()
 migrate_add_makeup_fields()
 migrate_add_payment_method()

@@ -167,6 +167,9 @@ const handleLogin = async () => {
           if (settingsResponse.data && settingsResponse.data.operation_managers) {
             localStorage.setItem('operation_managers', JSON.stringify(settingsResponse.data.operation_managers))
           }
+          if (settingsResponse.data && settingsResponse.data.completed_training_managers) {
+            localStorage.setItem('completed_training_managers', JSON.stringify(settingsResponse.data.completed_training_managers))
+          }
         } catch (error) {
           window.logger.error('Failed to load site settings:', error)
         }

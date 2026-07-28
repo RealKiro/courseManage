@@ -349,6 +349,8 @@ class ScheduleUpdate(BaseModel):
     homework_regular: Optional[str] = None
     homework_images: Optional[str] = None
     content_feedback: Optional[str] = None
+    word_check: Optional[str] = None
+    renewal_intention: Optional[str] = None
     cancel_reason: Optional[str] = None
     postpone_reason: Optional[str] = None
     schedule_type: Optional[str] = None
@@ -370,6 +372,9 @@ class Schedule(ScheduleBase):
     has_conflict: bool
     conflict_reason: Optional[str]
     execution_status: str
+    content_feedback: Optional[str] = None
+    word_check: Optional[str] = None
+    renewal_intention: Optional[str] = None
     homework_regular: Optional[str] = None
     homework_images: Optional[str] = None
     scheduled_students: Optional[List[StudentAttendanceInfo]] = Field(None, description="参与课程的学员列表及出勤状态")
@@ -382,6 +387,8 @@ class Schedule(ScheduleBase):
 
 class ScheduleCompleteFeedback(BaseModel):
     content_feedback: str = Field(..., description="课程反馈：内容|作业|注意|；格式说明：用|分隔，如：内容：我是谁？我来自哪里？我往那里去？|作业：今天布置的10道题|注意：注意第三题的解题思路")
+    word_check: Optional[str] = Field(None, description="单词检查反馈")
+    renewal_intention: Optional[str] = Field(None, description="续报意愿：high/medium/low/none")
     student_attendance: Optional[Dict[int, str]] = Field(None, description="学员出勤状态字典，key为学员ID，value为出勤状态(present/absent/leave)")
     absence_reasons: Optional[Dict[int, str]] = Field(None, description="缺勤原因字典，key为学员ID，value为缺勤原因")
     send_notification: bool = Field(default=False, description="是否发送通知")

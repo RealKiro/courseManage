@@ -9,7 +9,7 @@ from datetime import date, datetime
 from database import get_db
 from models import Settings, Schedule, Course, Teacher, Class, Student, Room, Leave, schedule_student
 from schemas import ScheduleCreate, ScheduleUpdate, Schedule as ScheduleSchema, ScheduleFilter, ConflictInfo, ScheduleCompleteFeedback, SchedulePostpone, ScheduleMakeup, ScheduleDeclineMakeup, ScheduleCancel, PaginatedScheduleResponse, ScheduleAttendanceUpdate
-from routers.auth import get_teacher_visibility_filter, get_current_user, get_current_superadmin_user, get_current_course_admin_user, get_current_teaching_assistant_user, User
+from routers.auth import get_teacher_visibility_filter, get_current_user, get_current_superadmin_user, get_current_course_admin_user, get_current_course_admin_or_completed_training_manager, get_current_teaching_assistant_user, User
 from optimizer import ScheduleOptimizer
 from openpyxl import Workbook
 from io import BytesIO
@@ -1419,15 +1419,24 @@ def update_schedule(
     schedule_id: int,
     schedule: ScheduleUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_course_admin_user)
+    current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         log_operation(db, "课程安排", "更新", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
-    # 检查权限
-    from routers.auth import can_edit_completed_schedule
+    # 检查权限：完训内容管理导师（非课程管理员）只能编辑已完训/延期/取消的课程
+    from routers.auth import can_edit_completed_schedule, is_completed_training_manager
+    if current_user.role not in ['super_admin', 'course_admin']:
+        if is_completed_training_manager(db, current_user):
+            if db_schedule.execution_status not in ['completed', 'postponed', 'cancelled']:
+                log_operation(db, "课程安排", "更新", f"权限不足: 完训内容管理导师{current_user.username}尝试编辑{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
+                raise HTTPException(status_code=403, detail="完训内容管理导师只能编辑已完训的课程安排")
+        else:
+            log_operation(db, "课程安排", "更新", f"权限不足: 用户{current_user.username}尝试编辑课程ID{schedule_id}", current_user.username, "WARNING")
+            raise HTTPException(status_code=403, detail="权限不足")
+    
     if not can_edit_completed_schedule(db, current_user, db_schedule.execution_status):
         log_operation(db, "课程安排", "更新", f"权限不足: 用户{current_user.username}尝试编辑{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
         raise HTTPException(status_code=403, detail="您没有权限编辑该状态的课程安排")
@@ -1517,6 +1526,10 @@ def update_schedule(
         db_schedule.end_date = safe_parse_date(schedule.end_date)
     if schedule.content_feedback is not None:
         db_schedule.content_feedback = schedule.content_feedback
+    if schedule.word_check is not None:
+        db_schedule.word_check = schedule.word_check
+    if schedule.renewal_intention is not None:
+        db_schedule.renewal_intention = schedule.renewal_intention
     if schedule.homework_regular is not None:
         db_schedule.homework_regular = schedule.homework_regular
     if schedule.homework_images is not None:
@@ -1856,14 +1869,24 @@ def update_schedule(
 def delete_schedule(
     schedule_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_course_admin_user)
+    current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         log_operation(db, "课程安排", "删除", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
-    from routers.auth import can_delete_completed_schedule
+    # 检查权限：完训内容管理导师（非课程管理员）只能删除已完训/延期/取消的课程
+    from routers.auth import can_delete_completed_schedule, is_completed_training_manager
+    if current_user.role not in ['super_admin', 'course_admin']:
+        if is_completed_training_manager(db, current_user):
+            if db_schedule.execution_status not in ['completed', 'postponed', 'cancelled']:
+                log_operation(db, "课程安排", "删除", f"权限不足: 完训内容管理导师{current_user.username}尝试删除{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
+                raise HTTPException(status_code=403, detail="完训内容管理导师只能删除已完训的课程安排")
+        else:
+            log_operation(db, "课程安排", "删除", f"权限不足: 用户{current_user.username}尝试删除课程ID{schedule_id}", current_user.username, "WARNING")
+            raise HTTPException(status_code=403, detail="权限不足")
+    
     if not can_delete_completed_schedule(db, current_user, db_schedule.execution_status):
         log_operation(db, "课程安排", "删除", f"权限不足: 用户{current_user.username}尝试删除{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
         raise HTTPException(status_code=403, detail="您没有权限删除该状态的课程安排")
@@ -1976,7 +1999,7 @@ def complete_schedule(
     schedule_id: int,
     feedback: ScheduleCompleteFeedback,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_course_admin_user)
+    current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
@@ -1997,6 +2020,10 @@ def complete_schedule(
     
     db_schedule.execution_status = "completed"
     db_schedule.content_feedback = feedback.content_feedback
+    if feedback.word_check:
+        db_schedule.word_check = feedback.word_check
+    if feedback.renewal_intention:
+        db_schedule.renewal_intention = feedback.renewal_intention
     
     # 获取班级的活跃学员
     class_ = db.query(Class).filter(Class.id == db_schedule.class_id).first()
@@ -2415,7 +2442,7 @@ def update_schedule_attendance(
     schedule_id: int,
     attendance_data: ScheduleAttendanceUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_course_admin_user)
+    current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
     """更新课程安排的学员出勤状态"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
@@ -2468,7 +2495,7 @@ async def makeup_schedule(
     schedule_id: int,
     makeup_data: ScheduleMakeup,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_course_admin_user)
+    current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
     """学员补课：为选定的学员创建新的课程安排"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
@@ -2552,7 +2579,7 @@ async def decline_makeup(
     schedule_id: int,
     decline_data: ScheduleDeclineMakeup,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_course_admin_user)
+    current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
     """学员不补课：记录不补课原因并更新状态"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()

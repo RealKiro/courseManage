@@ -334,14 +334,29 @@
                     </el-tooltip>
                   </template>
                 </el-table-column>
-                <el-table-column :label="t('calendar.attendanceStatus')" width="100">
+                <el-table-column :label="t('calendar.attendanceStatus')" width="130">
                   <template #default="{ row }">
-                    <el-tag 
-                      :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
-                      size="small"
-                    >
-                      {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
-                    </el-tag>
+                    <template v-if="currentSchedule.execution_status === 'completed' && canEditCompletedSchedule">
+                      <el-select
+                        :model-value="row.attendance_status"
+                        size="small"
+                        style="width: 100px"
+                        @change="(val) => handleAttendanceChange(row, val)"
+                      >
+                        <el-option value="present" :label="t('calendar.present')" />
+                        <el-option value="absent" :label="t('calendar.absent')" />
+                        <el-option value="leave" :label="t('calendar.onLeave')" />
+                        <el-option value="pending" :label="t('calendar.unknown')" />
+                      </el-select>
+                    </template>
+                    <template v-else>
+                      <el-tag 
+                        :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
+                        size="small"
+                      >
+                        {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
+                      </el-tag>
+                    </template>
                   </template>
                 </el-table-column>
               </el-table>
@@ -397,10 +412,10 @@
         <div style="display: flex; gap: 10px; justify-content: space-between;">
           <div>
             <el-button v-if="canEditCompletedSchedule" @click="showEditDialog">{{ t('calendar.edit') }}</el-button>
-            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="primary" @click="showCopyDialog">{{ t('calendar.copy') }}</el-button>
-            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="success" @click="showHomeworkDialog">{{ t('calendar.sendHomework') }}</el-button>
+            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed' && currentUser && canEditCompletedSchedule" type="primary" @click="showCopyDialog">{{ t('calendar.copy') }}</el-button>
+            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed' && currentUser && canEditCompletedSchedule" type="success" @click="showHomeworkDialog">{{ t('calendar.sendHomework') }}</el-button>
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed'" type="primary" @click="emit('word-check', currentSchedule)">{{ t('calendar.wordCheck') }}</el-button>
-            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin') && hasStudentsNeedingMakeup(currentSchedule)" type="warning" @click="showMakeupDialog">{{ t('calendar.studentMakeup') }}</el-button>
+            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'completed' && currentUser && canEditCompletedSchedule && hasStudentsNeedingMakeup(currentSchedule)" type="warning" @click="showMakeupDialog">{{ t('calendar.studentMakeup') }}</el-button>
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" @click="showEditDialog">{{ t('calendar.edit') }}</el-button>
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="primary" @click="showCopyDialog">{{ t('calendar.copy') }}</el-button>
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="info" @click="showExtraStudentDialog">{{ t('calendar.extraStudent') }}</el-button>
@@ -497,6 +512,9 @@
             </div>
           </el-descriptions-item>
         </el-descriptions>
+        <div v-if="canEditCompletedSchedule" style="margin-top: 20px; text-align: center;">
+          <el-button type="primary" @click="executionStatusDialogVisible = false; showEditFeedbackDialog()">{{ t('calendar.editFeedback') }}</el-button>
+        </div>
       </div>
       <div v-else-if="executionStatusType === 'pending'">
         <el-descriptions :column="1" border>
@@ -1066,6 +1084,39 @@
         <el-button type="primary" @click="handleAddExtraStudents" :loading="extraStudentLoading" :disabled="selectedExtraStudentIds.length === 0">{{ t('calendar.confirmAddExtra') }}</el-button>
       </template>
     </el-dialog>
+    <!-- 编辑已完训课程反馈弹窗 -->
+    <el-dialog v-model="editFeedbackDialogVisible" :title="t('calendar.editFeedback')" width="600px" draggable>
+      <el-form :model="editFeedbackForm" label-width="120px">
+        <el-form-item :label="t('calendar.contentFeedback')">
+          <el-input
+            v-model="editFeedbackForm.content_feedback"
+            type="textarea"
+            :rows="4"
+            :placeholder="t('calendar.editFeedbackPlaceholder')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('calendar.wordCheck')">
+          <el-input
+            v-model="editFeedbackForm.word_check"
+            type="textarea"
+            :rows="3"
+            :placeholder="t('calendar.editWordCheckPlaceholder')"
+          />
+        </el-form-item>
+        <el-form-item :label="t('calendar.renewalIntention')">
+          <el-select v-model="editFeedbackForm.renewal_intention" style="width: 100%" :placeholder="t('calendar.renewalIntentionPlaceholder')">
+            <el-option value="high" :label="t('calendar.renewalHigh')" />
+            <el-option value="medium" :label="t('calendar.renewalMedium')" />
+            <el-option value="low" :label="t('calendar.renewalLow')" />
+            <el-option value="none" :label="t('calendar.renewalNone')" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editFeedbackDialogVisible = false">{{ t('calendar.cancel') }}</el-button>
+        <el-button type="primary" @click="handleSaveFeedback" :loading="editFeedbackLoading">{{ t('calendar.save') }}</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -1107,6 +1158,13 @@ const conflictDialogVisible = ref(false)
 const conflictSchedules = ref([])
 const executionStatusDialogVisible = ref(false)
 const executionStatusType = ref('')
+const editFeedbackDialogVisible = ref(false)
+const editFeedbackLoading = ref(false)
+const editFeedbackForm = ref({
+  content_feedback: '',
+  word_check: '',
+  renewal_intention: ''
+})
 const viewType = ref(props.viewType)
 const dateRange = ref([])
 const searchType = ref('all')
@@ -1204,6 +1262,9 @@ const canEditCompletedSchedule = computed(() => {
   // 超级管理员可以编辑
   if (currentUser.value.role === 'super_admin') return true
   
+  // 完训内容管理导师可以编辑
+  if (isCompletedTrainingManager()) return true
+  
   // 超级导师可以编辑
   if (currentUser.value.is_subject_teacher) {
     const scheduleEditRestricted = localStorage.getItem('schedule_edit_restricted')
@@ -1219,6 +1280,19 @@ const canEditCompletedSchedule = computed(() => {
   // 普通导师（course_admin，非超级导师）不能编辑
   return false
 })
+
+// 检查当前用户是否为完训内容管理导师
+const isCompletedTrainingManager = () => {
+  if (!currentUser.value || !currentUser.value.teacher_id) return false
+  const managersStr = localStorage.getItem('completed_training_managers')
+  if (!managersStr) return false
+  try {
+    const managers = JSON.parse(managersStr)
+    return Array.isArray(managers) && managers.includes(currentUser.value.teacher_id)
+  } catch (e) {
+    return false
+  }
+}
 const editDialogVisible = ref(false)
 const editStartTime = ref('')
 const editEndTime = ref('')
@@ -1941,6 +2015,69 @@ const showConflictDetails = async () => {
 const showExecutionStatusDetails = (type) => {
   executionStatusType.value = type
   executionStatusDialogVisible.value = true
+}
+
+// 显示编辑已完训课程反馈弹窗
+const showEditFeedbackDialog = () => {
+  if (!currentSchedule.value) return
+  editFeedbackForm.value = {
+    content_feedback: currentSchedule.value.content_feedback || '',
+    word_check: currentSchedule.value.word_check || '',
+    renewal_intention: currentSchedule.value.renewal_intention || ''
+  }
+  editFeedbackDialogVisible.value = true
+}
+
+// 保存反馈修改
+const handleSaveFeedback = async () => {
+  if (!currentSchedule.value) return
+  editFeedbackLoading.value = true
+  try {
+    await api.put(`/schedules/${currentSchedule.value.id}`, {
+      content_feedback: editFeedbackForm.value.content_feedback,
+      word_check: editFeedbackForm.value.word_check,
+      renewal_intention: editFeedbackForm.value.renewal_intention
+    })
+    ElMessage.success(t('calendar.feedbackSaved'))
+    editFeedbackDialogVisible.value = false
+    // 刷新当前课程数据
+    await fetchScheduleDetail(currentSchedule.value.id)
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || t('calendar.saveFailed'))
+  } finally {
+    editFeedbackLoading.value = false
+  }
+}
+
+// 处理出勤状态变更
+const handleAttendanceChange = async (student, newStatus) => {
+  if (!currentSchedule.value) return
+  try {
+    await api.put(`/schedules/${currentSchedule.value.id}/attendance`, {
+      student_attendance: {
+        [student.id]: newStatus
+      }
+    })
+    // 更新本地数据
+    if (student.attendance_status !== undefined) {
+      student.attendance_status = newStatus
+    }
+    ElMessage.success(t('calendar.attendanceUpdated'))
+  } catch (error) {
+    ElMessage.error(error.response?.data?.detail || t('calendar.updateFailed'))
+  }
+}
+
+// 获取课程详情
+const fetchScheduleDetail = async (scheduleId) => {
+  try {
+    const response = await api.get(`/schedules/${scheduleId}`)
+    if (response.data) {
+      currentSchedule.value = response.data
+    }
+  } catch (error) {
+    window.logger.error('Failed to fetch schedule detail:', error)
+  }
 }
 
 // 完训处理
