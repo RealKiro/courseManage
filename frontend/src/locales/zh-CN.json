@@ -410,7 +410,7 @@
     "courseDeleteTipOn": "开启后，仅超级管理员可删除已完训/延期/取消排课状态的课程安排",
     "courseDeleteTipOff": "关闭后，课程管理导师也可删除「已完训/延期/取消」状态的课程安排",
     "courseManageTeacherPlaceholder": "选择课程管理导师（不受导师课程可见性和用户角色的限制）",
-    "courseManageTeacherTip": "提示：被选择的导师将不受「导师可见性限制」选项和导师角色的限制，不受科目、班级、课程安排的访问限制",
+    "courseManageTeacherTip": "提示：被选择的导师将不受「可见性限制」选项和导师角色的限制，不受科目、班级、课程安排的访问限制",
     "feeManageTeacherPlaceholder": "选择费用管理导师（可访问费用管理模块）",
     "feeManageTeacherTip": "提示：被选择的导师可以访问「学员管理」中的「费用管理」模块（需已激活「费用管理」授权），不受导师角色对学员费用的访问限制",
     "gradeManageTeacherPlaceholder": "选择成绩管理导师（可访问成绩管理模块）",
