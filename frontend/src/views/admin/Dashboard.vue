@@ -829,6 +829,26 @@
                   {{ t('dashboard.operationManageTeacherTip') }}
                 </div>
               </el-form-item>
+              <el-form-item :label="t('dashboard.completedTrainingManageTeacher')">
+                <el-select
+                  v-model="siteSettingsForm.completed_training_managers"
+                  multiple
+                  filterable
+                  :placeholder="t('dashboard.completedTrainingManageTeacherPlaceholder')"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="teacher in teachers"
+                    :key="teacher.id"
+                    :label="teacher.name"
+                    :value="teacher.id"
+                  />
+                </el-select>
+                <div style="margin-top: 5px; font-size: 12px; color: #909399;">
+                  <el-icon><InfoFilled /></el-icon>
+                  {{ t('dashboard.completedTrainingManageTeacherTip') }}
+                </div>
+              </el-form-item>
             </el-form>
           </el-tab-pane>
           <el-tab-pane :label="t('dashboard.courseConfigTab')">
@@ -2122,6 +2142,7 @@ const siteSettingsForm = ref({
   grade_managers: [],
   evaluation_managers: [],
   operation_managers: [],
+  completed_training_managers: [],
   log_enabled: true,
   log_level: 'INFO',
   frontend_log_enabled: true,
@@ -2513,6 +2534,7 @@ const handleSiteSettingsSave = async () => {
           grade_managers: siteSettingsForm.value.grade_managers,
           evaluation_managers: siteSettingsForm.value.evaluation_managers,
           operation_managers: siteSettingsForm.value.operation_managers,
+          completed_training_managers: siteSettingsForm.value.completed_training_managers,
           schedule_edit_restricted: siteSettingsForm.value.schedule_edit_restricted,
           schedule_delete_restricted: siteSettingsForm.value.schedule_delete_restricted,
           log_enabled: siteSettingsForm.value.log_enabled,
@@ -2603,6 +2625,7 @@ const fetchSiteSettings = async () => {
       siteSettingsForm.value.grade_managers = response.data.grade_managers || []
       siteSettingsForm.value.evaluation_managers = response.data.evaluation_managers || []
       siteSettingsForm.value.operation_managers = response.data.operation_managers || []
+      siteSettingsForm.value.completed_training_managers = response.data.completed_training_managers || []
       siteSettingsForm.value.log_enabled = response.data.log_enabled !== undefined ? response.data.log_enabled : true
       siteSettingsForm.value.log_level = response.data.log_level || 'INFO'
       siteSettingsForm.value.log_debug_enabled = response.data.log_debug_enabled !== undefined ? response.data.log_debug_enabled : false
@@ -3356,6 +3379,7 @@ const updateSiteInfo = () => {
   localStorage.setItem('grade_managers', JSON.stringify(siteSettingsForm.value.grade_managers))
   localStorage.setItem('evaluation_managers', JSON.stringify(siteSettingsForm.value.evaluation_managers))
   localStorage.setItem('operation_managers', JSON.stringify(siteSettingsForm.value.operation_managers))
+  localStorage.setItem('completed_training_managers', JSON.stringify(siteSettingsForm.value.completed_training_managers))
   localStorage.setItem('frontend_log_enabled', siteSettingsForm.value.frontend_log_enabled)
   
   // 刷新日志配置缓存，使配置立即生效
@@ -3612,6 +3636,7 @@ const testAIConnection = async () => {
       grade_managers: siteSettingsForm.value.grade_managers,
       evaluation_managers: siteSettingsForm.value.evaluation_managers,
       operation_managers: siteSettingsForm.value.operation_managers,
+      completed_training_managers: siteSettingsForm.value.completed_training_managers,
       schedule_edit_restricted: siteSettingsForm.value.schedule_edit_restricted,
       schedule_delete_restricted: siteSettingsForm.value.schedule_delete_restricted,
       log_enabled: siteSettingsForm.value.log_enabled,

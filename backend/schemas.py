@@ -665,6 +665,7 @@ class SettingsBase(BaseModel):
     grade_managers: Optional[List[int]] = Field(None, description="成绩管理导师ID列表(逗号分隔)")
     evaluation_managers: Optional[List[int]] = Field(None, description="评价管理导师ID列表(逗号分隔)")
     operation_managers: Optional[List[int]] = Field(None, description="运营管理导师ID列表")
+    completed_training_managers: Optional[List[int]] = Field(None, description="完训内容管理导师ID列表")
     schedule_edit_restricted: Optional[bool] = Field(True, description="课程安排编辑限制：True-仅超级管理员可编辑已完训/延期/取消的课程，False-课程管理导师也可编辑")
     schedule_delete_restricted: Optional[bool] = Field(True, description="课程安排删除限制：True-仅超级管理员可删除已完训/延期/取消的课程，False-课程管理导师也可删除")
     log_enabled: Optional[bool] = Field(True, description="是否启用日志记录")
@@ -707,6 +708,7 @@ class SettingsUpdate(BaseModel):
     grade_managers: Optional[List[int]] = []
     evaluation_managers: Optional[List[int]] = []
     operation_managers: Optional[List[int]] = []
+    completed_training_managers: Optional[List[int]] = []
     schedule_edit_restricted: Optional[bool] = None
     schedule_delete_restricted: Optional[bool] = None
     log_enabled: Optional[bool] = None  # 添加日志启用字段

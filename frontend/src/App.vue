@@ -261,14 +261,12 @@ const goToScheduleView = () => {
 }
 
 const goToDashboardView = () => {
-  console.log('[App] 点击运营大屏按钮, canAccessDashboard:', canAccessDashboard.value, 'currentUser:', currentUser.value?.role, 'hasFeature:', hasFeature(licenseFeatures.DASHBOARD_VIEW))
-  ElMessage.info('正在导航到运营大屏... canAccess:' + canAccessDashboard.value + ' role:' + (currentUser.value?.role || 'null'))
+  window.logger.log('[App] 点击运营大屏按钮, canAccessDashboard:', canAccessDashboard.value, 'currentUser:', currentUser.value?.role, 'hasFeature:', hasFeature(licenseFeatures.DASHBOARD_VIEW))
+  window.logger.info('[App] 正在导航到运营大屏... canAccess:' + canAccessDashboard.value + ' role:' + (currentUser.value?.role || 'null'))
   router.push('/admin/dashboard-view').then(() => {
-    console.log('[App] 导航完成, 当前路由:', router.currentRoute.value.path, 'matched:', router.currentRoute.value.matched.length)
-    ElMessage.success('导航完成! 路由:' + router.currentRoute.value.path + ' matched:' + router.currentRoute.value.matched.length)
+    window.logger.log('[App] 导航完成, 当前路由:', router.currentRoute.value.path, 'matched:', router.currentRoute.value.matched.length)
   }).catch(err => {
-    console.error('[App] 导航失败:', err)
-    ElMessage.error('导航失败: ' + err.message)
+    window.logger.error('[App] 导航失败:', err)
   })
 }
 </script>

@@ -1072,11 +1072,9 @@ import api from '@/utils/api'
 import { hasFeature } from '@/utils/license'
 import { useI18n } from 'vue-i18n'
 
-console.log('[DashboardView] ========== 组件模块开始加载 ==========')
+window.logger.log('[DashboardView] ========== 组件模块开始加载 ==========')
 document.title = '[DashboardView] 组件已加载'
-import('element-plus').then(({ ElMessage }) => {
-  ElMessage.success('DashboardView组件已加载!')
-})
+window.logger.log('[DashboardView] 组件已加载')
 
 const { t, locale } = useI18n()
 const router = useRouter()
@@ -2965,12 +2963,12 @@ watch(locale, () => {
 
 // 初始化
 onMounted(async () => {
-  console.log('[DashboardView] 组件已挂载，开始初始化')
+  window.logger.log('[DashboardView] 组件已挂载，开始初始化')
   try {
     await nextTick()
-    console.log('[DashboardView] nextTick完成，开始刷新数据')
+    window.logger.log('[DashboardView] nextTick完成，开始刷新数据')
     await refreshData()
-    console.log('[DashboardView] 数据刷新完成')
+    window.logger.log('[DashboardView] 数据刷新完成')
     
     // 设置30分钟自动刷新
     refreshTimer = setInterval(refreshData, 30 * 60 * 1000)

@@ -312,6 +312,7 @@ class Settings(Base):
     grade_managers = Column(Text, default="[]", comment="成绩管理导师ID列表(逗号分隔)")
     evaluation_managers = Column(Text, default="[]", comment="评价管理导师ID列表(逗号分隔)")
     operation_managers = Column(Text, default="[]", comment="运营管理导师ID列表(JSON格式)")
+    completed_training_managers = Column(Text, default="[]", comment="完训内容管理导师ID列表(JSON格式)")
     schedule_edit_restricted = Column(Boolean, default=True, comment="课程安排编辑限制：True-仅超级管理员可编辑已完训/延期/取消的课程，False-课程管理导师也可编辑")
     schedule_delete_restricted = Column(Boolean, default=True, comment="课程安排删除限制：True-仅超级管理员可删除已完训/延期/取消的课程，False-课程管理导师也可删除")
     log_enabled = Column(Boolean, default=True, comment="是否启用日志记录")

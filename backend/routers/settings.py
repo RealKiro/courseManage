@@ -180,6 +180,7 @@ def get_settings(db: Session = Depends(get_db)):
             grade_managers=[],
             evaluation_managers=[],
             operation_managers=[],
+            completed_training_managers=[],
             schedule_edit_restricted=True,
             schedule_delete_restricted=True,
             log_enabled=True,
@@ -250,6 +251,15 @@ def get_settings(db: Session = Depends(get_db)):
     except (json.JSONDecodeError, TypeError):
         operation_managers_list = []
     settings.operation_managers = operation_managers_list
+
+    # 解析completed_training_managers
+    try:
+        completed_training_managers_list = json.loads(settings.completed_training_managers) if settings.completed_training_managers else []
+        if not isinstance(completed_training_managers_list, list):
+            completed_training_managers_list = []
+    except (json.JSONDecodeError, TypeError):
+        completed_training_managers_list = []
+    settings.completed_training_managers = completed_training_managers_list
 
     # 同步配置到全局通知器
     from utils.wechat_notifier import wechat_notifier
@@ -343,6 +353,8 @@ def update_settings(
         settings.evaluation_managers = json.dumps(settings_data.evaluation_managers)
     if settings_data.operation_managers is not None:
         settings.operation_managers = json.dumps(settings_data.operation_managers)
+    if settings_data.completed_training_managers is not None:
+        settings.completed_training_managers = json.dumps(settings_data.completed_training_managers)
     if settings_data.schedule_edit_restricted is not None:
         settings.schedule_edit_restricted = settings_data.schedule_edit_restricted
     if settings_data.schedule_delete_restricted is not None:
@@ -431,6 +443,11 @@ def update_settings(
     except:
         settings.operation_managers = []
 
+    try:
+        settings.completed_training_managers = json.loads(settings.completed_training_managers) if settings.completed_training_managers else []
+    except:
+        settings.completed_training_managers = []
+
     log_operation(db, "系统配置", "修改", f"更新系统配置及微信通知映射", current_user.username)
     return settings
 
@@ -478,6 +495,8 @@ def create_or_update_settings(
     evaluation_managers_json = json.dumps(settings_data.evaluation_managers or [])
     # 处理 operation_managers，将其转为 JSON 字符串
     operation_managers_json = json.dumps(settings_data.operation_managers or [])
+    # 处理 completed_training_managers，将其转为 JSON 字符串
+    completed_training_managers_json = json.dumps(settings_data.completed_training_managers or [])
 
     schedule_edit_restricted = settings_data.schedule_edit_restricted if settings_data.schedule_edit_restricted is not None else True
     schedule_delete_restricted = settings_data.schedule_delete_restricted if settings_data.schedule_delete_restricted is not None else True
@@ -534,6 +553,7 @@ def create_or_update_settings(
         settings.grade_managers = grade_managers_json
         settings.evaluation_managers = evaluation_managers_json
         settings.operation_managers = operation_managers_json
+        settings.completed_training_managers = completed_training_managers_json
         settings.schedule_edit_restricted = schedule_edit_restricted
         settings.schedule_delete_restricted = schedule_delete_restricted
         # 添加日志字段处理
@@ -603,6 +623,7 @@ def create_or_update_settings(
             grade_managers=grade_managers_json,
             evaluation_managers=evaluation_managers_json,
             operation_managers=operation_managers_json,
+            completed_training_managers=completed_training_managers_json,
             schedule_edit_restricted=schedule_edit_restricted,
             schedule_delete_restricted=schedule_delete_restricted,
             log_enabled=settings_data.log_enabled if settings_data.log_enabled is not None else True,
@@ -658,6 +679,11 @@ def create_or_update_settings(
         settings.operation_managers = json.loads(settings.operation_managers)
     except:
         settings.operation_managers = []
+
+    try:
+        settings.completed_training_managers = json.loads(settings.completed_training_managers)
+    except:
+        settings.completed_training_managers = []
 
     # 重新初始化定时任务调度器
     from utils.remainder import init_scheduler
