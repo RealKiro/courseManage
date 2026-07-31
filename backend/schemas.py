@@ -693,6 +693,7 @@ class SettingsBase(BaseModel):
     contact_phone: Optional[str] = Field(None, description="联系电话")
     contact_email: Optional[str] = Field(None, description="联系邮箱")
     contact_wechat: Optional[str] = Field(None, description="联系微信")
+    classroom_facility_config: Optional[str] = Field(None, description="教室设施配置(JSON格式)")
 
 class SettingsCreate(SettingsBase):
     created_at: Optional[datetime] = Field(None, description="创建时间")
@@ -736,6 +737,7 @@ class SettingsUpdate(BaseModel):
     contact_phone: Optional[str] = None
     contact_email: Optional[str] = None
     contact_wechat: Optional[str] = None
+    classroom_facility_config: Optional[str] = None
 
 class Settings(SettingsBase):
     id: int

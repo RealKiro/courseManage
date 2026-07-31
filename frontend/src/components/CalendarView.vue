@@ -433,6 +433,7 @@
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="primary" @click="showCopyDialog">{{ t('calendar.copy') }}</el-button>
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="info" @click="showExtraStudentDialog">{{ t('calendar.extraStudent') }}</el-button>
             <el-button v-if="currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="warning" @click="handleNotifyNow">{{ t('calendar.notifyNow') }}</el-button>
+            <el-button type="info" @click="handleCopyNotification">{{ t('calendar.copyNotification') }}</el-button>
           </div>
           <div>
             <el-button v-if="canEditCompletedSchedule" type="danger" @click="handleDeleteSchedule">{{ t('calendar.delete') }}</el-button>
@@ -2941,6 +2942,54 @@ const handleNotifyNow = () => {
     }
   }).catch(() => {})
 }
+
+const handleCopyNotification = async () => {
+  if (!currentSchedule.value) return
+  
+  const schedule = currentSchedule.value
+  const className = getClassName(schedule.class_id)
+  const courseName = getCourseName(schedule.course_id)
+  const dateStr = formatDate(schedule.start_date)
+  const timeStr = `${schedule.start_time}-${schedule.end_time}`
+  const roomName = getRoomName(schedule.room_id)
+  
+  // 获取学员列表
+  let studentNames = []
+  if (schedule.scheduled_students && schedule.scheduled_students.length > 0) {
+    studentNames = schedule.scheduled_students.map(s => s.name)
+  } else if (schedule.class_id) {
+    // 如果没有scheduled_students，尝试从班级获取学员
+    const classStudents = getActiveClassStudents(schedule.class_id)
+    if (classStudents && classStudents.length > 0) {
+      studentNames = classStudents.map(s => s.name)
+    }
+  }
+  
+  // 构建通知内容
+  let notificationContent = `[烟花][烟花][烟花][温馨提示]warm tips：\n`
+  notificationContent += `【${className}】明天上课安排\n`
+  notificationContent += `【${dateStr}】【${timeStr}】【${courseName}】`
+  if (roomName) {
+    notificationContent += `，【${roomName}】`
+  }
+  notificationContent += `\n`
+  
+  if (studentNames.length > 0) {
+    notificationContent += `【${studentNames.join('】【')}】\n`
+    notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
+    notificationContent += studentNames.map(name => `@${name}`).join('')
+  } else {
+    notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
+  }
+  
+  try {
+    await navigator.clipboard.writeText(notificationContent)
+    ElMessage.success(t('calendar.copyNotificationSuccess') || '通知内容已复制到剪贴板')
+  } catch (error) {
+    window.logger.error('复制通知失败:', error)
+    ElMessage.error(t('calendar.copyNotificationFail') || '复制失败')
+  }
+}
  
 // 图片预览
 const handlePicturePreview = async (uploadFile) => {
@@ -3144,18 +3193,47 @@ const handleScreenshot = async () => {
           cell.style.maxHeight = 'none'
         })
 
+        const clonedScheduleCells = clonedCalendar.querySelectorAll('.schedule-cell')
         const clonedDateHeaders = clonedCalendar.querySelectorAll('.date-header')
-        clonedDateHeaders.forEach(header => {
-          header.style.flex = 'none'
-          header.style.minWidth = '120px'
-          header.style.width = '120px'
+        const clonedDateHeaderRow = clonedCalendar.querySelector('.date-header-row')
+        const dateCount = clonedDateHeaders.length
+        const dateColumnWidths = new Array(dateCount).fill(100)
+        
+        if (clonedDateHeaderRow) {
+          clonedDateHeaderRow.style.display = 'block'
+          clonedDateHeaderRow.style.height = 'auto'
+          clonedDateHeaderRow.style.overflow = 'visible'
+        }
+        
+        clonedScheduleCells.forEach((cell, cellIndex) => {
+          cell.style.flex = 'none'
+          const scheduleItems = cell.querySelectorAll('.schedule-item')
+          const itemCount = scheduleItems.length
+          const cellWidth = Math.max(100, itemCount * 100)
+          cell.dataset.cellWidth = cellWidth
+          cell.style.minWidth = cellWidth + 'px'
+          cell.style.width = cellWidth + 'px'
+          cell.style.display = 'flex'
+          cell.style.flexDirection = 'row'
+          cell.style.flexWrap = 'nowrap'
+          cell.style.gap = '4px'
+          scheduleItems.forEach(item => {
+            item.style.flex = 'none'
+            item.style.width = '100px'
+            item.style.maxWidth = '100px'
+          })
+          
+          const dateIndex = cellIndex % dateCount
+          dateColumnWidths[dateIndex] = Math.max(dateColumnWidths[dateIndex], cellWidth)
         })
 
-        const clonedScheduleCells = clonedCalendar.querySelectorAll('.schedule-cell')
-        clonedScheduleCells.forEach(cell => {
-          cell.style.flex = 'none'
-          cell.style.minWidth = '100px'
-          cell.style.width = '100px'
+        clonedDateHeaders.forEach((header, headerIndex) => {
+          header.style.flex = 'none'
+          header.style.display = 'inline-block'
+          header.style.verticalAlign = 'top'
+          const maxWidth = dateColumnWidths[headerIndex] || 120
+          header.style.minWidth = maxWidth + 'px'
+          header.style.width = maxWidth + 'px'
         })
 
         const allTags = clonedCalendar.querySelectorAll('.el-tag')

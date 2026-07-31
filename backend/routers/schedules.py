@@ -98,13 +98,38 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
                 class2_student_ids = class_students_cache.get(existing.class_id, set())
             
             common_students = class1_student_ids & class2_student_ids
+            
+            # 如果存在共同学生，检查是否有实际冲突
             if common_students:
-                conflicts.append(ConflictInfo(
-                    schedule_id=existing.id,
-                    conflict_type="学生时间冲突",
-                    conflict_description=f"班级 {schedule.class_id} 和班级 {existing.class_id} 有共同学生，在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 时间冲突",
-                    related_schedules=[existing.id]
-                ))
+                # 如果已完成的课程中的学员已有出勤记录，则不算冲突
+                # 因为这些学员在该课程中已经有确定的出勤状态记录
+                # 这种情况可能是：
+                # - 'leave'/'absent': 学员在该课程已请假/缺勤，可以在其他课程补课
+                # - 'present': 学员在该课程已出勤，可以在其他课程补假期的课
+                # 已完训课程的学员状态已经确定，不应影响其他课程的完训
+                if existing.execution_status == 'completed':
+                    from sqlalchemy import select
+                    stmt = select(schedule_student.c.student_id, schedule_student.c.attendance_status).where(
+                        (schedule_student.c.schedule_id == existing.id) &
+                        (schedule_student.c.student_id.in_(common_students))
+                    )
+                    result = db.execute(stmt)
+                    attendance_records = {row[0]: row[1] for row in result.fetchall()}
+                    
+                    # 只要有出勤记录（包括present/leave/absent），就不报冲突
+                    if attendance_records:
+                        pass  # 不报冲突
+                    else:
+                        # 没有出勤记录的情况，视为没有冲突（可能是试听课等特殊情况）
+                        pass
+                else:
+                    # 未完成的课程，任何共同学生都算冲突
+                    conflicts.append(ConflictInfo(
+                        schedule_id=existing.id,
+                        conflict_type="学生时间冲突",
+                        conflict_description=f"班级 {schedule.class_id} 和班级 {existing.class_id} 有共同学生，在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 时间冲突",
+                        related_schedules=[existing.id]
+                    ))
 
         # 教室时间冲突
         if check_room_conflict and existing.room_id is not None and schedule.room_id is not None and existing.room_id == schedule.room_id:

@@ -6,7 +6,7 @@
     <div class="dashboard-header">
       <div class="header-left">
         <h1 class="dashboard-title">
-          <el-icon><DataAnalysis /></el-icon>
+          <el-icon><DataAnalysis /></el-icon>jix
           {{ t('dashboardView.title') }}
         </h1>
         <span class="last-update">{{ t('dashboardView.lastUpdate') }}: {{ lastUpdateTime }}</span>
@@ -658,6 +658,39 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 各导师完课率 -->
+    <el-row :gutter="20" class="chart-section">
+      <el-col :span="24">
+        <el-card class="chart-card" shadow="hover" v-loading="loading">
+          <template #header>
+            <div class="card-header">
+              <span>{{ t('dashboardView.teacherCompletionRateRanking') }}</span>
+              <el-select v-model="completionRatePeriod" @change="handleCompletionRatePeriodChange" style="width: 150px">
+                <el-option :label="t('dashboardView.completionRatePeriod1Week')" :value="1" />
+                <el-option :label="t('dashboardView.completionRatePeriod1Month')" :value="2" />
+                <el-option :label="t('dashboardView.completionRatePeriod3Months')" :value="3" />
+                <el-option :label="t('dashboardView.completionRatePeriodHalfYear')" :value="4" />
+                <el-option :label="t('dashboardView.completionRatePeriod1Year')" :value="5" />
+              </el-select>
+            </div>
+          </template>
+          <el-table :data="teacherCompletionRates" style="width: 100%" max-height="400">
+            <el-table-column type="index" :label="t('dashboardView.indexLabel')" width="60" />
+            <el-table-column prop="teacher_name" :label="t('dashboardView.teacher')" width="150" />
+            <el-table-column prop="total_schedules" :label="t('dashboardView.totalSchedules')" width="120" align="center" />
+            <el-table-column prop="completed_schedules" :label="t('dashboardView.completedSchedules')" width="120" align="center" />
+            <el-table-column prop="completion_rate" :label="t('dashboardView.completionRate')" width="120" align="center">
+              <template #default="{ row }">
+                <el-tag :type="row.completion_rate >= 90 ? 'success' : row.completion_rate >= 75 ? 'warning' : 'danger'">
+                  {{ row.completion_rate }}%
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
     
     <el-row :gutter="20" class="chart-section" v-if="!hideRevenue && hasFeature('fee_management')">
       <!-- 费用分析 -->
@@ -1164,6 +1197,8 @@ const refundRateMonths = ref(6)
 const trialEfficiencyDays = ref(30)
 const trialFunnelDays = ref(30)
 const longTermStudentsLimit = ref(30)
+const completionRatePeriod = ref(2)
+const teacherCompletionRates = ref([])
 // 成绩曲线相关
 const gradeCurveDialogVisible = ref(false)
 const gradeCurveLoading = ref(false)
@@ -1938,6 +1973,19 @@ const handleLongTermStudentsLimitChange = () => {
   fetchLongTermStudents()
 }
 
+const fetchTeacherCompletionRates = async () => {
+  try {
+    const response = await api.get(`/statistics/teachers/completion-rate-ranking?period=${completionRatePeriod.value}`)
+    teacherCompletionRates.value = response.data
+  } catch (error) {
+    window.logger.error('获取各导师完课率失败:', error)
+  }
+}
+
+const handleCompletionRatePeriodChange = () => {
+  fetchTeacherCompletionRates()
+}
+
 // 获取收费预警
 const fetchFeeAlerts = async () => {
   try {
@@ -2565,7 +2613,8 @@ const refreshData = async () => {
       fetchStudentGrowth(),
       fetchPopularCourses(),
       fetchRoomUtilization(),
-      fetchDBPoolStatus()
+      fetchDBPoolStatus(),
+      fetchTeacherCompletionRates()
     ]
     if (hasFeature('fee_management')) {
       promises.push(fetchFeeComposition(), fetchFeeTrend(), fetchFeeAlerts(), fetchUnpaidStudents(), fetchRefundRate())

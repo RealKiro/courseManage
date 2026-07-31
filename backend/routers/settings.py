@@ -191,7 +191,8 @@ def get_settings(db: Session = Depends(get_db)):
             ldap_enabled=False,
             ldap_config="{}",
             hours_per_lesson=2.0,
-            course_config="{}"
+            course_config="{}",
+            classroom_facility_config="{}"
         )
         db.add(settings)
         db.commit()
@@ -291,6 +292,34 @@ def check_scheduler_status(
         "jobs_count": len(job_list),
         "jobs": job_list
     }
+
+@router.get("/classroom-facility-config")
+def get_classroom_facility_config(db: Session = Depends(get_db)):
+    """获取教室设施配置"""
+    settings = db.query(Settings).first()
+    if not settings:
+        return {"facility_types": {}}
+    try:
+        config = json.loads(settings.classroom_facility_config) if settings.classroom_facility_config else {}
+    except (json.JSONDecodeError, TypeError):
+        config = {}
+    return config
+
+@router.put("/classroom-facility-config")
+def update_classroom_facility_config(
+    config_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_system_admin_user)
+):
+    """更新教室设施配置"""
+    settings = db.query(Settings).first()
+    if not settings:
+        raise HTTPException(status_code=404, detail="站点参数不存在")
+    
+    settings.classroom_facility_config = json.dumps(config_data)
+    db.commit()
+    log_operation(db, "系统配置", "修改", "更新教室设施配置", current_user.username, "INFO")
+    return {"message": "更新成功"}
 
 @router.put("", response_model=SettingsSchema)
 def update_settings(

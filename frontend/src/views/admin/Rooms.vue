@@ -93,8 +93,7 @@
           </template>
         </el-input>
         <el-select v-model="facilitiesFilter" :placeholder="t('rooms.facilitiesType')" clearable style="width: 150px" @change="fetchRooms">
-          <el-option :label="t('rooms.multimedia')" value="多媒体" />
-          <el-option :label="t('rooms.normal')" value="普通" />
+          <el-option v-for="(details, type) in facilityOptions" :key="type" :label="type" :value="type" />
         </el-select>
         <el-select v-model="isActiveFilter" :placeholder="t('rooms.activeStatus')" clearable style="width: 120px" @change="fetchRooms">
           <el-option :label="t('common.enabled')" :value="true" />
@@ -170,8 +169,7 @@
         </el-form-item>
         <el-form-item :label="t('rooms.facilities')" prop="facilities">
           <el-select v-model="form.facilities" :placeholder="t('rooms.selectFacilitiesPlaceholder')">
-            <el-option :label="t('rooms.multimedia')" value="多媒体" />
-            <el-option :label="t('rooms.normal')" value="普通" />
+            <el-option v-for="(details, type) in facilityOptions" :key="type" :label="type" :value="type" />
           </el-select>
         </el-form-item>
         <el-form-item :label="t('rooms.facilityDetails')" prop="facility_details">
@@ -242,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, Plus, Search, Reading, User, UserFilled, OfficeBuilding, Calendar, Clock, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -267,11 +265,37 @@ const lastRoomCode = ref('')
 const batchAddDialogVisible = ref(false)
 const batchAddText = ref('')
 const batchAddLoading = ref(false)
-// 设施选项定义
-const facilityOptions = computed(() => ({
-  '普通': [t('rooms.whiteboard'), t('rooms.fan'), t('rooms.airConditioner')],
-  '多媒体': [t('rooms.projector'), t('rooms.tv'), t('rooms.computer'), t('rooms.whiteboard'), t('rooms.fan'), t('rooms.airConditioner')]
-}))
+// 设施选项定义 - 从API获取
+const facilityOptions = ref({})
+
+const fetchFacilityOptions = async () => {
+  try {
+    const response = await api.get('/settings/classroom-facility-config')
+    const config = response.data || {}
+    // 将API返回的配置转换为前端需要的格式
+    // API返回格式: { "普通": ["白板", "风扇", "空调"], "多媒体": [...] }
+    // 或者 { "facility_types": { "普通": [...], "多媒体": [...] } }
+    if (config.facility_types) {
+      facilityOptions.value = config.facility_types
+    } else {
+      facilityOptions.value = config
+    }
+    // 如果API返回空对象，使用默认值
+    if (Object.keys(facilityOptions.value).length === 0) {
+      facilityOptions.value = {
+        '普通': [t('rooms.whiteboard'), t('rooms.fan'), t('rooms.airConditioner')],
+        '多媒体': [t('rooms.projector'), t('rooms.tv'), t('rooms.computer'), t('rooms.whiteboard'), t('rooms.fan'), t('rooms.airConditioner')]
+      }
+    }
+  } catch (error) {
+    window.logger.error('获取教室设施配置失败:', error)
+    // 使用默认值作为后备
+    facilityOptions.value = {
+      '普通': [t('rooms.whiteboard'), t('rooms.fan'), t('rooms.airConditioner')],
+      '多媒体': [t('rooms.projector'), t('rooms.tv'), t('rooms.computer'), t('rooms.whiteboard'), t('rooms.fan'), t('rooms.airConditioner')]
+    }
+  }
+}
 
 const goBack = () => {
   router.back()
@@ -636,6 +660,7 @@ onMounted(async () => {
     pagination.value.pageSize = parseInt(pageSizeQuery)
   }
   
+  await fetchFacilityOptions()
   await fetchRooms()
   
   // 如果需要查看关联信息

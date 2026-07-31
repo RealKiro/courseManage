@@ -1754,3 +1754,58 @@ def get_long_term_students(
         })
     
     return result
+
+@router.get("/teachers/completion-rate-ranking")
+def get_teacher_completion_rate_ranking(
+    # period: 1=1周(7天), 2=1月(30天), 3=3月(90天), 4=半年(180天), 5=近1年(365天)
+    period: int = Query(default=2, ge=1, le=5, description="统计周期"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """获取各导师完课率排名"""
+    if not check_dashboard_permission(db, current_user):
+        raise HTTPException(status_code=403, detail="权限不足")
+    
+    # 根据周期计算天数
+    period_days_map = {
+        1: 7,    # 1周
+        2: 30,   # 1月
+        3: 90,   # 3月
+        4: 180,  # 半年
+        5: 365   # 近1年
+    }
+    days = period_days_map.get(period, 30)
+    
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days)
+    
+    # 查询所有导师
+    teachers = db.query(Teacher).filter(Teacher.is_active == True).all()
+    
+    result = []
+    for teacher in teachers:
+        # 查询该导师在指定时间范围内的课程安排
+        schedules = db.query(Schedule).filter(
+            Schedule.teacher_id == teacher.id,
+            Schedule.start_date >= start_date,
+            Schedule.start_date <= end_date
+        ).all()
+        
+        total_schedules = len(schedules)
+        completed_schedules = sum(1 for s in schedules if s.execution_status == 'completed')
+        
+        # 计算完训率
+        completion_rate = round((completed_schedules / total_schedules * 100), 2) if total_schedules > 0 else 0.0
+        
+        result.append({
+            "teacher_id": teacher.id,
+            "teacher_name": teacher.name,
+            "total_schedules": total_schedules,
+            "completed_schedules": completed_schedules,
+            "completion_rate": completion_rate
+        })
+    
+    # 按完课率降序排列
+    result.sort(key=lambda x: x['completion_rate'], reverse=True)
+    
+    return result
