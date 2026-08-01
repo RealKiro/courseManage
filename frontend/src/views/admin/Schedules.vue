@@ -4432,7 +4432,8 @@ const handleHomeworkSubmit = async (sendNotification = false) => {
               className: getClassName(currentHomeworkSchedule.value.class_id),
               students: studentNames,
               classHomework: homeworkForm.value.classHomework,
-              regularHomework: homeworkForm.value.regularHomework
+              regularHomework: homeworkForm.value.regularHomework,
+              at: '@'
             })
             
             try {

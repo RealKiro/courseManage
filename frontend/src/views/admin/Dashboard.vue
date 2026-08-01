@@ -626,7 +626,7 @@
                 <el-form-item :label="t('dashboard.siteIpLabel')" prop="site_url">
                   <el-input v-model="siteSettingsForm.site_url" :placeholder="t('dashboard.siteIpPlaceholder')">
                     <template #prepend>http://</template>
-                    <template #append>:{{ backendPort }}</template>
+                    <template #append>:{{ frontendPort }}</template>
                   </el-input>
                   <div style="margin-top: 5px; font-size: 12px; color: #909399;">
                     <el-icon><InfoFilled /></el-icon> {{ t('dashboard.siteIpTip') }}
@@ -948,7 +948,7 @@
                 <el-input-number v-model="emailConfig.smtp_port" :min="1" :max="65535" :placeholder="t('dashboard.smtpPortPlaceholder')" />
               </el-form-item>
               <el-form-item :label="t('dashboard.smtpUser')" prop="smtp_user">
-                <el-input v-model="emailConfig.smtp_user" :placeholder="t('dashboard.smtpUserPlaceholder')" />
+                <el-input v-model="emailConfig.smtp_user" :placeholder="t('dashboard.smtpUserPlaceholder', { at: '@' })" />
               </el-form-item>
               <el-form-item :label="t('dashboard.smtpPassword')" prop="smtp_password">
                 <el-input v-model="emailConfig.smtp_password" type="password" show-password :placeholder="t('dashboard.smtpPasswordPlaceholder')" />
@@ -3466,7 +3466,7 @@ const beforeLogoUpload = (file) => {
 const updateSiteInfo = () => {
   localStorage.setItem('site_name', siteSettingsForm.value.site_name)
   // 保存完整的 URL（带协议和端口）
-  const fullUrl = `http://${siteSettingsForm.value.site_url}:${backendPort.value}`
+  const fullUrl = `http://${siteSettingsForm.value.site_url}:${frontendPort.value}`
   localStorage.setItem('site_url', fullUrl)
   localStorage.setItem('site_logo', siteSettingsForm.value.site_logo)
   localStorage.setItem('teacher_visibility_restricted', siteSettingsForm.value.teacher_visibility_restricted)

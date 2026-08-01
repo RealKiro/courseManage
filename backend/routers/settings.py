@@ -163,6 +163,18 @@ def get_tomorrow_schedules(
         "schedules": schedule_list
     }
 
+@router.get("/site-info")
+def get_site_info(db: Session = Depends(get_db)):
+    """获取站点URL信息（用于前端构造图片完整URL）"""
+    settings = db.query(Settings).first()
+    site_url = ""
+    if settings and settings.site_url:
+        site_url = settings.site_url
+    if not site_url:
+        frontend_port = int(os.getenv("FRONTEND_PORT", "18080"))
+        site_url = f"http://127.0.0.1:{frontend_port}"
+    return {"site_url": site_url}
+
 @router.get("", response_model=SettingsSchema)
 def get_settings(db: Session = Depends(get_db)):
     """获取站点参数"""
@@ -326,11 +338,9 @@ def update_settings(
         if not (re.match(ip_pattern, raw_ip) or re.match(domain_pattern, raw_ip)):
             raise HTTPException(status_code=400, detail="请输入有效的内网IP地址或域名")
         
-        # 获取后端端口（从环境变量）
-        backend_port = int(os.getenv("BACKEND_PORT", "35000"))
+        frontend_port = int(os.getenv("FRONTEND_PORT", "18080"))
         
-        # 自动拼接完整的 URL
-        settings.site_url = f"http://{raw_ip}:{backend_port}"
+        settings.site_url = f"http://{raw_ip}:{frontend_port}"
     
     if settings_data.site_logo is not None:
         settings.site_logo = settings_data.site_logo
@@ -458,11 +468,9 @@ def create_or_update_settings(
     if not (re.match(ip_pattern, raw_ip) or re.match(domain_pattern, raw_ip)):
         raise HTTPException(status_code=400, detail="请输入有效的内网IP地址或域名")
     
-    # 获取后端端口（从环境变量）
-    backend_port = int(os.getenv("BACKEND_PORT", "35000"))
+    frontend_port = int(os.getenv("FRONTEND_PORT", "18080"))
     
-    # 自动拼接完整的 URL
-    full_site_url = f"http://{raw_ip}:{backend_port}"
+    full_site_url = f"http://{raw_ip}:{frontend_port}"
 
     # 如果配置为空字符串，则初始化为空对象 JSON
     config_str = settings_data.wechat_webhook_config

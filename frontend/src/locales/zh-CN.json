@@ -454,7 +454,7 @@
     "smtpConfig": "SMTP配置",
     "smtpHostPlaceholder": "例如：smtp.qq.com",
     "smtpPortPlaceholder": "例如：465",
-    "smtpUserPlaceholder": "例如：yourname'@'qq.com",
+    "smtpUserPlaceholder": "例如：yourname{at}qq.com",
     "smtpPasswordPlaceholder": "请输入邮箱密码或授权码",
     "smtpFromNamePlaceholder": "例如：课程安排系统",
     "scheduleReminderConfig": "课程安排提醒设置",
@@ -1732,7 +1732,7 @@
     "editScheduleTitle2": "编辑课程安排",
     "copyScheduleTitle": "复制课程安排",
     "nameSeparator": "、",
-    "homeworkNotificationTemplate": "【作业安排】\n\n科目：{course}\n课程日期时间：{date} {time}\n课程内容：{content}\n班级：{className}\n学员：{students}\n\n随堂作业：{classHomework}\n常规作业：{regularHomework}\n\n请同学们按时完成作业。'@'所有人",
+    "homeworkNotificationTemplate": "【作业安排】\n\n科目：{course}\n课程日期时间：{date} {time}\n课程内容：{content}\n班级：{className}\n学员：{students}\n\n随堂作业：{classHomework}\n常规作业：{regularHomework}\n\n请同学们按时完成作业。{at}所有人",
     "validation": {
       "selectCourse": "请选择科目",
       "selectTeacher": "请选择导师",

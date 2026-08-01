@@ -455,7 +455,7 @@
     "smtpConfig": "SMTP Configuration",
     "smtpHostPlaceholder": "e.g., smtp.qq.com",
     "smtpPortPlaceholder": "e.g., 465",
-    "smtpUserPlaceholder": "e.g., yourname'@'qq.com",
+    "smtpUserPlaceholder": "e.g., yourname{at}qq.com",
     "smtpPasswordPlaceholder": "Enter email password or authorization code",
     "smtpFromNamePlaceholder": "e.g., Course Schedule System",
     "scheduleReminderConfig": "Schedule Reminder Settings",
@@ -1724,7 +1724,7 @@
     "editScheduleTitle2": "Edit Schedule",
     "copyScheduleTitle": "Copy Schedule",
     "nameSeparator": ", ",
-    "homeworkNotificationTemplate": "[Homework Assignment]\n\nCourse: {course}\nDate & Time: {date} {time}\nContent: {content}\nClass: {className}\nStudents: {students}\n\nClass Homework: {classHomework}\nRegular Homework: {regularHomework}\n\nPlease complete the homework on time. '@'All",
+    "homeworkNotificationTemplate": "[Homework Assignment]\n\nCourse: {course}\nDate & Time: {date} {time}\nContent: {content}\nClass: {className}\nStudents: {students}\n\nClass Homework: {classHomework}\nRegular Homework: {regularHomework}\n\nPlease complete the homework on time. {at}All",
     "validation": {
       "selectCourse": "Please select course",
       "selectTeacher": "Please select teacher",
