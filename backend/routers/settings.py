@@ -213,32 +213,35 @@ def get_settings(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(settings)
 
+    result = {c.name: getattr(settings, c.name) for c in settings.__table__.columns}
+
     for _field in _LIST_FIELDS:
         try:
-            _parsed = json.loads(getattr(settings, _field)) if getattr(settings, _field) else []
+            _parsed = json.loads(result[_field]) if result[_field] else []
             if not isinstance(_parsed, list):
                 _parsed = []
         except (json.JSONDecodeError, TypeError):
             _parsed = []
-        setattr(settings, _field, _parsed)
+        result[_field] = _parsed
 
-    settings.log_enabled = settings.log_enabled if settings.log_enabled is not None else True
-    settings.log_level = settings.log_level or "INFO"
+    result['log_enabled'] = result.get('log_enabled', True)
+    result['log_level'] = result.get('log_level', 'INFO')
 
-    if settings.open_registration_enabled and settings.open_registration_expiry and datetime.now() > settings.open_registration_expiry:
+    if result.get('open_registration_enabled') and result.get('open_registration_expiry') and datetime.now() > result['open_registration_expiry']:
         settings.open_registration_enabled = False
         settings.open_registration_expiry = None
         db.commit()
         db.refresh(settings)
+        result['open_registration_enabled'] = False
+        result['open_registration_expiry'] = None
         log_operation(db, "系统配置", "自动关闭", "开放注册已过期，自动关闭", "system", "WARNING")
 
-    # 同步配置到全局通知器
     from utils.wechat_notifier import wechat_notifier
     wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
     
     log_operation(db, "系统配置", "调试", f"返回classroom_facility_config: {settings.classroom_facility_config[:200] if settings.classroom_facility_config else 'None'}", "system", "DEBUG")
     
-    return settings
+    return result
 
 @router.get("/check-scheduler-status")
 def check_scheduler_status(
@@ -419,20 +422,21 @@ def update_settings(
     db.commit()
     db.refresh(settings)
     
-    # 更新后立即同步
     from utils.wechat_notifier import wechat_notifier
     wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
+
+    result = {c.name: getattr(settings, c.name) for c in settings.__table__.columns}
     for _field in _LIST_FIELDS:
         try:
-            _parsed = json.loads(getattr(settings, _field)) if getattr(settings, _field) else []
+            _parsed = json.loads(result[_field]) if result[_field] else []
             if not isinstance(_parsed, list):
                 _parsed = []
         except (json.JSONDecodeError, TypeError):
             _parsed = []
-        setattr(settings, _field, _parsed)
+        result[_field] = _parsed
 
     log_operation(db, "系统配置", "修改", f"更新系统配置及微信通知映射", current_user.username)
-    return settings
+    return result
 
 @router.post("", response_model=SettingsSchema)
 def create_or_update_settings(
@@ -641,20 +645,21 @@ def create_or_update_settings(
     from utils.wechat_notifier import wechat_notifier
     wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
     wechat_notifier.load_notification_settings(settings.notification_settings or "{}")
-    
+
+    result = {c.name: getattr(settings, c.name) for c in settings.__table__.columns}
     for _field in _LIST_FIELDS:
         try:
-            _parsed = json.loads(getattr(settings, _field)) if getattr(settings, _field) else []
+            _parsed = json.loads(result[_field]) if result[_field] else []
             if not isinstance(_parsed, list):
                 _parsed = []
         except (json.JSONDecodeError, TypeError):
             _parsed = []
-        setattr(settings, _field, _parsed)
+        result[_field] = _parsed
 
     # 重新初始化定时任务调度器
     from utils.remainder import init_scheduler
     init_scheduler()
-    return settings
+    return result
 
 @router.post("/test-wechat-url")
 def test_specific_webhook(
