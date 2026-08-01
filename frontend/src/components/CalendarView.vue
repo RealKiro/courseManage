@@ -2973,12 +2973,19 @@ const handleCopyNotification = async () => {
   notificationContent += `时间【${timePeriod}】【${timeStr}】\n`
   notificationContent += `科目【${courseName}】教室【${roomName || '未安排'}】\n`
   
+  const teacherName = getTeacherName(schedule.teacher_id)
+  
   if (studentNames.length > 0) {
     notificationContent += `学员【${studentNames.join('】【')}】\n`
-    notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
-    notificationContent += studentNames.map(name => `@${name}`).join('')
-  } else {
-    notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
+  }
+  notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
+  
+  const allMentions = [...studentNames]
+  if (teacherName && teacherName !== '-') {
+    allMentions.push(teacherName)
+  }
+  if (allMentions.length > 0) {
+    notificationContent += allMentions.map(name => `@${name}`).join('')
   }
   
   try {
