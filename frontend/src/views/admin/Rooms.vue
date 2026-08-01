@@ -273,12 +273,22 @@ const fetchFacilityOptions = async () => {
     const response = await api.get('/settings/classroom-facility-config')
     const config = response.data || {}
     // 将API返回的配置转换为前端需要的格式
-    // API返回格式: { "普通": ["白板", "风扇", "空调"], "多媒体": [...] }
-    // 或者 { "facility_types": { "普通": [...], "多媒体": [...] } }
-    if (config.facility_types) {
-      facilityOptions.value = config.facility_types
-    } else {
+    // API返回格式（新数组格式）: { facility_types: [{ name: "普通", facilities: ["白板", "风扇"] }, ...] }
+    // API返回格式（旧对象格式）: { "普通": ["白板", "风扇", "空调"], "多媒体": [...] }
+    if (config.facility_types && Array.isArray(config.facility_types)) {
+      // 新数组格式转换为 { "类型名": [设施列表], ... }
+      const converted = {}
+      config.facility_types.forEach(item => {
+        if (item.name && Array.isArray(item.facilities)) {
+          converted[item.name] = item.facilities
+        }
+      })
+      facilityOptions.value = converted
+    } else if (typeof config === 'object' && config !== null) {
+      // 旧对象格式直接使用
       facilityOptions.value = config
+    } else {
+      facilityOptions.value = {}
     }
     // 如果API返回空对象，使用默认值
     if (Object.keys(facilityOptions.value).length === 0) {

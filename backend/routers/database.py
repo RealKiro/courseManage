@@ -374,13 +374,17 @@ def _scheduled_backup_job():
 def _acquire_backup_lock():
     """跨进程文件锁，防止多 worker 同时执行备份"""
     import tempfile
+    import sys
     lock_file = os.path.join(tempfile.gettempdir(), 'course_arrange_backup.lock')
-    try:
-        import fcntl
-        lock_fd = open(lock_file, 'w')
-        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        return lock_fd, True
-    except (IOError, OSError, ImportError):
+    if sys.platform != 'win32':
+        try:
+            import fcntl
+            lock_fd = open(lock_file, 'w')
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return lock_fd, True
+        except (IOError, OSError):
+            return None, False
+    else:
         try:
             import msvcrt
             lock_fd = open(lock_file, 'w')

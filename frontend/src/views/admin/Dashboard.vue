@@ -1454,6 +1454,38 @@
               </el-form-item>
             </el-form>
           </el-tab-pane>
+          <el-tab-pane :label="t('dashboard.classroomResourceTab')">
+            <div style="margin-bottom: 20px; color: #606266;">
+              {{ t('dashboard.classroomResourceDesc') }}
+            </div>
+            
+            <el-form :model="siteSettingsForm" label-width="160px">
+              <el-form-item :label="t('dashboard.classroomFacilityTypes')">
+                <div style="width: 100%;">
+                  <div v-for="(typeObj, index) in siteSettingsForm.classroom_facility_config.facility_types" :key="index" style="margin-bottom: 15px; padding: 10px; border: 1px solid #dcdfe6; border-radius: 4px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                      <el-input v-model="typeObj.name" style="width: 200px; margin-right: 10px;" :placeholder="t('dashboard.facilityTypeName')" />
+                      <el-button type="danger" size="small" @click="removeFacilityType(index)">{{ t('common.delete') }}</el-button>
+                    </div>
+                    <div style="margin-left: 20px;">
+                      <el-tag v-for="facility in typeObj.facilities" :key="facility" closable @close="removeFacility(index, facility)" style="margin-right: 5px; margin-bottom: 5px;">
+                        {{ facility }}
+                      </el-tag>
+                      <el-input 
+                        v-model="newFacilityInputs[index]" 
+                        :placeholder="t('dashboard.addFacilityPlaceholder')"
+                        size="small" 
+                        style="width: 120px; margin-right: 5px;"
+                        @keyup.enter="addFacility(index)"
+                      />
+                      <el-button size="small" type="primary" @click="addFacility(index)">{{ t('common.add') }}</el-button>
+                    </div>
+                  </div>
+                  <el-button type="primary" plain @click="addFacilityType">{{ t('dashboard.addFacilityType') }}</el-button>
+                </div>
+              </el-form-item>
+            </el-form>
+          </el-tab-pane>
           
         </el-tabs>
         </div>
@@ -2186,6 +2218,9 @@ const siteSettingsForm = ref({
       system_admin: '',
       system_audit: ''
     }
+  },
+  classroom_facility_config: {
+    facility_types: []
   }
 })
 
@@ -2195,6 +2230,43 @@ const classes = ref([])
 const teachers = ref([])
 const students = ref([])
 const testingUrl = ref(null) // 用于控制测试按钮的加载状态
+
+const newFacilityInputs = ref({})
+
+const addFacilityType = () => {
+  siteSettingsForm.value.classroom_facility_config.facility_types.push({
+    name: t('dashboard.newFacilityType'),
+    facilities: []
+  })
+  const newIndex = siteSettingsForm.value.classroom_facility_config.facility_types.length - 1
+  newFacilityInputs.value[newIndex] = ''
+}
+
+const removeFacilityType = (index) => {
+  siteSettingsForm.value.classroom_facility_config.facility_types.splice(index, 1)
+  delete newFacilityInputs.value[index]
+}
+
+const addFacility = (index) => {
+  const facility = newFacilityInputs.value[index]
+  if (facility && facility.trim()) {
+    const typeObj = siteSettingsForm.value.classroom_facility_config.facility_types[index]
+    if (typeObj && !typeObj.facilities.includes(facility.trim())) {
+      typeObj.facilities.push(facility.trim())
+    }
+    newFacilityInputs.value[index] = ''
+  }
+}
+
+const removeFacility = (index, facility) => {
+  const typeObj = siteSettingsForm.value.classroom_facility_config.facility_types[index]
+  if (typeObj) {
+    const facilityIndex = typeObj.facilities.indexOf(facility)
+    if (facilityIndex > -1) {
+      typeObj.facilities.splice(facilityIndex, 1)
+    }
+  }
+}
 
 const wechatConfig = ref({
   fee_alert: [''],
@@ -2552,7 +2624,8 @@ const handleSiteSettingsSave = async () => {
             exam_stages: siteSettingsForm.value.exam_stages.filter(s => s.trim() !== ''),
             grade_upgrade_month: siteSettingsForm.value.grade_upgrade_month,
             grade_upgrade_day: siteSettingsForm.value.grade_upgrade_day
-          })
+          }),
+          classroom_facility_config: JSON.stringify(siteSettingsForm.value.classroom_facility_config)
         }
         
         window.logger.log('[DEBUG] 正在保存配置，ai_config:', payload.ai_config)
@@ -2685,6 +2758,29 @@ const fetchSiteSettings = async () => {
             }
           }
         }
+      }
+
+      // 解析教室设施配置
+      if (response.data.classroom_facility_config) {
+        try {
+          const parsed = JSON.parse(response.data.classroom_facility_config)
+          if (Array.isArray(parsed.facility_types)) {
+            siteSettingsForm.value.classroom_facility_config.facility_types = parsed.facility_types
+          } else if (typeof parsed === 'object' && parsed !== null) {
+            // 旧格式 { "普通": [...], "多媒体": [...] } 转换为新格式
+            siteSettingsForm.value.classroom_facility_config.facility_types = Object.keys(parsed).map(name => ({
+              name: name,
+              facilities: Array.isArray(parsed[name]) ? parsed[name] : []
+            }))
+          } else {
+            siteSettingsForm.value.classroom_facility_config.facility_types = []
+          }
+        } catch (e) {
+          window.logger.error('解析教室设施配置失败:', e)
+          siteSettingsForm.value.classroom_facility_config.facility_types = []
+        }
+      } else {
+        siteSettingsForm.value.classroom_facility_config.facility_types = []
       }
 
       // ✅ 获取导师列表用于超级导师选择

@@ -495,8 +495,21 @@ def add_grade_updated_year_column():
     else:
         print("字段 grade_updated_year 已存在于表 students")
 
+def add_classroom_facility_config_column():
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'settings'"))
+        columns = [row[0] for row in result]
+    if 'classroom_facility_config' not in columns:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE settings ADD COLUMN classroom_facility_config TEXT DEFAULT '{}'"))
+            conn.commit()
+        print("已添加字段 classroom_facility_config 到表 settings")
+    else:
+        print("字段 classroom_facility_config 已存在于表 settings")
+
 add_parent_course_column()
 add_grade_updated_year_column()
+add_classroom_facility_config_column()
 
 def create_default_admin():
     from passlib.context import CryptContext
