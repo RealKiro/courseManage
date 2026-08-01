@@ -18,6 +18,11 @@ import os
 
 router = APIRouter()
 
+_LIST_FIELDS = [
+    'subject_teachers', 'fee_managers', 'grade_managers',
+    'evaluation_managers', 'operation_managers', 'completed_training_managers'
+]
+
 class TestWebhookRequest(BaseModel):
     webhook_url: str
 
@@ -198,41 +203,24 @@ def get_settings(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(settings)
     
-    # 解析subject_teachers
-    try:
-        subject_teachers_list = json.loads(settings.subject_teachers) if settings.subject_teachers else []
-        if not isinstance(subject_teachers_list, list):
-            subject_teachers_list = []
-    except (json.JSONDecodeError, TypeError):
-        subject_teachers_list = []
-    settings.subject_teachers = subject_teachers_list
-    
-    # 解析fee_managers
-    try:
-        fee_managers_list = json.loads(settings.fee_managers) if settings.fee_managers else []
-        if not isinstance(fee_managers_list, list):
-            fee_managers_list = []
-    except (json.JSONDecodeError, TypeError):
-        fee_managers_list = []
-    settings.fee_managers = fee_managers_list
+    _needs_fix = False
+    for _field in _LIST_FIELDS:
+        _val = getattr(settings, _field)
+        if _val is None or _val.strip() == '{}' or _val.strip() == '':
+            setattr(settings, _field, '[]')
+            _needs_fix = True
+    if _needs_fix:
+        db.commit()
+        db.refresh(settings)
 
-    # 解析grade_managers
-    try:
-        grade_managers_list = json.loads(settings.grade_managers) if settings.grade_managers else []
-        if not isinstance(grade_managers_list, list):
-            grade_managers_list = []
-    except (json.JSONDecodeError, TypeError):
-        grade_managers_list = []
-    settings.grade_managers = grade_managers_list
-
-    # 解析evaluation_managers
-    try:
-        evaluation_managers_list = json.loads(settings.evaluation_managers) if settings.evaluation_managers else []
-        if not isinstance(evaluation_managers_list, list):
-            evaluation_managers_list = []
-    except (json.JSONDecodeError, TypeError):
-        evaluation_managers_list = []
-    settings.evaluation_managers = evaluation_managers_list
+    for _field in _LIST_FIELDS:
+        try:
+            _parsed = json.loads(getattr(settings, _field)) if getattr(settings, _field) else []
+            if not isinstance(_parsed, list):
+                _parsed = []
+        except (json.JSONDecodeError, TypeError):
+            _parsed = []
+        setattr(settings, _field, _parsed)
 
     settings.log_enabled = settings.log_enabled if settings.log_enabled is not None else True
     settings.log_level = settings.log_level or "INFO"
@@ -243,24 +231,6 @@ def get_settings(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(settings)
         log_operation(db, "系统配置", "自动关闭", "开放注册已过期，自动关闭", "system", "WARNING")
-
-    # 解析operation_managers
-    try:
-        operation_managers_list = json.loads(settings.operation_managers) if settings.operation_managers else []
-        if not isinstance(operation_managers_list, list):
-            operation_managers_list = []
-    except (json.JSONDecodeError, TypeError):
-        operation_managers_list = []
-    settings.operation_managers = operation_managers_list
-
-    # 解析completed_training_managers
-    try:
-        completed_training_managers_list = json.loads(settings.completed_training_managers) if settings.completed_training_managers else []
-        if not isinstance(completed_training_managers_list, list):
-            completed_training_managers_list = []
-    except (json.JSONDecodeError, TypeError):
-        completed_training_managers_list = []
-    settings.completed_training_managers = completed_training_managers_list
 
     # 同步配置到全局通知器
     from utils.wechat_notifier import wechat_notifier
@@ -452,36 +422,14 @@ def update_settings(
     # 更新后立即同步
     from utils.wechat_notifier import wechat_notifier
     wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
-    # 返回前解析 JSON 字符串为列表，以符合 Schema 定义
-    try:
-        settings.subject_teachers = json.loads(settings.subject_teachers) if settings.subject_teachers else []
-    except:
-        settings.subject_teachers = []
-    
-    try:
-        settings.fee_managers = json.loads(settings.fee_managers) if settings.fee_managers else []
-    except:
-        settings.fee_managers = []
-
-    try:
-        settings.grade_managers = json.loads(settings.grade_managers) if settings.grade_managers else []
-    except:
-        settings.grade_managers = []
-
-    try:
-        settings.evaluation_managers = json.loads(settings.evaluation_managers) if settings.evaluation_managers else []
-    except:
-        settings.evaluation_managers = []
-
-    try:
-        settings.operation_managers = json.loads(settings.operation_managers) if settings.operation_managers else []
-    except:
-        settings.operation_managers = []
-
-    try:
-        settings.completed_training_managers = json.loads(settings.completed_training_managers) if settings.completed_training_managers else []
-    except:
-        settings.completed_training_managers = []
+    for _field in _LIST_FIELDS:
+        try:
+            _parsed = json.loads(getattr(settings, _field)) if getattr(settings, _field) else []
+            if not isinstance(_parsed, list):
+                _parsed = []
+        except (json.JSONDecodeError, TypeError):
+            _parsed = []
+        setattr(settings, _field, _parsed)
 
     log_operation(db, "系统配置", "修改", f"更新系统配置及微信通知映射", current_user.username)
     return settings
@@ -694,36 +642,14 @@ def create_or_update_settings(
     wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
     wechat_notifier.load_notification_settings(settings.notification_settings or "{}")
     
-    # 返回时同样需要解析一下，确保响应格式一致
-    try:
-        settings.subject_teachers = json.loads(settings.subject_teachers)
-    except:
-        settings.subject_teachers = []
-
-    try:
-        settings.fee_managers = json.loads(settings.fee_managers)
-    except:
-        settings.fee_managers = []
-
-    try:
-        settings.grade_managers = json.loads(settings.grade_managers)
-    except:
-        settings.grade_managers = []
-
-    try:
-        settings.evaluation_managers = json.loads(settings.evaluation_managers)
-    except:
-        settings.evaluation_managers = []
-
-    try:
-        settings.operation_managers = json.loads(settings.operation_managers)
-    except:
-        settings.operation_managers = []
-
-    try:
-        settings.completed_training_managers = json.loads(settings.completed_training_managers)
-    except:
-        settings.completed_training_managers = []
+    for _field in _LIST_FIELDS:
+        try:
+            _parsed = json.loads(getattr(settings, _field)) if getattr(settings, _field) else []
+            if not isinstance(_parsed, list):
+                _parsed = []
+        except (json.JSONDecodeError, TypeError):
+            _parsed = []
+        setattr(settings, _field, _parsed)
 
     # 重新初始化定时任务调度器
     from utils.remainder import init_scheduler

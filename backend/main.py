@@ -511,6 +511,21 @@ add_parent_course_column()
 add_grade_updated_year_column()
 add_classroom_facility_config_column()
 
+def fix_settings_list_fields():
+    from sqlalchemy import text
+    list_fields = [
+        'subject_teachers', 'fee_managers', 'grade_managers',
+        'evaluation_managers', 'operation_managers', 'completed_training_managers'
+    ]
+    with engine.connect() as conn:
+        for field in list_fields:
+            conn.execute(text(
+                f"UPDATE settings SET {field} = '[]' WHERE {field} = '{{}}' OR {field} IS NULL OR {field} = ''"
+            ))
+        conn.commit()
+
+fix_settings_list_fields()
+
 def create_default_admin():
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
