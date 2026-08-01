@@ -177,10 +177,9 @@
             <el-checkbox 
               v-for="item in facilityOptions[form.facilities] || []" 
               :key="item" 
+              :value="item"
               :label="item"
-            >
-              {{ item }}
-            </el-checkbox>
+            />
           </el-checkbox-group>
         </el-form-item>
         <el-form-item :label="t('rooms.isActive')" prop="is_active">
