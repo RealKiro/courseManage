@@ -112,7 +112,7 @@
           <template #default="{ row }">
             <div>
               <el-tag :type="row.facilities === '多媒体' ? 'primary' : 'info'" style="margin-right: 10px;">
-                {{ row.facilities === '多媒体' ? t('rooms.multimedia') : t('rooms.normal') }}
+                {{ row.facilities }}
               </el-tag>
             </div>
             <div v-if="row.facility_details" style="margin-top: 3px;">

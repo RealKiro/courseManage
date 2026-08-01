@@ -2629,6 +2629,7 @@ const handleSiteSettingsSave = async () => {
         }
         
         window.logger.log('[DEBUG] 正在保存配置，ai_config:', payload.ai_config)
+        window.logger.log('[DEBUG] classroom_facility_config保存值:', payload.classroom_facility_config)
         window.logger.log('[DEBUG] 完整的payload:', JSON.stringify(payload, null, 2))
         
         const response = await api.post('/settings', payload)
@@ -2761,6 +2762,7 @@ const fetchSiteSettings = async () => {
       }
 
       // 解析教室设施配置
+      window.logger.log('[DEBUG] classroom_facility_config raw value:', response.data.classroom_facility_config, 'type:', typeof response.data.classroom_facility_config)
       if (response.data.classroom_facility_config) {
         try {
           const parsed = JSON.parse(response.data.classroom_facility_config)

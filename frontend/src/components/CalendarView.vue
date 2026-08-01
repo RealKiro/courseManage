@@ -433,7 +433,7 @@
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="primary" @click="showCopyDialog">{{ t('calendar.copy') }}</el-button>
             <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending' && currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="info" @click="showExtraStudentDialog">{{ t('calendar.extraStudent') }}</el-button>
             <el-button v-if="currentUser && (currentUser.role === 'super_admin' || currentUser.role === 'course_admin')" type="warning" @click="handleNotifyNow">{{ t('calendar.notifyNow') }}</el-button>
-            <el-button type="info" @click="handleCopyNotification">{{ t('calendar.copyNotification') }}</el-button>
+            <el-button v-if="currentSchedule && currentSchedule.execution_status === 'pending'" type="info" @click="handleCopyNotification">{{ t('calendar.copyNotification') }}</el-button>
           </div>
           <div>
             <el-button v-if="canEditCompletedSchedule" type="danger" @click="handleDeleteSchedule">{{ t('calendar.delete') }}</el-button>
@@ -2965,17 +2965,16 @@ const handleCopyNotification = async () => {
     }
   }
   
-  // 构建通知内容
+  const hour = parseInt(schedule.start_time.split(':')[0])
+  const timePeriod = hour < 12 ? '上午' : '下午'
+  
   let notificationContent = `[烟花][烟花][烟花][温馨提示]warm tips：\n`
-  notificationContent += `【${className}】明天上课安排\n`
-  notificationContent += `【${dateStr}】【${timeStr}】【${courseName}】`
-  if (roomName) {
-    notificationContent += `，【${roomName}】`
-  }
-  notificationContent += `\n`
+  notificationContent += `【${className}】明天【${dateStr}】上课安排\n`
+  notificationContent += `时间【${timePeriod}】【${timeStr}】\n`
+  notificationContent += `科目【${courseName}】教室【${roomName || '未安排'}】\n`
   
   if (studentNames.length > 0) {
-    notificationContent += `【${studentNames.join('】【')}】\n`
+    notificationContent += `学员【${studentNames.join('】【')}】\n`
     notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
     notificationContent += studentNames.map(name => `@${name}`).join('')
   } else {

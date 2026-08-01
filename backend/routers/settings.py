@@ -265,6 +265,9 @@ def get_settings(db: Session = Depends(get_db)):
     # 同步配置到全局通知器
     from utils.wechat_notifier import wechat_notifier
     wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
+    
+    log_operation(db, "系统配置", "调试", f"返回classroom_facility_config: {settings.classroom_facility_config[:200] if settings.classroom_facility_config else 'None'}", "system", "DEBUG")
+    
     return settings
 
 @router.get("/check-scheduler-status")
@@ -439,6 +442,9 @@ def update_settings(
         settings.contact_email = settings_data.contact_email
     if settings_data.contact_wechat is not None:
         settings.contact_wechat = settings_data.contact_wechat
+    
+    if settings_data.classroom_facility_config is not None:
+        settings.classroom_facility_config = settings_data.classroom_facility_config
     
     db.commit()
     db.refresh(settings)
@@ -630,6 +636,10 @@ def create_or_update_settings(
         if settings_data.contact_wechat is not None:
             settings.contact_wechat = settings_data.contact_wechat
         
+        if settings_data.classroom_facility_config is not None:
+            settings.classroom_facility_config = settings_data.classroom_facility_config
+            log_operation(db, "系统配置", "调试", f"保存classroom_facility_config: {settings_data.classroom_facility_config[:200] if settings_data.classroom_facility_config else 'None'}", current_user.username, "DEBUG")
+        
         db.commit()
         log_operation(db, "系统配置", "修改", f"更新站点参数: {settings_data.site_name}", current_user.username)
         db.refresh(settings)
@@ -671,6 +681,7 @@ def create_or_update_settings(
             contact_phone=settings_data.contact_phone or "",
             contact_email=settings_data.contact_email or "",
             contact_wechat=settings_data.contact_wechat or "",
+            classroom_facility_config=settings_data.classroom_facility_config or '{}',
         )
 
         db.add(settings)
