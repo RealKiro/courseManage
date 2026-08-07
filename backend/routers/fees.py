@@ -17,6 +17,7 @@ from io import BytesIO
 from fastapi.responses import StreamingResponse
 from utils.logger import log_operation
 from utils.wechat_notifier import wechat_notifier
+from utils.fee_utils import calculate_remaining_amount
 from sqlalchemy import select
 import json
 
@@ -27,6 +28,9 @@ def get_hours_per_lesson(db: Session) -> float:
     if settings and settings.hours_per_lesson is not None:
         return settings.hours_per_lesson
     return 2.0
+
+def _calculate_remaining_amount(fee) -> tuple:
+    return calculate_remaining_amount(fee)
 
 def _find_fee_with_parent_fallback(db: Session, student_id: int, course_id: int):
     """查找学员课费项，支持父科目 fallback。
@@ -233,6 +237,8 @@ def get_student_fees(
             student_is_active=student.is_active if student else True,
             course_name=course.name if course else "",
             course_teachers=course_teachers,
+            remaining_amount=_calculate_remaining_amount(fee)[0],
+            discount_note=_calculate_remaining_amount(fee)[1],
             created_at=fee.created_at,
             updated_at=fee.updated_at
         ))
@@ -325,6 +331,8 @@ def get_student_fee(
         is_active=fee.is_active,
         student_name=student.name if student else "",
         course_name=course.name if course else "",
+        remaining_amount=_calculate_remaining_amount(fee)[0],
+        discount_note=_calculate_remaining_amount(fee)[1],
         created_at=fee.created_at,
         updated_at=fee.updated_at
     )
@@ -448,9 +456,9 @@ def create_student_fee(
                     log_type="consume",
                     amount=-hours * db_fee.hourly_fee,
                     hours=hours,
-                    remaining_amount=db_fee.total_actual_amount - db_fee.total_refund_amount,
+                    remaining_amount=_calculate_remaining_amount(db_fee)[0],
                     remaining_hours=db_fee.remaining_hours,
-                    description=f"完训消耗 {hours} 小时(根据规则和实际情况触发记录)"
+                    description=f"完训消耗 {hours} 小时(根据规则和实际情况触发记录)" + (_calculate_remaining_amount(db_fee)[1] and f"（{_calculate_remaining_amount(db_fee)[1]}）" or "")
                 )
                 db.add(consume_log)
                 has_consumed = True
@@ -481,6 +489,8 @@ def create_student_fee(
         is_active=db_fee.is_active,
         student_name=student.name,
         course_name=course.name,
+        remaining_amount=_calculate_remaining_amount(db_fee)[0],
+        discount_note=_calculate_remaining_amount(db_fee)[1],
         created_at=db_fee.created_at,
         updated_at=db_fee.updated_at
     )
@@ -675,9 +685,9 @@ def trigger_auto_consume(
                     log_type="consume",
                     amount=-hours * fee.hourly_fee,
                     hours=hours,
-                    remaining_amount=fee.total_actual_amount - fee.total_refund_amount,
+                    remaining_amount=_calculate_remaining_amount(fee)[0],
                     remaining_hours=fee.remaining_hours,
-                    description=f"完训消耗 {hours} 小时(根据规则和实际情况触发记录)"
+                    description=f"完训消耗 {hours} 小时(根据规则和实际情况触发记录)" + (_calculate_remaining_amount(fee)[1] and f"（{_calculate_remaining_amount(fee)[1]}）" or "")
                 )
                 db.add(consume_log)
                 consumed_count += 1
@@ -864,7 +874,7 @@ def add_payment(
         amount=actual_amount,
         receivable_amount=receivable_amount,
         hours=0,
-        remaining_amount=fee.total_actual_amount,
+        remaining_amount=_calculate_remaining_amount(fee)[0],
         remaining_hours=fee.remaining_hours,
         payment_date=payment.payment_date or date.today(),
         description=payment.description or f"追缴（{payment.lesson_count}节课，{payment.lesson_count * hpl}小时）{'，优惠' + str(payment.discount_amount) + '元' if payment.discount_amount > 0 else ''}{'，收费来自'+ payment_method_desc}"
@@ -916,7 +926,7 @@ def add_refund(
         log_type="refund",
         amount=-refund.amount,
         hours=-refunded_hours,
-        remaining_amount=fee.total_actual_amount - fee.total_refund_amount,
+        remaining_amount=_calculate_remaining_amount(fee)[0],
         remaining_hours=fee.remaining_hours,
         refund_date=refund.refund_date or date.today(),
         description=refund.refund_reason or refund.description or f"退费 {refund.amount} 元"
@@ -985,6 +995,8 @@ def consume_hours(
         fee.consumed_hours += hours
         fee.remaining_hours = fee.total_lesson_count * hpl - fee.consumed_hours
         
+        remaining_amt, discount_note = _calculate_remaining_amount(fee)
+        
         log = FeeLog(
             student_id=student.id,
             course_id=schedule.course_id,
@@ -992,13 +1004,13 @@ def consume_hours(
             log_type="consume",
             amount=-hours * fee.hourly_fee,
             hours=hours,
-            remaining_amount=fee.total_actual_amount - fee.total_refund_amount,
+            remaining_amount=remaining_amt,
             remaining_hours=fee.remaining_hours,
-            description=f"完训消耗 {hours} 小时"
+            description=f"完训消耗 {hours} 小时" + (discount_note and f"（{discount_note}）" or "")
         )
         db.add(log)
         
-        log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 消耗 {hours} 小时，剩余课时: {fee.remaining_hours}", current_user.username, "INFO")
+        log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 消耗 {hours} 小时，剩余课时: {fee.remaining_hours}，剩余金额: {remaining_amt:.2f}" + (discount_note and f"，{discount_note}" or ""), current_user.username, "INFO")
         
         results.append({
             "student_id": student.id,
@@ -1286,7 +1298,8 @@ def get_fee_alerts(
                 "remaining_hours": fee.remaining_hours,
                 "alert_threshold": fee.alert_threshold,
                 "hourly_fee": fee.hourly_fee,
-                "remaining_amount": fee.total_actual_amount - fee.total_refund_amount
+                "remaining_amount": _calculate_remaining_amount(fee)[0],
+                "discount_note": _calculate_remaining_amount(fee)[1]
             }
             
             alerts.append(alert_data)
@@ -1382,15 +1395,15 @@ def export_payment_records(
     
     _t_map = {
         "zh-CN": {
-            "sheet": "课费管理",
-            "headers": ["学员", "科目", "起算日期", "课时费/小时", "累计应收金额", "累计实收金额", "累计退费金额", "当前累计收入", "累计已消耗课时", "当前剩余课时数", "预警阈值(小时)", "状态"],
-            "enabled": "启用", "disabled": "禁用",
+            "sheet": "课费汇总",
+            "headers": ["学员", "科目", "起算日期", "课时费/小时", "累计应收金额", "累计实收金额", "累计退费金额", "当前剩余金额", "累计已消耗课时", "当前剩余课时数", "预警阈值(小时)", "状态"],
+            "enabled": "启用", "disabled": "停用"
         },
         "en": {
-            "sheet": "Fee Management",
-            "headers": ["Student", "Course", "Start Date", "Hourly Fee", "Total Receivable", "Total Actual", "Total Refund", "Current Revenue", "Consumed Hours", "Remaining Hours", "Alert Threshold (hrs)", "Status"],
-            "enabled": "Enabled", "disabled": "Disabled",
-        },
+            "sheet": "Fee Summary",
+            "headers": ["Student", "Course", "Start Date", "Hourly Fee", "Total Receivable", "Total Actual", "Total Refund", "Current Remaining Amount", "Consumed Hours", "Remaining Hours", "Alert Threshold (hrs)", "Status"],
+            "enabled": "Enabled", "disabled": "Disabled"
+        }
     }
     t = _t_map.get(lang, _t_map["zh-CN"])
     from sqlalchemy.orm import joinedload
@@ -1457,7 +1470,7 @@ def export_payment_records(
             total_receivable_amount,
             calculated_total_actual_amount,
             total_refund_amount,
-            calculated_total_actual_amount - total_refund_amount,
+            _calculate_remaining_amount(fee)[0],
             consumed_hours,
             fee.remaining_hours,
             fee.alert_threshold,
@@ -1688,6 +1701,8 @@ def consume_hours_with_attendance(
         fee.consumed_hours += hours
         fee.remaining_hours = fee.total_lesson_count * hpl - fee.consumed_hours
         
+        remaining_amt, discount_note = _calculate_remaining_amount(fee)
+        
         log = FeeLog(
             student_id=student.id,
             course_id=schedule.course_id,
@@ -1695,13 +1710,13 @@ def consume_hours_with_attendance(
             log_type="consume",
             amount=-hours * fee.hourly_fee,
             hours=hours,
-            remaining_amount=fee.total_actual_amount - fee.total_refund_amount,
+            remaining_amount=remaining_amt,
             remaining_hours=fee.remaining_hours,
-            description=f"完训消耗 {hours} 小时"
+            description=f"完训消耗 {hours} 小时" + (discount_note and f"（{discount_note}）" or "")
         )
         db.add(log)
         
-        log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 消耗 {hours} 小时，剩余课时: {fee.remaining_hours}", current_user.username, "INFO")
+        log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 消耗 {hours} 小时，剩余课时: {fee.remaining_hours}，剩余金额: {remaining_amt:.2f}" + (discount_note and f"，{discount_note}" or ""), current_user.username, "INFO")
         
         results.append({
             "student_id": student.id,

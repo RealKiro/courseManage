@@ -983,6 +983,19 @@
                   <el-icon><InfoFilled /></el-icon> {{ t('dashboard.emailRecipientsTip') }}
                 </div>
               </el-form-item>
+              <el-divider content-position="left">{{ t('dashboard.feeAlertConfig') }}</el-divider>
+              <el-form-item :label="t('dashboard.enableFeeAlert')">
+                <el-switch v-model="emailNotificationSettings.fee_alert_enabled" />
+              </el-form-item>
+              <el-form-item :label="t('dashboard.feeAlertRecipients')">
+                <el-checkbox-group v-model="emailNotificationSettings.fee_alert_recipients">
+                  <el-checkbox value="fee_managers">{{ t('dashboard.feeManagers') }}</el-checkbox>
+                  <el-checkbox value="students">{{ t('dashboard.student') }}</el-checkbox>
+                </el-checkbox-group>
+                <div style="margin-top: 5px; font-size: 12px; color: #909399;">
+                  <el-icon><InfoFilled /></el-icon> {{ t('dashboard.feeAlertRecipientsTip') }}
+                </div>
+              </el-form-item>
             </el-form>
           </el-tab-pane>
           <el-tab-pane :label="t('dashboard.wechatTab')">
@@ -2285,7 +2298,9 @@ const emailNotificationSettings = ref({
   reminders: ['morning', 'evening'],
   recipients: ['teachers', 'students'],
   homework_enabled: false,
-  homework_recipients: ['students']
+  homework_recipients: ['students'],
+  fee_alert_enabled: false,
+  fee_alert_recipients: ['fee_managers']
 })
 const testingEmail = ref(false)
 
@@ -2555,7 +2570,9 @@ const handleSiteSettingsSave = async () => {
           evening_reminder: emailNotificationSettings.value.reminders.includes('evening'),
           recipients: emailNotificationSettings.value.recipients,
           homework_enabled: emailNotificationSettings.value.homework_enabled,
-          homework_recipients: emailNotificationSettings.value.homework_recipients
+          homework_recipients: emailNotificationSettings.value.homework_recipients,
+          fee_alert_enabled: emailNotificationSettings.value.fee_alert_enabled,
+          fee_alert_recipients: emailNotificationSettings.value.fee_alert_recipients
         }
 
         const aiConfigData = {
@@ -2860,7 +2877,9 @@ const fetchSiteSettings = async () => {
             reminders: [],
             recipients: parsed.recipients || [],
             homework_enabled: parsed.homework_enabled || false,
-            homework_recipients: parsed.homework_recipients || []
+            homework_recipients: parsed.homework_recipients || [],
+            fee_alert_enabled: parsed.fee_alert_enabled || false,
+            fee_alert_recipients: parsed.fee_alert_recipients || ['fee_managers']
           }
           if (parsed.morning_reminder) emailNotificationSettings.value.reminders.push('morning')
           if (parsed.evening_reminder) emailNotificationSettings.value.reminders.push('evening')
@@ -3688,7 +3707,9 @@ const testAIConnection = async () => {
       evening_reminder: emailNotificationSettings.value.reminders.includes('evening'),
       recipients: emailNotificationSettings.value.recipients,
       homework_enabled: emailNotificationSettings.value.homework_enabled,
-      homework_recipients: emailNotificationSettings.value.homework_recipients
+      homework_recipients: emailNotificationSettings.value.homework_recipients,
+      fee_alert_enabled: emailNotificationSettings.value.fee_alert_enabled,
+      fee_alert_recipients: emailNotificationSettings.value.fee_alert_recipients
     }
 
     const aiConfigData = {

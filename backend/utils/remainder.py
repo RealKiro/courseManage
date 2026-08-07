@@ -4,9 +4,10 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from database import SessionLocal
-from models import Schedule, Teacher, Class, Room, Student, Settings
+from models import Schedule, Teacher, Class, Room, Student, Settings, StudentFee, FeeLog, Course
 from utils.wechat_notifier import wechat_notifier
 from utils.email_notifier import email_notifier
+from utils.fee_utils import calculate_remaining_amount
 from datetime import date, datetime, timedelta
 import json
 from utils.logger import log_operation
@@ -385,6 +386,127 @@ def check_and_send_evening_reminder():
         db.close()
         _release_reminder_lock(lock_fd)
 
+def check_and_send_fee_alert():
+    """每天上午9点检查并发送课时费预警"""
+    import os, threading
+    db = SessionLocal()
+    lock_fd, acquired = _acquire_reminder_lock()
+    if not acquired:
+        log_operation(db, "系统配置", "定时任务执行", f"课时费预警任务触发 [PID={os.getpid()} TID={threading.current_thread().ident}] - 跳过", "system", "DEBUG")
+        return
+    
+    db = SessionLocal()
+    try:
+        settings = db.query(Settings).first()
+        if not settings:
+            return
+        
+        wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
+        wechat_notifier.load_promotion_info(
+            website=settings.organization_website,
+            wechat_qr=settings.wechat_qrcode,
+            work_wechat_qr=settings.work_wechat_qrcode
+        )
+        
+        email_notif_settings = json.loads(settings.email_notification_settings or "{}")
+        fee_alert_email_enabled = email_notif_settings.get('fee_alert_enabled', False)
+        
+        fees = db.query(StudentFee).filter(StudentFee.is_active == True).all()
+        
+        alert_count = 0
+        for fee in fees:
+            if fee.remaining_hours <= fee.alert_threshold:
+                student = db.query(Student).filter(Student.id == fee.student_id).first()
+                course = db.query(Course).filter(Course.id == fee.course_id).first()
+                if not student:
+                    continue
+                
+                remaining_amount, discount_note = calculate_remaining_amount(fee)
+                alert_count += 1
+                
+                try:
+                    content = f"""## 💰 课时费预警通知
+> **学员：** {student.name}
+> **科目：** {course.name if course else '未知'}
+> **剩余课时：** <font color="warning">{fee.remaining_hours:.2f} 小时</font>
+> **剩余金额：** <font color="warning">¥{remaining_amount:.2f}</font>
+
+请及时联系学员续费！"""
+                    wechat_notifier.send_message_by_type("fee_alert", content, is_markdown=True)
+                except Exception as e:
+                    log_operation(db, "费用管理", "定时发送微信缴费预警失败", f"学员ID: {fee.student_id}, 科目ID: {fee.course_id}, 错误: {str(e)}", "system", "ERROR")
+                
+                if fee_alert_email_enabled and student.email:
+                    try:
+                        fee_alert_recipients = email_notif_settings.get('fee_alert_recipients', ['fee_managers'])
+                        should_send_to_student = 'students' in fee_alert_recipients
+                        
+                        if should_send_to_student:
+                            email_config = settings.email_config
+                            from utils.email_notifier import EmailNotifier
+                            email_notifier_instance = EmailNotifier()
+                            email_notifier_instance.load_config(email_config, settings.site_name)
+                            
+                            subject = f"【{settings.site_name}】课时费预警通知"
+                            html_content = f"""
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <meta charset="UTF-8">
+                                <style>
+                                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                                    .header {{ background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                                    .content {{ background: #f9f9f9; padding: 20px; border-radius: 0 0 10px 10px; }}
+                                    .warning {{ color: #f56c6c; font-weight: bold; }}
+                                    .info-item {{ margin: 10px 0; padding: 10px; background: white; border-left: 4px solid #409eff; }}
+                                </style>
+                            </head>
+                            <body>
+                                <div class="container">
+                                    <div class="header">
+                                        <h2>💰 课时费预警通知</h2>
+                                    </div>
+                                    <div class="content">
+                                        <div class="info-item">
+                                            <strong>学员姓名：</strong>{student.name}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>科目名称：</strong>{course.name if course else '未知'}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>剩余课时：</strong><span class="warning">{fee.remaining_hours:.2f} 小时</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>剩余金额：</strong><span class="warning">¥{remaining_amount:.2f}</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>预警阈值：</strong>{fee.alert_threshold} 小时
+                                        </div>
+                                        <p style="margin-top: 20px; color: #909399;">
+                                            温馨提示：您的课时即将用完，请及时联系机构续费，以免影响正常上课。
+                                        </p>
+                                    </div>
+                                </div>
+                            </body>
+                            </html>
+                            """
+                            email_notifier_instance.send_email([student.email], subject, html_content)
+                            log_operation(db, "费用管理", "定时发送邮件缴费预警", f"已发送邮件给学员 {student.name} ({student.email})", "system", "INFO")
+                    except Exception as e:
+                        log_operation(db, "费用管理", "定时发送邮件缴费预警失败", f"学员ID: {fee.student_id}, 错误: {str(e)}", "system", "ERROR")
+        
+        if alert_count > 0:
+            log_operation(db, "费用管理", "定时课时费预警", f"共发送 {alert_count} 条课时费预警通知", "system", "INFO")
+        
+    except Exception as e:
+        import traceback
+        log_operation(db, "费用管理", "课时费预警任务出错", f"错误: {str(e)}", "system", "ERROR")
+        log_operation(db, "费用管理", "课时费预警任务出错", f"堆栈跟踪: {traceback.format_exc()}", "system", "ERROR")
+    finally:
+        db.close()
+        _release_reminder_lock(lock_fd)
+
 def init_scheduler():
     """根据设置初始化定时任务"""
     db = SessionLocal()
@@ -396,8 +518,8 @@ def init_scheduler():
         log_operation(db, "系统配置", "初始化定时任务", f"当前共有 {len(all_jobs)} 个任务，将移除所有与课程提醒相关的任务", "system", "DEBUG")
         for job in all_jobs:
             # 移除我们管理的所有课程提醒任务
-            if job.id in ['today_schedule_reminder', 'tomorrow_schedule_reminder'] or \
-               (job.name and ('课程提醒' in job.name)):
+            if job.id in ['today_schedule_reminder', 'tomorrow_schedule_reminder', 'fee_alert_reminder'] or \
+               (job.name and ('课程提醒' in job.name or '课时费预警' in job.name)):
                 scheduler.remove_job(job.id)
                 log_operation(db, "系统配置", "初始化定时任务", f"已移除任务: {job.id} ({job.name})", "system", "DEBUG")
         
@@ -444,6 +566,25 @@ def init_scheduler():
                 replace_existing=True
             )
             log_operation(db, "系统配置", "初始化定时任务", "已添加晚上7点明日课程提醒任务", "system", "INFO")
+        
+        # 检查是否需要添加课时费预警任务
+        need_fee_alert = False
+        if settings:
+            wechat_config = json.loads(settings.wechat_webhook_config or "{}")
+            has_fee_alert_webhook = bool(wechat_config.get("fee_alert"))
+            email_notif_settings_check = json.loads(settings.email_notification_settings or "{}")
+            has_fee_alert_email = email_notif_settings_check.get('fee_alert_enabled', False)
+            need_fee_alert = has_fee_alert_webhook or has_fee_alert_email
+        
+        if need_fee_alert:
+            scheduler.add_job(
+                check_and_send_fee_alert,
+                CronTrigger(hour=9, minute=0, timezone=BEIJING_TZ),
+                id='fee_alert_reminder',
+                name='课时费预警',
+                replace_existing=True
+            )
+            log_operation(db, "系统配置", "初始化定时任务", "已添加上午9点课时费预警任务", "system", "INFO")
         
         # 确保调度器已启动
         if not scheduler.running:

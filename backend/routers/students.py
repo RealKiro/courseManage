@@ -168,6 +168,7 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
 @router.post("", response_model=StudentSchema)
 def create_student(
     student: StudentCreate,
+    force: bool = Query(False, description="强制创建，跳过同名检查"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_user)
 ):
@@ -175,6 +176,12 @@ def create_student(
     if db_student:
         log_operation(db, "学员管理", "创建学员失败", f"学员代码 {student.code} 已存在", current_user.username, "WARNING")
         raise HTTPException(status_code=400, detail="学员代码已存在")
+    
+    if not force:
+        existing_student = db.query(Student).filter(Student.name == student.name).first()
+        if existing_student:
+            log_operation(db, "学员管理", "创建学员提示", f"同名学员 {student.name} 已存在 (ID: {existing_student.id}, 代码: {existing_student.code})", current_user.username, "WARNING")
+            raise HTTPException(status_code=409, detail=f"同名学员已存在：{existing_student.name}（代码：{existing_student.code}），请确认是否为不同人员")
     
     db_student = Student(
         code=student.code,

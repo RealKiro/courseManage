@@ -133,19 +133,22 @@
               ¥{{ row.hourly_fee.toFixed(2) }}
             </template>
           </el-table-column>
-          <el-table-column prop="current_remaining_amount" :label="t('fee.currentRemainingAmount')" width="270" sortable>
+          <el-table-column prop="remaining_amount" :label="t('fee.currentRemainingAmount')" width="270" sortable>
             <template #default="{ row }">
               <span :style="{ 
-                color: (row.total_actual_amount - row.total_refund_amount) <= row.alert_threshold * row.hourly_fee ? '#ff0000' : '#67C23A',
+                color: row.remaining_amount <= row.alert_threshold * row.hourly_fee ? '#ff0000' : '#67C23A',
                 fontWeight: 'bold',
                 fontSize: '16px',
                 display: 'inline-block',
                 padding: '4px 8px',
                 borderRadius: '4px',
-                backgroundColor: (row.total_actual_amount - row.total_refund_amount) <= row.alert_threshold * row.hourly_fee ? '#fef0f0' : '#f0f9ff',
-                border: (row.total_actual_amount - row.total_refund_amount) <= row.alert_threshold * row.hourly_fee ? '1px solid #f56c6c' : '1px solid #67C23A'
+                backgroundColor: row.remaining_amount <= row.alert_threshold * row.hourly_fee ? '#fef0f0' : '#f0f9ff',
+                border: row.remaining_amount <= row.alert_threshold * row.hourly_fee ? '1px solid #f56c6c' : '1px solid #67C23A'
               }">
-                ¥{{ (row.total_actual_amount - row.total_refund_amount).toFixed(2) }}
+                ¥{{ row.remaining_amount.toFixed(2) }}
+              </span>
+              <span v-if="row.discount_note" style="display: block; font-size: 12px; color: #E6A23C; margin-top: 2px;">
+                {{ row.discount_note }}
               </span>
             </template>
           </el-table-column>
@@ -436,7 +439,7 @@
             :placeholder="t('fee.selectRefundDate')"
             value-format="YYYY-MM-DD"
             style="width: 100%"
-          />
+          />ji须
         </el-form-item>
         <el-form-item :label="t('fee.refundMethod')" prop="refund_method">
           <el-select v-model="refundForm.refund_method" :placeholder="t('f  ee.selectRefundMethod')" style="width: 100%">

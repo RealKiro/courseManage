@@ -595,6 +595,8 @@ class StudentFee(StudentFeeBase):
     total_refund_amount: float = 0.0
     consumed_hours: float = 0.0
     consumed_schedules: List[dict] = []
+    remaining_amount: float = 0.0
+    discount_note: str = ""
     created_at: datetime
     updated_at: datetime
 

@@ -128,6 +128,7 @@ def get_teacher(teacher_id: int, db: Session = Depends(get_db)):
 @router.post("", response_model=TeacherSchema)
 def create_teacher(
     teacher: TeacherCreate,
+    force: bool = Query(False, description="强制创建，跳过同名检查"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_user)
 ):
@@ -135,6 +136,12 @@ def create_teacher(
     if db_teacher:
         log_operation(db, "导师管理", "创建导师失败", f"导师代码 {teacher.code} 已存在", current_user.username, "WARNING")
         raise HTTPException(status_code=400, detail="导师代码已存在")
+    
+    if not force:
+        existing_teacher = db.query(Teacher).filter(Teacher.name == teacher.name).first()
+        if existing_teacher:
+            log_operation(db, "导师管理", "创建导师提示", f"同名导师 {teacher.name} 已存在 (ID: {existing_teacher.id}, 代码: {existing_teacher.code})", current_user.username, "WARNING")
+            raise HTTPException(status_code=409, detail=f"同名导师已存在：{existing_teacher.name}（代码：{existing_teacher.code}），请确认是否为不同人员")
     
     db_teacher = Teacher(
         code=teacher.code,

@@ -1337,7 +1337,28 @@ const handleSubmit = async () => {
           }
         } else {
           // 新建学员
-          await api.post('/students', form.value)
+          try {
+            await api.post('/students', form.value)
+          } catch (error) {
+            if (error.response && error.response.status === 409) {
+              try {
+                await ElMessageBox.confirm(
+                  error.response.data.detail,
+                  t('common.tip'),
+                  {
+                    confirmButtonText: t('students.stillCreate'),
+                    cancelButtonText: t('common.cancel'),
+                    type: 'warning'
+                  }
+                )
+                forceCreateStudent()
+                return
+              } catch {
+                return
+              }
+            }
+            throw error
+          }
           ElMessage.success(t('common.createSuccess'))
           // 重新加载allStudents数据
           try {
@@ -1361,6 +1382,28 @@ const handleSubmit = async () => {
       }
     }
   })
+}
+
+const forceCreateStudent = async () => {
+  try {
+    await api.post('/students?force=true', form.value)
+    ElMessage.success(t('common.createSuccess'))
+    try {
+      const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
+      allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
+    } catch (error) {
+      window.logger.error('重新加载所有学员数据失败:', error)
+    }
+    dialogVisible.value = false
+    fetchStudents()
+  } catch (error) {
+    window.logger.error('强制创建学员失败:', error)
+    if (error.response) {
+      ElMessage.error(t('students.operationFailedDetail', { status: error.response.status, detail: JSON.stringify(error.response.data) }))
+    } else {
+      ElMessage.error(t('common.operationFailedNetwork'))
+    }
+  }
 }
 
 const handleDelete = (row) => {

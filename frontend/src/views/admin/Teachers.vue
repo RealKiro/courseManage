@@ -950,7 +950,28 @@ const handleSubmit = async () => {
           await api.put(`/teachers/${form.value.id}`, formData)
           ElMessage.success(t('common.updateSuccess'))
         } else {
-          await api.post('/teachers', formData)
+          try {
+            await api.post('/teachers', formData)
+          } catch (error) {
+            if (error.response && error.response.status === 409) {
+              try {
+                await ElMessageBox.confirm(
+                  error.response.data.detail,
+                  t('common.tip'),
+                  {
+                    confirmButtonText: t('teachers.stillCreate'),
+                    cancelButtonText: t('common.cancel'),
+                    type: 'warning'
+                  }
+                )
+                forceCreateTeacher(formData)
+                return
+              } catch {
+                return
+              }
+            }
+            throw error
+          }
           ElMessage.success(t('common.createSuccess'))
         }
         dialogVisible.value = false
@@ -971,6 +992,22 @@ const handleSubmit = async () => {
       }
     }
   })
+}
+
+const forceCreateTeacher = async (formData) => {
+  try {
+    await api.post('/teachers?force=true', formData)
+    ElMessage.success(t('common.createSuccess'))
+    dialogVisible.value = false
+    fetchTeachers()
+  } catch (error) {
+    window.logger.error('强制创建导师失败:', error)
+    if (error.response && error.response.data && error.response.data.detail) {
+      ElMessage.error(t('common.operationFailed') + ': ' + error.response.data.detail)
+    } else {
+      ElMessage.error(t('common.operationFailed'))
+    }
+  }
 }
 
 const handleDelete = (row) => {
