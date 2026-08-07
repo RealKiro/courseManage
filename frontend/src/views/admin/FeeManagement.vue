@@ -439,10 +439,10 @@
             :placeholder="t('fee.selectRefundDate')"
             value-format="YYYY-MM-DD"
             style="width: 100%"
-          />ji须
+          />
         </el-form-item>
         <el-form-item :label="t('fee.refundMethod')" prop="refund_method">
-          <el-select v-model="refundForm.refund_method" :placeholder="t('f  ee.selectRefundMethod')" style="width: 100%">
+          <el-select v-model="refundForm.refund_method" :placeholder="t('fee.selectRefundMethod')" style="width: 100%">
             <el-option :label="t('fee.wechat')" value="微信" />
             <el-option :label="t('fee.alipay')" value="支付宝" />
             <el-option :label="t('fee.cash')" value="现金" />
