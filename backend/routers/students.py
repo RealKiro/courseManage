@@ -7,7 +7,7 @@ from typing import List, Optional
 from datetime import date
 import json
 from database import get_db
-from models import Student, Class, Schedule, Course, Teacher, Settings
+from models import Student, Class, Schedule, Course, Teacher, Settings, schedule_student
 from schemas import StudentCreate, StudentUpdate, Student as StudentSchema, PaginatedStudentResponse
 from routers.auth import get_teacher_visibility_filter, get_current_user,  get_current_course_admin_user, User
 from utils.logger import log_operation
@@ -237,6 +237,7 @@ def create_student(
 def update_student(
     student_id: int,
     student: StudentUpdate,
+    force: bool = Query(False, description="强制更新，跳过同名检查"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_user)
 ):
@@ -244,6 +245,13 @@ def update_student(
     if not db_student:
         log_operation(db, "学员管理", "修改学员失败", f"学员ID {student_id} 不存在", current_user.username, "WARNING")
         raise HTTPException(status_code=404, detail="学员不存在")
+    
+    # 检查同名冲突（名称发生变化时）
+    if not force and student.name is not None and student.name != db_student.name:
+        existing_student = db.query(Student).filter(Student.name == student.name, Student.id != student_id).first()
+        if existing_student:
+            log_operation(db, "学员管理", "修改学员提示", f"同名学员 {student.name} 已存在 (ID: {existing_student.id}, 代码: {existing_student.code})", current_user.username, "WARNING")
+            raise HTTPException(status_code=409, detail=f"同名学员已存在：{existing_student.name}（代码：{existing_student.code}），请确认是否为不同人员")
     
     # 检查is_active是否从True变为False
     is_becoming_inactive = (db_student.is_active == True and student.is_active == False)
@@ -330,9 +338,17 @@ def delete_student(
         log_operation(db, "学员管理", "删除学员失败", f"学员ID {student_id} 不存在", current_user.username, "WARNING")
         raise HTTPException(status_code=404, detail="学员不存在")
     
-    if db_student.schedules:
-        log_operation(db, "学员管理", "删除学员失败", f"学员 {db_student.code} - {db_student.name} 已有课程安排，无法删除", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="该学员已有课程安排，无法删除")
+    # 检查学员是否关联班级
+    if db_student.classes and len(db_student.classes) > 0:
+        class_names = ", ".join([c.name for c in db_student.classes])
+        log_operation(db, "学员管理", "删除学员失败", f"学员 {db_student.code} - {db_student.name} 已关联班级：{class_names}，无法删除", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail=f"该学员已关联班级：{class_names}，无法删除")
+    
+    # 检查学员是否关联课程安排（通过schedule_student表）
+    schedule_count = db.query(schedule_student).filter(schedule_student.c.student_id == student_id).count()
+    if schedule_count > 0:
+        log_operation(db, "学员管理", "删除学员失败", f"学员 {db_student.code} - {db_student.name} 已有{schedule_count}条课程安排记录，无法删除", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail=f"该学员已有{schedule_count}条课程安排记录，无法删除")
     
     db.delete(db_student)
     db.commit()

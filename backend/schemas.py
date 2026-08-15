@@ -1008,7 +1008,8 @@ class PaginatedEvaluationTemplateResponse(BaseModel):
 
 class WordItem(BaseModel):
     word: str = Field(..., description="单词")
-    meaning: str = Field("", description="释义")
+    meaning: str = Field("", description="英文释义")
+    chinese_meaning: str = Field("", description="中文释义")
     uk_phonetic: str = Field("", description="英式音标")
     us_phonetic: str = Field("", description="美式音标")
     part_of_speech: str = Field("", description="词性")

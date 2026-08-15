@@ -65,8 +65,19 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
     existing_schedules = query.all()
     
     for existing in existing_schedules:
+        # 检查该课程安排的学员是否全部请假，如果是则资源已释放
+        all_on_leave = False
+        stmt_check = select(schedule_student.c.attendance_status).where(
+            schedule_student.c.schedule_id == existing.id
+        )
+        attendance_result = db.execute(stmt_check).fetchall()
+        if attendance_result and len(attendance_result) > 0:
+            all_statuses = [row[0] for row in attendance_result]
+            if all(s == 'leave' for s in all_statuses):
+                all_on_leave = True
+        
         # 硬性约束：导师时间冲突（HC_TEACHER_TIME）
-        if existing.teacher_id == schedule.teacher_id:
+        if existing.teacher_id == schedule.teacher_id and not all_on_leave:
             conflicts.append(ConflictInfo(
                 schedule_id=existing.id,
                 conflict_type="导师时间冲突",
@@ -75,14 +86,14 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
             ))
         
         # 硬性约束：班级时间冲突（HC_CLASS_TIME）
-        if existing.class_id == schedule.class_id:
+        if existing.class_id == schedule.class_id and not all_on_leave:
             conflicts.append(ConflictInfo(
                 schedule_id=existing.id,
                 conflict_type="班级时间冲突",
                 conflict_description=f"班级 {schedule.class_id} 在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 已有课程安排",
                 related_schedules=[existing.id]
             ))
-        else:
+        elif not all_on_leave:
             # 硬性约束：学员时间冲突（HC_STUDENT_TIME）
             # 检查两个班级是否有共同的学生
             if class_students_cache is None:
@@ -108,7 +119,6 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
                 # - 'present': 学员在该课程已出勤，可以在其他课程补假期的课
                 # 已完训课程的学员状态已经确定，不应影响其他课程的完训
                 if existing.execution_status == 'completed':
-                    from sqlalchemy import select
                     stmt = select(schedule_student.c.student_id, schedule_student.c.attendance_status).where(
                         (schedule_student.c.schedule_id == existing.id) &
                         (schedule_student.c.student_id.in_(common_students))
@@ -132,7 +142,7 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
                     ))
 
         # 教室时间冲突
-        if check_room_conflict and existing.room_id is not None and schedule.room_id is not None and existing.room_id == schedule.room_id:
+        if check_room_conflict and existing.room_id is not None and schedule.room_id is not None and existing.room_id == schedule.room_id and not all_on_leave:
                 conflicts.append(ConflictInfo(
                     schedule_id=existing.id,
                     conflict_type="教室时间冲突",
@@ -141,6 +151,16 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
                 ))
     
     return conflicts
+
+@router.post("/recalculate-conflicts")
+def recalculate_conflicts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_course_admin_user)
+):
+    """重新计算所有课程安排的冲突状态"""
+    updated_count = recalculate_all_conflicts(db)
+    log_operation(db, "课程安排", "重算冲突", f"已完成冲突状态重算，更新了 {updated_count} 条记录", current_user.username, "INFO")
+    return {"message": f"冲突状态重算完成，更新了 {updated_count} 条记录", "updated_count": updated_count}
 
 @router.get("/{schedule_id}/absent-students")
 async def get_absent_students(
@@ -154,7 +174,6 @@ async def get_absent_students(
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
     # 查询缺席或请假且未补课的学员
-    from sqlalchemy import select
     stmt = select(schedule_student).where(
         (schedule_student.c.schedule_id == schedule_id) &
         (schedule_student.c.attendance_status.in_(['absent', 'leave'])) &
@@ -178,10 +197,46 @@ async def get_absent_students(
     
     return absent_students
 
+def recalculate_all_conflicts(db: Session) -> int:
+    """重新计算所有课程安排的冲突状态，返回更新的记录数"""
+    all_schedules = db.query(Schedule).all()
+    all_classes = db.query(Class).filter(Class.is_active == True).all()
+    class_students_cache = {}
+    for class_ in all_classes:
+        active_students = get_students_by_class(db, class_.id, is_active=True)
+        class_students_cache[class_.id] = {s.id for s in active_students}
+
+    updated_count = 0
+    for s in all_schedules:
+        conflicts = check_conflicts(db, s, exclude_id=s.id, class_students_cache=class_students_cache)
+        leave_conflicts = check_leave_conflicts(db, s)
+        leave_warnings = check_leave_warnings(db, s)
+
+        old_has_conflict = s.has_conflict
+        old_conflict_reason = s.conflict_reason
+
+        if conflicts or leave_conflicts:
+            s.has_conflict = True
+            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_conflicts.extend(leave_warnings)
+            s.conflict_reason = "; ".join(all_conflicts)
+        elif leave_warnings:
+            s.has_conflict = False
+            s.conflict_reason = "; ".join(leave_warnings)
+        else:
+            s.has_conflict = False
+            s.conflict_reason = None
+
+        if old_has_conflict != s.has_conflict or old_conflict_reason != s.conflict_reason:
+            updated_count += 1
+
+    db.commit()
+    return updated_count
+
 def check_leave_conflicts(db: Session, schedule: Schedule) -> List[str]:
     conflicts = []
     
-    # 将排课日期+时间组合成完整的 datetime 用于精确时间段比对
     schedule_start = datetime.combine(schedule.start_date, datetime.strptime(schedule.start_time, "%H:%M").time())
     schedule_end = datetime.combine(schedule.end_date, datetime.strptime(schedule.end_time, "%H:%M").time())
     
@@ -195,10 +250,16 @@ def check_leave_conflicts(db: Session, schedule: Schedule) -> List[str]:
     for leave in teacher_leaves:
         conflicts.append(f"导师请假冲突: {leave.start_date} 至 {leave.end_date} - {leave.reason}")
     
-    # 获取班级的所有学员
+    return conflicts
+
+def check_leave_warnings(db: Session, schedule: Schedule) -> List[str]:
+    warnings = []
+    
+    schedule_start = datetime.combine(schedule.start_date, datetime.strptime(schedule.start_time, "%H:%M").time())
+    schedule_end = datetime.combine(schedule.end_date, datetime.strptime(schedule.end_time, "%H:%M").time())
+    
     students = get_students_by_class(db, schedule.class_id, is_active=True)
     
-    # 检查学员请假
     for student in students:
         student_leaves = db.query(Leave).filter(
             Leave.leave_type == "student",
@@ -208,9 +269,9 @@ def check_leave_conflicts(db: Session, schedule: Schedule) -> List[str]:
         ).all()
         
         for leave in student_leaves:
-            conflicts.append(f"学员请假冲突: {leave.start_date} 至 {leave.end_date} - {leave.reason}")
+            warnings.append(f"学员请假提醒: {student.name} {leave.start_date} 至 {leave.end_date} - {leave.reason}")
     
-    return conflicts
+    return warnings
 
 def check_teacher_availability(db: Session, teacher_id: int, day_of_week: int, start_time: str, end_time: str) -> bool:
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
@@ -697,7 +758,6 @@ def get_all_conflicts(db: Session = Depends(get_db)):
     schedules = db.query(Schedule).all()
     all_conflicts = []
     
-    # 预加载班级学生缓存
     all_classes = db.query(Class).filter(Class.is_active == True).all()
     class_students_cache = {}
     for class_ in all_classes:
@@ -705,7 +765,6 @@ def get_all_conflicts(db: Session = Depends(get_db)):
         class_students_cache[class_.id] = {s.id for s in active_students}
     
     for schedule in schedules:
-        # 延期/取消的课程不参与冲突检测，清除其冲突标记
         if schedule.execution_status in ('postponed', 'cancelled'):
             if schedule.has_conflict:
                 schedule.has_conflict = False
@@ -713,10 +772,27 @@ def get_all_conflicts(db: Session = Depends(get_db)):
             continue
         
         conflicts = check_conflicts(db, schedule, exclude_id=schedule.id, class_students_cache=class_students_cache)
-        if conflicts:
+        leave_conflicts = check_leave_conflicts(db, schedule)
+        leave_warnings = check_leave_warnings(db, schedule)
+
+        if conflicts or leave_conflicts:
             schedule.has_conflict = True
-            schedule.conflict_reason = "; ".join([c.conflict_description for c in conflicts])
-            all_conflicts.extend(conflicts)
+            all_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_reasons.extend(leave_warnings)
+            schedule.conflict_reason = "; ".join(all_reasons)
+            for c in conflicts:
+                all_conflicts.append(c)
+            for lc in leave_conflicts:
+                all_conflicts.append(ConflictInfo(
+                    schedule_id=schedule.id,
+                    conflict_type="导师请假冲突",
+                    conflict_description=lc,
+                    related_schedules=[schedule.id]
+                ))
+        elif leave_warnings:
+            schedule.has_conflict = False
+            schedule.conflict_reason = "; ".join(leave_warnings)
         else:
             schedule.has_conflict = False
             schedule.conflict_reason = None
@@ -800,12 +876,17 @@ def auto_schedule(
             log_operation(db, "课程安排", "检查排课冲突", f"检查排课冲突: schedule_id={schedule.id}, course_id={schedule.course_id}, teacher_id={schedule.teacher_id}, class_id={schedule.class_id}, room_id={schedule.room_id}, day_of_week={schedule.day_of_week}, start_time={schedule.start_time}, end_time={schedule.end_time}", current_user.username, "Debug")
             conflicts = check_conflicts(db, schedule, check_room_conflict=check_room)
             leave_conflicts = check_leave_conflicts(db, schedule)
+            leave_warnings = check_leave_warnings(db, schedule)
             
             conflict_reason = None
             if conflicts or leave_conflicts:
-                all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-                conflict_reason = "; ".join(all_conflicts)
+                all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+                if leave_warnings:
+                    all_conflict_reasons.extend(leave_warnings)
+                conflict_reason = "; ".join(all_conflict_reasons)
                 conflicts_found += 1
+            elif leave_warnings:
+                conflict_reason = "; ".join(leave_warnings)
             
             # 获取相关信息
             course = db.query(Course).filter(Course.id == schedule.course_id).first()
@@ -892,6 +973,7 @@ def check_preview_conflict(
         check_room = room_type == "offline_physical"
         conflicts = check_conflicts(db, schedule, check_room_conflict=check_room)
         leave_conflicts = check_leave_conflicts(db, schedule)
+        leave_warnings = check_leave_warnings(db, schedule)
 
         if conflicts is None:
             conflicts = []
@@ -901,8 +983,12 @@ def check_preview_conflict(
         has_conflict = bool(conflicts or leave_conflicts)
         conflict_reason = None
         if has_conflict:
-            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-            conflict_reason = "; ".join(all_conflicts)
+            all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_conflict_reasons.extend(leave_warnings)
+            conflict_reason = "; ".join(all_conflict_reasons)
+        elif leave_warnings:
+            conflict_reason = "; ".join(leave_warnings)
 
         course = db.query(Course).filter(Course.id == schedule.course_id).first()
         teacher = db.query(Teacher).filter(Teacher.id == schedule.teacher_id).first()
@@ -968,6 +1054,7 @@ def save_preview_schedules(
             check_room = (room_type == "offline_physical")
             conflicts = check_conflicts(db, schedule, check_room_conflict=check_room)
             leave_conflicts = check_leave_conflicts(db, schedule)
+            leave_warnings = check_leave_warnings(db, schedule)
             
             if conflicts is None:
                 conflicts = []
@@ -976,9 +1063,14 @@ def save_preview_schedules(
             
             if conflicts or leave_conflicts:
                 schedule.has_conflict = True
-                all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-                schedule.conflict_reason = "; ".join(all_conflicts)
+                all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+                if leave_warnings:
+                    all_conflict_reasons.extend(leave_warnings)
+                schedule.conflict_reason = "; ".join(all_conflict_reasons)
                 conflicts_found += 1
+            elif leave_warnings:
+                schedule.has_conflict = False
+                schedule.conflict_reason = "; ".join(leave_warnings)
             else:
                 schedule.has_conflict = False
             
@@ -1674,11 +1766,17 @@ def update_schedule(
     for s in all_schedules_conflict:
         conflicts = check_conflicts(db, s, exclude_id=s.id, class_students_cache=class_students_cache)
         leave_conflicts = check_leave_conflicts(db, s)
+        leave_warnings = check_leave_warnings(db, s)
         
         if conflicts or leave_conflicts:
             s.has_conflict = True
-            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-            s.conflict_reason = "; ".join(all_conflicts)
+            all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_conflict_reasons.extend(leave_warnings)
+            s.conflict_reason = "; ".join(all_conflict_reasons)
+        elif leave_warnings:
+            s.has_conflict = False
+            s.conflict_reason = "; ".join(leave_warnings)
         else:
             s.has_conflict = False
             s.conflict_reason = None
@@ -2004,14 +2102,19 @@ def delete_schedule(
     # 重新检查所有课程的冲突状态
     all_schedules = db.query(Schedule).all()
     for schedule in all_schedules:
-        # 排除当前正在检查的课程本身，避免自我冲突
         conflicts = check_conflicts(db, schedule, exclude_id=schedule.id, class_students_cache=class_students_cache)
         leave_conflicts = check_leave_conflicts(db, schedule)
+        leave_warnings = check_leave_warnings(db, schedule)
         
         if conflicts or leave_conflicts:
             schedule.has_conflict = True
-            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-            schedule.conflict_reason = "; ".join(all_conflicts)
+            all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_conflict_reasons.extend(leave_warnings)
+            schedule.conflict_reason = "; ".join(all_conflict_reasons)
+        elif leave_warnings:
+            schedule.has_conflict = False
+            schedule.conflict_reason = "; ".join(leave_warnings)
         else:
             schedule.has_conflict = False
             schedule.conflict_reason = None
@@ -2306,11 +2409,17 @@ def postpone_schedule(
     # 检查新课程安排的冲突状态
     conflicts = check_conflicts(db, new_schedule)
     leave_conflicts = check_leave_conflicts(db, new_schedule)
+    leave_warnings = check_leave_warnings(db, new_schedule)
     
     if conflicts or leave_conflicts:
         new_schedule.has_conflict = True
-        all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-        new_schedule.conflict_reason = "; ".join(all_conflicts)
+        all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+        if leave_warnings:
+            all_conflict_reasons.extend(leave_warnings)
+        new_schedule.conflict_reason = "; ".join(all_conflict_reasons)
+    elif leave_warnings:
+        new_schedule.has_conflict = False
+        new_schedule.conflict_reason = "; ".join(leave_warnings)
     else:
         new_schedule.has_conflict = False
     
@@ -2326,14 +2435,20 @@ def postpone_schedule(
     
     for s in all_schedules_conflict:
         if s.id == new_schedule.id:
-            continue  # 新课程已检查过
+            continue
         conflicts = check_conflicts(db, s, exclude_id=s.id, class_students_cache=class_students_cache)
         leave_conflicts = check_leave_conflicts(db, s)
+        leave_warnings = check_leave_warnings(db, s)
         
         if conflicts or leave_conflicts:
             s.has_conflict = True
-            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-            s.conflict_reason = "; ".join(all_conflicts)
+            all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_conflict_reasons.extend(leave_warnings)
+            s.conflict_reason = "; ".join(all_conflict_reasons)
+        elif leave_warnings:
+            s.has_conflict = False
+            s.conflict_reason = "; ".join(leave_warnings)
         else:
             s.has_conflict = False
             s.conflict_reason = None
@@ -2401,27 +2516,7 @@ def cancel_schedule(
     db_schedule.conflict_reason = None
     db.commit()
 
-    # 重新计算所有排课的冲突状态（取消课程后可能解除其他课程的冲突）
-    all_schedules_cancel = db.query(Schedule).all()
-    all_classes = db.query(Class).filter(Class.is_active == True).all()
-    class_students_cache = {}
-    for class_ in all_classes:
-        active_students = get_students_by_class(db, class_.id, is_active=True)
-        class_students_cache[class_.id] = {s.id for s in active_students}
-    
-    for s in all_schedules_cancel:
-        conflicts = check_conflicts(db, s, exclude_id=s.id, class_students_cache=class_students_cache)
-        leave_conflicts = check_leave_conflicts(db, s)
-        
-        if conflicts or leave_conflicts:
-            s.has_conflict = True
-            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-            s.conflict_reason = "; ".join(all_conflicts)
-        else:
-            s.has_conflict = False
-            s.conflict_reason = None
-    
-    db.commit()
+    recalculate_all_conflicts(db)
 
     if hasattr(cancel_data, 'send_notification') and cancel_data.send_notification:
         try:
@@ -2586,11 +2681,17 @@ async def makeup_schedule(
     # 检查新课程安排的冲突状态
     conflicts = check_conflicts(db, new_schedule)
     leave_conflicts = check_leave_conflicts(db, new_schedule)
+    leave_warnings = check_leave_warnings(db, new_schedule)
     
     if conflicts or leave_conflicts:
         new_schedule.has_conflict = True
-        all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-        new_schedule.conflict_reason = "; ".join(all_conflicts)
+        all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+        if leave_warnings:
+            all_conflict_reasons.extend(leave_warnings)
+        new_schedule.conflict_reason = "; ".join(all_conflict_reasons)
+    elif leave_warnings:
+        new_schedule.has_conflict = False
+        new_schedule.conflict_reason = "; ".join(leave_warnings)
     else:
         new_schedule.has_conflict = False
     
@@ -2655,6 +2756,20 @@ async def get_schedule_conflicts(schedule_id: int, db: Session = Depends(get_db)
     current_class_student_ids = {s.id for s in current_class_students}
     
     for s in all_schedules:
+        # 检查该课程安排的学员是否全部请假，如果是则资源已释放
+        all_on_leave = False
+        stmt_check = select(schedule_student.c.attendance_status).where(
+            schedule_student.c.schedule_id == s.id
+        )
+        attendance_result = db.execute(stmt_check).fetchall()
+        if attendance_result and len(attendance_result) > 0:
+            all_statuses = [row[0] for row in attendance_result]
+            if all(st == 'leave' for st in all_statuses):
+                all_on_leave = True
+
+        if all_on_leave:
+            continue
+
         conflict_types = []
         conflict_details = []
         

@@ -227,17 +227,24 @@ class ScheduleOptimizer:
             if leave.start_date <= schedule.end_date and leave.end_date >= schedule.start_date:
                 if leave.leave_type == "teacher" and leave.teacher_id == schedule.teacher_id:
                     conflicts.append(f"导师请假: {leave.reason}")
-                elif leave.leave_type == "student":
-                    # 检查学员请假（使用多对多关系）
+        
+        return conflicts
+
+    def _check_leave_warnings(self, schedule: Schedule, leaves: List[Leave]) -> List[str]:
+        warnings = []
+        
+        for leave in leaves:
+            if leave.start_date <= schedule.end_date and leave.end_date >= schedule.start_date:
+                if leave.leave_type == "student":
                     class_ = self.db.query(Class).filter(Class.id == schedule.class_id).first()
                     if class_:
                         students = [s for s in class_.students if s.is_active]
                         for student in students:
                             if student.id == leave.student_id:
-                                conflicts.append(f"学员请假: {leave.reason}")
+                                warnings.append(f"学员请假: {leave.reason}")
                                 break
         
-        return conflicts
+        return warnings
 
     def _check_teacher_availability(self, teacher: Teacher, day_of_week: int, start_time: str = None, end_time: str = None) -> bool:
         try:

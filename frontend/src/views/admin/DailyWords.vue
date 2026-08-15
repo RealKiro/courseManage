@@ -1014,78 +1014,36 @@ const fetchPhonetic = async (index) => {
 
   word._phoneticLoading = true
   try {
-    const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.word.trim())}`)
-    if (!response.ok) {
-      ElMessage.warning(t('dailyWords.phoneticNotFound', { word: word.word.trim() }))
-      return
+    const response = await api.get(`/daily-words/lookup/${encodeURIComponent(word.word.trim())}`)
+    const data = response.data
+
+    if (data.uk_phonetic && !word.uk_phonetic.trim()) {
+      word.uk_phonetic = data.uk_phonetic
     }
-    const data = await response.json()
-    if (!data || data.length === 0) {
-      ElMessage.warning(t('dailyWords.phoneticNotFound', { word: word.word.trim() }))
-      return
+    if (data.us_phonetic && !word.us_phonetic.trim()) {
+      word.us_phonetic = data.us_phonetic
     }
-
-    const entry = data[0]
-    const phonetics = entry.phonetics || []
-
-    const ukPhon = phonetics.find(p => p.text && p.text.includes('/'))
-    let ukText = ukPhon ? ukPhon.text : (entry.phonetic || '')
-
-    const usPhon = phonetics.slice(1).find(p => p.text && p.text !== ukText && p.text.includes('/'))
-    let usText = usPhon ? usPhon.text : ''
-
-    if (!usText && ukText) {
-      usText = ukText
+    if (data.meaning && !word.meaning.trim()) {
+      word.meaning = data.meaning
     }
-
-    if (!ukText) {
-      ElMessage.warning(t('dailyWords.phoneticNotFound', { word: word.word.trim() }))
-      return
-    }
-
-    if (!word.uk_phonetic.trim()) {
-      word.uk_phonetic = ukText
-    }
-    if (!word.us_phonetic.trim()) {
-      word.us_phonetic = usText
-    }
-
-    if (!word.meaning.trim() && entry.meanings && entry.meanings.length > 0) {
-      const firstMeaning = entry.meanings[0]
-      if (firstMeaning.definitions && firstMeaning.definitions.length > 0) {
-        word.meaning = firstMeaning.definitions[0].definition || ''
-      }
-    }
-
-    if (!word.part_of_speech && entry.meanings && entry.meanings.length > 0) {
-      const firstMeaning = entry.meanings[0]
-      const pos = (firstMeaning.partOfSpeech || '').toLowerCase()
-      const validPos = partOfSpeechOptions.value.find(o => o.value === pos)
+    if (data.part_of_speech && !word.part_of_speech) {
+      const validPos = partOfSpeechOptions.value.find(o => o.value === data.part_of_speech)
       if (validPos) {
         word.part_of_speech = validPos.value
       }
     }
-
-    if (!word.chinese_meaning.trim() && word.meaning.trim()) {
-      try {
-        const translateResponse = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word.meaning.trim())}&langpair=en|zh`
-        )
-        if (translateResponse.ok) {
-          const translateData = await translateResponse.json()
-          if (translateData.responseData && translateData.responseData.translatedText) {
-            word.chinese_meaning = translateData.responseData.translatedText
-          }
-        }
-      } catch (translateError) {
-        window.logger.warn('翻译中文释义失败:', translateError)
-      }
+    if (data.chinese_meaning && !word.chinese_meaning.trim()) {
+      word.chinese_meaning = data.chinese_meaning
     }
 
     ElMessage.success(t('dailyWords.phoneticFound'))
   } catch (error) {
-    window.logger.error('查询音标失败:', error)
-    ElMessage.error(t('dailyWords.phoneticQueryFailed'))
+    if (error.response?.status === 404 && error.response?.data?.detail) {
+      ElMessage.warning(error.response.data.detail)
+    } else {
+      window.logger.error('查询音标失败:', error)
+      ElMessage.error(t('dailyWords.phoneticQueryFailed'))
+    }
   } finally {
     word._phoneticLoading = false
   }

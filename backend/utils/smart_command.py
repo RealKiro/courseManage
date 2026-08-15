@@ -4254,17 +4254,25 @@ class CommandExecutor:
         self.db.refresh(new_schedule)
         
         # 检查冲突
-        from routers.schedules import check_conflicts, check_leave_conflicts
+        from routers.schedules import check_conflicts, check_leave_conflicts, check_leave_warnings
         conflicts = check_conflicts(self.db, new_schedule)
         leave_conflicts = check_leave_conflicts(self.db, new_schedule)
+        leave_warnings = check_leave_warnings(self.db, new_schedule)
         
         if conflicts or leave_conflicts:
             new_schedule.has_conflict = True
-            all_conflicts = [c.conflict_description for c in conflicts] + leave_conflicts
-            new_schedule.conflict_reason = "; ".join(all_conflicts)
+            all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+            if leave_warnings:
+                all_conflict_reasons.extend(leave_warnings)
+            new_schedule.conflict_reason = "; ".join(all_conflict_reasons)
             self.db.commit()
             
-            conflict_msg = f"（存在冲突：{'; '.join(all_conflicts[:2])}）" if len(all_conflicts) > 2 else f"（存在冲突：{all_conflicts[0]}）"
+            conflict_msg = f"（存在冲突：{'; '.join(all_conflict_reasons[:2])}）" if len(all_conflict_reasons) > 2 else f"（存在冲突：{all_conflict_reasons[0]}）"
+        elif leave_warnings:
+            new_schedule.has_conflict = False
+            new_schedule.conflict_reason = "; ".join(leave_warnings)
+            self.db.commit()
+            conflict_msg = ""
         else:
             conflict_msg = ""
         

@@ -19,8 +19,167 @@ from utils.logger import log_operation
 from utils.wechat_notifier import wechat_notifier
 from utils.email_notifier import email_notifier
 import json
+import requests as http_requests
 
 router = APIRouter()
+
+
+# ==================== 单词查询工具 ====================
+
+PART_OF_SPEECH_MAP = {
+    "noun": "noun",
+    "pronoun": "pronoun",
+    "verb": "verb",
+    "adjective": "adjective",
+    "adverb": "adverb",
+    "preposition": "preposition",
+    "conjunction": "conjunction",
+    "interjection": "interjection",
+    "article": "article",
+    "determiner": "determiner",
+    "numeral": "numeral",
+}
+
+def _query_free_dictionary_api(word: str, timeout: int = 10):
+    try:
+        resp = http_requests.get(
+            f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}",
+            timeout=timeout,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if not data or not isinstance(data, list) or len(data) == 0:
+            return None
+        return data
+    except Exception:
+        return None
+
+def _query_youdao_api(word: str, timeout: int = 10):
+    try:
+        resp = http_requests.get(
+            "https://dict.youdao.com/suggest",
+            params={"q": word, "le": "eng", "ver": "2", "doctype": "json"},
+            timeout=timeout,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if not data or not isinstance(data, dict):
+            return None
+        entries = data.get("data", {}).get("entries", [])
+        if not entries or not isinstance(entries, list):
+            return None
+        for entry in entries:
+            if entry.get("entry", "").strip().lower() == word.strip().lower():
+                return entry
+        if entries:
+            return entries[0]
+        return None
+    except Exception:
+        return None
+
+def _extract_phonetics_from_dictapi(data):
+    result = {"uk_phonetic": "", "us_phonetic": "", "meaning": "", "part_of_speech": "", "chinese_meaning": ""}
+    if not data:
+        return result
+    entry = data[0] if isinstance(data, list) else data
+
+    phonetics = entry.get("phonetics", [])
+    uk_phon = ""
+    us_phon = ""
+    for p in phonetics:
+        text = p.get("text", "")
+        if not text or "/" not in text:
+            continue
+        audio = p.get("audio", "")
+        if audio and ("-uk_" in audio or "_gb_" in audio or "uk" in audio.lower()):
+            uk_phon = text
+        elif audio and ("-us_" in audio or "_us_" in audio or "us" in audio.lower()):
+            us_phon = text
+        elif not uk_phon:
+            uk_phon = text
+
+    if not uk_phon and entry.get("phonetic"):
+        uk_phon = entry["phonetic"]
+
+    if not us_phon and uk_phon:
+        us_phon = uk_phon
+
+    result["uk_phonetic"] = uk_phon
+    result["us_phonetic"] = us_phon
+
+    meanings = entry.get("meanings", [])
+    if meanings:
+        first_meaning = meanings[0]
+        pos = (first_meaning.get("partOfSpeech") or "").lower()
+        if pos in PART_OF_SPEECH_MAP:
+            result["part_of_speech"] = PART_OF_SPEECH_MAP[pos]
+        definitions = first_meaning.get("definitions", [])
+        if definitions:
+            result["meaning"] = definitions[0].get("definition", "")
+
+    return result
+
+def _extract_from_youdao_suggest(entry):
+    result = {"uk_phonetic": "", "us_phonetic": "", "meaning": "", "part_of_speech": "", "chinese_meaning": ""}
+    if not entry:
+        return result
+    chinese = entry.get("explain", "")
+    if chinese:
+        result["chinese_meaning"] = chinese
+    return result
+
+@router.get("/lookup/{word}")
+def lookup_word(
+    word: str,
+    current_user: User = Depends(get_current_teaching_assistant_user),
+):
+    word = word.strip()
+    if not word:
+        raise HTTPException(status_code=400, detail="单词不能为空")
+
+    result = {
+        "word": word,
+        "uk_phonetic": "",
+        "us_phonetic": "",
+        "meaning": "",
+        "part_of_speech": "",
+        "chinese_meaning": "",
+    }
+
+    dictapi_data = _query_free_dictionary_api(word, timeout=8)
+    if dictapi_data:
+        extracted = _extract_phonetics_from_dictapi(dictapi_data)
+        result["uk_phonetic"] = extracted["uk_phonetic"]
+        result["us_phonetic"] = extracted["us_phonetic"]
+        result["meaning"] = extracted["meaning"]
+        result["part_of_speech"] = extracted["part_of_speech"]
+
+    youdao_entry = _query_youdao_api(word, timeout=8)
+    if youdao_entry:
+        youdao_result = _extract_from_youdao_suggest(youdao_entry)
+        if youdao_result["chinese_meaning"]:
+            result["chinese_meaning"] = youdao_result["chinese_meaning"]
+
+    if not result["uk_phonetic"] and not result["chinese_meaning"]:
+        raise HTTPException(status_code=404, detail=f"未找到\"{word}\"的相关信息，请手动填写")
+
+    if not result["chinese_meaning"] and result["meaning"]:
+        try:
+            translate_resp = http_requests.get(
+                "https://api.mymemory.translated.net/get",
+                params={"q": result["meaning"], "langpair": "en|zh-CN"},
+                timeout=8,
+            )
+            if translate_resp.status_code == 200:
+                translate_data = translate_resp.json()
+                if translate_data.get("responseData", {}).get("translatedText"):
+                    result["chinese_meaning"] = translate_data["responseData"]["translatedText"]
+        except Exception:
+            pass
+
+    return result
 
 
 # ==================== 每日单词管理 ====================

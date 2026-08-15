@@ -412,7 +412,7 @@ def recalculate_conflicts_on_startup():
     """启动时重新计算所有排课的冲突状态，修正历史错误冲突数据"""
     from sqlalchemy.orm import Session
     from models import Schedule, Class
-    from routers.schedules import check_conflicts, check_leave_conflicts, get_students_by_class
+    from routers.schedules import check_conflicts, check_leave_conflicts, check_leave_warnings, get_students_by_class
     
     db = SessionLocal()
     try:
@@ -436,10 +436,17 @@ def recalculate_conflicts_on_startup():
             old_has_conflict = schedule.has_conflict
             conflicts = check_conflicts(db, schedule, exclude_id=schedule.id, class_students_cache=class_students_cache)
             leave_conflicts = check_leave_conflicts(db, schedule)
+            leave_warnings = check_leave_warnings(db, schedule)
             
             if conflicts or leave_conflicts:
                 schedule.has_conflict = True
-                schedule.conflict_reason = "; ".join([c.conflict_description for c in conflicts] + leave_conflicts)
+                all_conflict_reasons = [c.conflict_description for c in conflicts] + leave_conflicts
+                if leave_warnings:
+                    all_conflict_reasons.extend(leave_warnings)
+                schedule.conflict_reason = "; ".join(all_conflict_reasons)
+            elif leave_warnings:
+                schedule.has_conflict = False
+                schedule.conflict_reason = "; ".join(leave_warnings)
             else:
                 schedule.has_conflict = False
                 schedule.conflict_reason = None

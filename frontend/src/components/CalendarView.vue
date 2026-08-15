@@ -120,8 +120,8 @@
                 :key="schedule.id"
                 class="schedule-item"
                 :class="{
-                  'has-conflict': schedule.has_conflict && !isLeaveOnlyConflict(schedule),
-                  'has-leave-conflict': isLeaveOnlyConflict(schedule),
+                  'has-conflict': schedule.has_conflict,
+                  'has-leave-warning': !schedule.has_conflict && hasLeaveWarning(schedule),
                   'is-multi-row': schedule.isMultiRow
                 }"
                 :style="getScheduleStyle(schedule)"
@@ -344,6 +344,7 @@
                           style="width: 100px"
                           @change="(val) => { handleAttendanceChange(row, val); editingAttendanceStudentId = null; }"
                           @blur="editingAttendanceStudentId = null"
+                          :disabled="currentSchedule && currentSchedule.execution_status === 'cancelled'"
                         >
                           <el-option value="present" :label="t('calendar.present')" />
                           <el-option value="absent" :label="t('calendar.absent')" />
@@ -353,21 +354,21 @@
                       </template>
                       <template v-else>
                         <el-tag 
-                          :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
+                          :type="currentSchedule && currentSchedule.execution_status === 'cancelled' ? 'info' : row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
                           size="small"
                           @click="editingAttendanceStudentId = row.id"
                           style="cursor: pointer"
                         >
-                          {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
+                          {{ currentSchedule && currentSchedule.execution_status === 'cancelled' ? t('calendar.notRequired') : row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
                         </el-tag>
                       </template>
                     </template>
                     <template v-else>
                       <el-tag 
-                        :type="row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
+                        :type="currentSchedule && currentSchedule.execution_status === 'cancelled' ? 'info' : row.attendance_status === 'present' ? 'success' : row.attendance_status === 'leave' ? 'warning' : row.attendance_status === 'pending' ? 'info' : 'danger'"
                         size="small"
                       >
-                        {{ row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
+                        {{ currentSchedule && currentSchedule.execution_status === 'cancelled' ? t('calendar.notRequired') : row.attendance_status === 'present' ? t('calendar.present') : row.attendance_status === 'leave' ? t('calendar.onLeave') : row.attendance_status === 'pending' ? t('calendar.unknown') : t('calendar.absent') }}
                       </el-tag>
                     </template>
                   </template>
@@ -402,7 +403,10 @@
           <el-button type="danger" size="small" @click="showConflictDetails" v-if="currentSchedule.has_conflict">
             {{ t('calendar.conflict') }}
           </el-button>
-          <el-button type="success" size="small" @click="showConflictDetails" v-else>
+          <el-button type="warning" size="small" @click="showConflictDetails" v-else-if="hasLeaveWarning(currentSchedule)">
+            {{ t('calendar.leaveWarning', '请假提醒') }}
+          </el-button>
+          <el-button type="success" size="small" v-else>
             {{ t('calendar.noConflict') }}
           </el-button>
         </el-descriptions-item>
@@ -1677,13 +1681,10 @@ const getScheduleStyle = (schedule) => {
   }
 }
 
-const isLeaveOnlyConflict = (schedule) => {
-  if (!schedule.has_conflict || !schedule.conflict_reason) return false
-  const reason = schedule.conflict_reason
-  const parts = reason.split(';').map(p => p.trim()).filter(p => p.length > 0)
-  const hasLeave = parts.some(p => p.includes('请假'))
-  const hasNonLeave = parts.some(p => !p.includes('请假'))
-  return hasLeave && !hasNonLeave
+const hasLeaveWarning = (schedule) => {
+  if (!schedule.conflict_reason) return false
+  const parts = schedule.conflict_reason.split(';').map(p => p.trim()).filter(p => p.length > 0)
+  return parts.some(p => p.includes('请假提醒'))
 }
 
 const getScheduleTitle = (schedule) => {
@@ -2734,27 +2735,11 @@ const executeHomework = async (sendNotification = false) => {
     if (sendNotification) {
       const classInfo = classes.value.find(c => c.id === currentSchedule.value.class_id)
       
-      let siteUrl = localStorage.getItem('site_url')
-      if (!siteUrl) {
-        try {
-          const response = await api.get('/settings/site-info')
-          if (response.data && response.data.site_url) {
-            siteUrl = response.data.site_url
-            localStorage.setItem('site_url', siteUrl)
-          }
-        } catch (error) {
-          window.logger.error('获取站点URL失败:', error)
-        }
-      }
-      if (!siteUrl) {
-        siteUrl = window.location.origin
-      }
-      
       let imageUrls = []
       if (homeworkForm.value.images && homeworkForm.value.images.length > 0) {
         imageUrls = homeworkForm.value.images.map(img => {
           const url = img.response?.url || img.url
-          return url.startsWith('http') ? url : siteUrl + url
+          return url.startsWith('http') ? url : window.location.origin + url
         }).filter(url => url)
       }
       
@@ -3002,25 +2987,7 @@ const handlePicturePreview = async (uploadFile) => {
   const url = uploadFile.response?.url || uploadFile.url
   if (!url) return
   
-  let siteUrl = localStorage.getItem('site_url')
-  
-  if (!siteUrl) {
-    try {
-      const response = await api.get('/settings/site-info')
-      if (response.data && response.data.site_url) {
-        siteUrl = response.data.site_url
-        localStorage.setItem('site_url', siteUrl)
-      }
-    } catch (error) {
-      window.logger.error('获取站点URL失败:', error)
-    }
-  }
-  
-  if (!siteUrl) {
-    siteUrl = window.location.origin
-  }
-  
-  const fullUrl = url.startsWith('http') ? url : siteUrl + url
+  const fullUrl = url.startsWith('http') ? url : window.location.origin + url
   window.open(fullUrl, '_blank')
 }
  
@@ -3527,8 +3494,8 @@ const handleScreenshot = async () => {
   border: 2px solid #F56C6C;
 }
 
-.schedule-item.has-leave-conflict {
-  border: 3px solid #9C27B0;
+.schedule-item.has-leave-warning {
+  border: 2px solid #E6A23C;
 }
 
 .schedule-item.is-multi-row {

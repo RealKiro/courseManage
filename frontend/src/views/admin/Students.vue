@@ -1326,7 +1326,28 @@ const handleSubmit = async () => {
           }
           
           // 编辑学员
-          await api.put(`/students/${form.value.id}`, form.value)
+          try {
+            await api.put(`/students/${form.value.id}`, form.value)
+          } catch (error) {
+            if (error.response && error.response.status === 409) {
+              try {
+                await ElMessageBox.confirm(
+                  error.response.data.detail,
+                  t('common.tip'),
+                  {
+                    confirmButtonText: t('students.stillSave'),
+                    cancelButtonText: t('common.cancel'),
+                    type: 'warning'
+                  }
+                )
+                await api.put(`/students/${form.value.id}?force=true`, form.value)
+              } catch {
+                return
+              }
+            } else {
+              throw error
+            }
+          }
           ElMessage.success(t('common.updateSuccess'))
           // 重新加载allStudents数据
           try {
@@ -1425,6 +1446,11 @@ const handleDelete = (row) => {
       }
     } catch (error) {
       window.logger.error('删除失败:', error)
+      if (error.response && error.response.data && error.response.data.detail) {
+        ElMessage.error(error.response.data.detail)
+      } else {
+        ElMessage.error(t('common.operationFailed'))
+      }
     }
   }).catch(() => {})
 }

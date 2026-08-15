@@ -91,6 +91,10 @@
               <el-icon><Delete /></el-icon>
               {{ t('schedules.clearAll') }}
             </el-button>
+            <el-button v-if="currentUser && currentUser.role !== 'teaching_assistant'" type="warning" @click="recalculateConflicts" :loading="isRecalculatingConflicts">
+              <el-icon><Refresh /></el-icon>
+              {{ t('schedules.recalculateConflicts') }}
+            </el-button>
             <el-button v-if="currentUser && currentUser.role !== 'teaching_assistant'" type="info" @click="downloadImportTemplate">
               <el-icon><Download /></el-icon>
               {{ t('schedules.downloadTemplate') }}
@@ -391,10 +395,10 @@
                         </el-tooltip>
                         <el-tag v-if="student.is_extra" type="warning" size="small" effect="dark">{{ t('schedules.extraStudent') }}</el-tag>
                         <el-tag 
-                          :type="student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : student.attendance_status === 'pending' ? 'info' : 'danger'"
+                          :type="row.execution_status === 'cancelled' ? 'info' : student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : student.attendance_status === 'pending' ? 'info' : 'danger'"
                           size="small"
                         >
-                          {{ student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : student.attendance_status === 'pending' ? t('schedules.unknown') : t('schedules.absent') }}
+                          {{ row.execution_status === 'cancelled' ? t('schedules.notRequired') : student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : student.attendance_status === 'pending' ? t('schedules.unknown') : t('schedules.absent') }}
                         </el-tag>
                       </div>
                     </div>
@@ -466,10 +470,10 @@
                           <div v-for="student in row.scheduled_students" :key="student.id" style="margin-bottom: 4px; display: flex; align-items: center;">
                             <span style="flex: 1;">{{ student.name }}</span>
                             <el-tag 
-                              :type="student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : student.attendance_status === 'pending' ? 'info' : 'danger'"
+                              :type="row.execution_status === 'cancelled' ? 'info' : student.attendance_status === 'present' ? 'success' : student.attendance_status === 'leave' ? 'warning' : student.attendance_status === 'pending' ? 'info' : 'danger'"
                               size="small"
                             >
-                              {{ student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : student.attendance_status === 'pending' ? t('schedules.unknown') : t('schedules.absent') }}
+                              {{ row.execution_status === 'cancelled' ? t('schedules.notRequired') : student.attendance_status === 'present' ? t('schedules.present') : student.attendance_status === 'leave' ? t('schedules.onLeave') : student.attendance_status === 'pending' ? t('schedules.unknown') : t('schedules.absent') }}
                             </el-tag>
                             <el-tag v-if="student.makeup_status === 'completed'" type="success" size="small" style="margin-left: 4px;">{{ t('schedules.makeupCompleted') }}</el-tag>
                             <el-tag v-else-if="student.makeup_status === 'declined'" type="info" size="small" style="margin-left: 4px;">{{ t('schedules.makeupDeclined') }}</el-tag>
@@ -594,6 +598,7 @@
                                 <div v-else>{{ t('schedules.noConflictCourse') }}</div>
                             </div>
                         </el-popover>
+                        <el-tag v-else-if="row.conflict_reason" type="warning">{{ t('schedules.leaveWarning', '请假提醒') }}</el-tag>
                         <el-tag v-else type="success">{{ t('schedules.noConflict') }}</el-tag>
                     </template>
                 </el-table-column>
@@ -652,6 +657,11 @@
                 {{ getRoomName(row.room_id) }}
               </template>
             </el-table-column>
+            <el-table-column :label="t('schedules.date')" width="120" sortable prop="start_date">
+                <template #default="{ row }">
+                    {{ formatDate(row.start_date) }}
+                </template>
+            </el-table-column>
             <el-table-column :label="t('schedules.dayOfWeek')" width="80">
                 <template #default="{ row }">
                     {{ getDayOfWeekFromDate(row.start_date) }}
@@ -664,7 +674,12 @@
             </el-table-column>
             <el-table-column :label="t('schedules.conflictReason')" min-width="300">
               <template #default="{ row }">
-                <span style="color: #f56c6c;">{{ row.conflict_reason }}</span>
+                <template v-if="row.has_conflict">
+                  <span style="color: #f56c6c;">{{ row.conflict_reason }}</span>
+                </template>
+                <template v-else-if="row.conflict_reason">
+                  <span style="color: #e6a23c;">{{ row.conflict_reason }}</span>
+                </template>
               </template>
             </el-table-column>
             <el-table-column :label="t('common.operation')" width="135" fixed="right">
@@ -1081,8 +1096,14 @@
           </el-table-column>
           <el-table-column :label="t('schedules.conflictStatus')" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.has_conflict ? 'danger' : 'success'">
-                {{ row.has_conflict ? t('schedules.hasConflict') : t('schedules.noConflict') }}
+              <el-tag v-if="row.has_conflict" type="danger">
+                {{ t('schedules.hasConflict') }}
+              </el-tag>
+              <el-tag v-else-if="row.conflict_reason" type="warning">
+                {{ t('schedules.leaveWarning', '请假提醒') }}
+              </el-tag>
+              <el-tag v-else type="success">
+                {{ t('schedules.noConflict') }}
               </el-tag>
             </template>
           </el-table-column>
@@ -1149,6 +1170,7 @@
                     class="preview-schedule-item"
                     :class="{
                       'has-conflict': schedule.has_conflict,
+                      'has-leave-warning': !schedule.has_conflict && schedule.conflict_reason,
                       'is-selected': isPreviewScheduleSelected(schedule)
                     }"
                     @click="togglePreviewScheduleSelection(schedule)"
@@ -1166,6 +1188,9 @@
                     <div class="schedule-info"></div>
                     <div class="schedule-time">{{ schedule.start_time }}-{{ schedule.end_time }}</div>
                     <div v-if="schedule.has_conflict" class="conflict-badge">
+                      <el-icon><Warning /></el-icon>
+                    </div>
+                    <div v-else-if="schedule.conflict_reason" class="leave-warning-badge">
                       <el-icon><Warning /></el-icon>
                     </div>
                     <div class="schedule-edit-btn" @click.stop="handleEditPreviewSchedule(schedule)">
@@ -1841,7 +1866,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowLeft, Plus, MagicStick, Delete, Reading, User, UserFilled, OfficeBuilding, Calendar, Clock, InfoFilled, Link, Download, Upload, Document, Setting, Warning, Lock, Printer, Camera } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, MagicStick, Delete, Reading, User, UserFilled, OfficeBuilding, Calendar, Clock, InfoFilled, Link, Download, Upload, Document, Setting, Warning, Lock, Printer, Camera, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
 import { hasFeature, FEATURES as licenseFeatures } from '@/utils/license'
@@ -1854,6 +1879,7 @@ import { useI18n } from 'vue-i18n'
 const { t, locale } = useI18n()
 const mainTableRef = ref(null)
 const isScreenshotting = ref(false)
+const isRecalculatingConflicts = ref(false)
 const topScrollbarRef = ref(null)
 const scrollbarWidth = ref(0)
 let scrollHandler = null
@@ -4394,27 +4420,11 @@ const handleHomeworkSubmit = async (sendNotification = false) => {
         await api.put(`/schedules/${currentHomeworkSchedule.value.id}`, updateData)
         
         if (sendNotification) {
-          let siteUrl = localStorage.getItem('site_url')
-          if (!siteUrl) {
-            try {
-              const response = await api.get('/settings/site-info')
-              if (response.data && response.data.site_url) {
-                siteUrl = response.data.site_url
-                localStorage.setItem('site_url', siteUrl)
-              }
-            } catch (error) {
-              window.logger.error('获取站点URL失败:', error)
-            }
-          }
-          if (!siteUrl) {
-            siteUrl = window.location.origin
-          }
-          
           let imageUrls = []
           if (homeworkForm.value.images && homeworkForm.value.images.length > 0) {
             imageUrls = homeworkForm.value.images.map(img => {
               const url = img.response?.url || img.url
-              return url.startsWith('http') ? url : siteUrl + url
+              return url.startsWith('http') ? url : window.location.origin + url
             }).filter(url => url)
           }
           
@@ -4492,6 +4502,26 @@ const clearAllSchedules = () => {
   }).catch(() => {})
 }
 
+const recalculateConflicts = () => {
+  ElMessageBox.confirm(t('schedules.message.recalculateConflictsConfirm'), t('common.tip'), {
+    confirmButtonText: t('common.confirm'),
+    cancelButtonText: t('common.cancel'),
+    type: 'warning'
+  }).then(async () => {
+    isRecalculatingConflicts.value = true
+    try {
+      const response = await api.post('/schedules/recalculate-conflicts')
+      ElMessage.success(t('schedules.message.recalculateConflictsSuccess', { count: response.data.updated_count }))
+      fetchSchedules()
+    } catch (error) {
+      window.logger.error('重算冲突失败:', error)
+      ElMessage.error(t('schedules.message.recalculateConflictsFailed'))
+    } finally {
+      isRecalculatingConflicts.value = false
+    }
+  }).catch(() => {})
+}
+
 const getCourseName = (courseId) => {
   const course = courses.value.find(c => c.id === courseId)
   return course ? course.name : '-'
@@ -4501,24 +4531,7 @@ const handlePicturePreview = async (uploadFile) => {
   const url = uploadFile.response?.url || uploadFile.url
   if (!url) return
   
-  let siteUrl = localStorage.getItem('site_url')
-  
-  if (!siteUrl) {
-    try {
-      const response = await api.get('/settings/site-info')
-      if (response.data && response.data.site_url) {
-        siteUrl = response.data.site_url
-        localStorage.setItem('site_url', siteUrl)
-      }
-    } catch (error) {
-      window.logger.error('获取站点URL失败:', error)
-    }
-  }
-  
-  if (!siteUrl) {
-    siteUrl = window.location.origin
-  }
-  const fullUrl = url.startsWith('http') ? url : siteUrl + url
+  const fullUrl = url.startsWith('http') ? url : window.location.origin + url
   window.open(fullUrl, '_blank')
 }
 
@@ -5598,6 +5611,10 @@ watch(schedules, () => {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
+.preview-schedule-item.has-leave-warning {
+  background: linear-gradient(135deg, #ffeaa7 0%, #e6a23c 100%);
+}
+
 .preview-schedule-item.is-selected {
   border-color: #ffd700;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
@@ -5650,6 +5667,20 @@ watch(schedules, () => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.leave-warning-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  background-color: rgba(230, 162, 60, 0.3);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e6a23c;
 }
 
 .schedule-edit-btn {
