@@ -1012,14 +1012,15 @@ class WordItem(BaseModel):
     chinese_meaning: str = Field("", description="中文释义")
     uk_phonetic: str = Field("", description="英式音标")
     us_phonetic: str = Field("", description="美式音标")
-    part_of_speech: str = Field("", description="词性")
+    part_of_speech: List[str] = Field(default=[], description="词性")
     mastery_requirement: str = Field("", description="掌握要求：full_mastery-会背(听说读写用), use-会用")
     remark: str = Field("", description="备注")
     link: str = Field("", description="链接")
 
 class PhraseItem(BaseModel):
     phrase: str = Field(..., description="短语内容")
-    meaning: str = Field("", description="释义")
+    meaning: str = Field("", description="英文释义")
+    chinese_meaning: str = Field("", description="中文释义")
     phrase_type: List[str] = Field(default=[], description="短语类型")
     syntactic_role: List[str] = Field(default=[], description="可充当语素")
     mastery_requirement: str = Field("", description="掌握要求：full_mastery-会背(听说读写用), use-会用")

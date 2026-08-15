@@ -79,42 +79,125 @@ def _query_youdao_api(word: str, timeout: int = 10):
     except Exception:
         return None
 
-def _extract_phonetics_from_dictapi(data):
-    result = {"uk_phonetic": "", "us_phonetic": "", "meaning": "", "part_of_speech": "", "chinese_meaning": ""}
+def _query_youdao_jsonapi(word: str, timeout: int = 10):
+    try:
+        resp = http_requests.get(
+            "https://dict.youdao.com/jsonapi",
+            params={"q": word, "doctype": "json"},
+            timeout=timeout,
+        )
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if not data or not isinstance(data, dict):
+            return None
+        return data
+    except Exception:
+        return None
+
+def _extract_phonetics_from_youdao_jsonapi(data):
+    result = {"uk_phonetic": "", "us_phonetic": "", "chinese_meaning": ""}
     if not data:
         return result
-    entry = data[0] if isinstance(data, list) else data
+    ec = data.get("ec")
+    if ec and isinstance(ec, dict):
+        word_list = ec.get("word", [])
+        if word_list and isinstance(word_list, list):
+            word_info = word_list[0]
+            uk = word_info.get("ukphone", "")
+            us = word_info.get("usphone", "")
+            if uk:
+                result["uk_phonetic"] = f"/{uk}/"
+            if us:
+                result["us_phonetic"] = f"/{us}/"
+            trs = word_info.get("trs", [])
+            if trs and isinstance(trs, list):
+                first_tr = trs[0]
+                if isinstance(first_tr, dict):
+                    tr_list = first_tr.get("tr", [])
+                    if tr_list and isinstance(tr_list, list):
+                        first_tr_item = tr_list[0]
+                        if isinstance(first_tr_item, dict):
+                            l_i = first_tr_item.get("l", {})
+                            if isinstance(l_i, dict):
+                                i_list = l_i.get("i", [])
+                                if i_list and isinstance(i_list, list):
+                                    result["chinese_meaning"] = str(i_list[0])
+    return result
 
-    phonetics = entry.get("phonetics", [])
+def _normalize_ipa(phonetic: str) -> str:
+    if not phonetic:
+        return phonetic
+    phonetic = phonetic.replace("ɹ", "r")
+    return phonetic
+
+def _extract_phonetics_from_dictapi(data):
+    result = {"uk_phonetic": "", "us_phonetic": "", "meaning": "", "part_of_speech": [], "chinese_meaning": ""}
+    if not data:
+        return result
+
+    all_phonetics = []
+    for entry in (data if isinstance(data, list) else [data]):
+        for p in entry.get("phonetics", []):
+            text = p.get("text", "")
+            if not text or "/" not in text:
+                continue
+            audio = p.get("audio", "")
+            all_phonetics.append({"text": text, "audio": audio})
+
     uk_phon = ""
     us_phon = ""
-    for p in phonetics:
-        text = p.get("text", "")
-        if not text or "/" not in text:
-            continue
-        audio = p.get("audio", "")
-        if audio and ("-uk_" in audio or "_gb_" in audio or "uk" in audio.lower()):
-            uk_phon = text
-        elif audio and ("-us_" in audio or "_us_" in audio or "us" in audio.lower()):
-            us_phon = text
-        elif not uk_phon:
-            uk_phon = text
+    generic_phon = ""
 
-    if not uk_phon and entry.get("phonetic"):
-        uk_phon = entry["phonetic"]
+    for p in all_phonetics:
+        text = p["text"]
+        audio = p["audio"]
+        if audio:
+            audio_lower = audio.lower()
+            if "-uk_" in audio_lower or "_gb_" in audio_lower or "/uk/" in audio_lower:
+                if not uk_phon:
+                    uk_phon = text
+                continue
+            elif "-us_" in audio_lower or "_us_" in audio_lower or "/us/" in audio_lower:
+                if not us_phon:
+                    us_phon = text
+                continue
+        if not generic_phon:
+            generic_phon = text
 
-    if not us_phon and uk_phon:
-        us_phon = uk_phon
+    if not uk_phon and not us_phon and generic_phon:
+        first_entry = data[0] if isinstance(data, list) else data
+        phonetics_list = first_entry.get("phonetics", [])
+        uk_count = sum(1 for p in phonetics_list if p.get("audio") and ("-uk_" in p["audio"].lower() or "_gb_" in p["audio"].lower()))
+        us_count = sum(1 for p in phonetics_list if p.get("audio") and ("-us_" in p["audio"].lower() or "_us_" in p["audio"].lower()))
+        if uk_count > 0 and us_count == 0:
+            uk_phon = generic_phon
+        elif us_count > 0 and uk_count == 0:
+            us_phon = generic_phon
+        else:
+            uk_phon = generic_phon
+
+    if not uk_phon:
+        first_entry = data[0] if isinstance(data, list) else data
+        if first_entry.get("phonetic"):
+            uk_phon = first_entry["phonetic"]
+
+    uk_phon = _normalize_ipa(uk_phon)
+    us_phon = _normalize_ipa(us_phon)
 
     result["uk_phonetic"] = uk_phon
     result["us_phonetic"] = us_phon
 
-    meanings = entry.get("meanings", [])
+    first_entry = data[0] if isinstance(data, list) else data
+    meanings = first_entry.get("meanings", [])
     if meanings:
+        pos_list = []
+        for meaning_entry in meanings:
+            pos = (meaning_entry.get("partOfSpeech") or "").lower()
+            if pos in PART_OF_SPEECH_MAP and pos not in pos_list:
+                pos_list.append(PART_OF_SPEECH_MAP[pos])
+        result["part_of_speech"] = pos_list
         first_meaning = meanings[0]
-        pos = (first_meaning.get("partOfSpeech") or "").lower()
-        if pos in PART_OF_SPEECH_MAP:
-            result["part_of_speech"] = PART_OF_SPEECH_MAP[pos]
         definitions = first_meaning.get("definitions", [])
         if definitions:
             result["meaning"] = definitions[0].get("definition", "")
@@ -122,7 +205,7 @@ def _extract_phonetics_from_dictapi(data):
     return result
 
 def _extract_from_youdao_suggest(entry):
-    result = {"uk_phonetic": "", "us_phonetic": "", "meaning": "", "part_of_speech": "", "chinese_meaning": ""}
+    result = {"uk_phonetic": "", "us_phonetic": "", "meaning": "", "part_of_speech": [], "chinese_meaning": ""}
     if not entry:
         return result
     chinese = entry.get("explain", "")
@@ -144,7 +227,7 @@ def lookup_word(
         "uk_phonetic": "",
         "us_phonetic": "",
         "meaning": "",
-        "part_of_speech": "",
+        "part_of_speech": [],
         "chinese_meaning": "",
     }
 
@@ -155,6 +238,16 @@ def lookup_word(
         result["us_phonetic"] = extracted["us_phonetic"]
         result["meaning"] = extracted["meaning"]
         result["part_of_speech"] = extracted["part_of_speech"]
+
+    youdao_jsonapi_data = _query_youdao_jsonapi(word, timeout=8)
+    if youdao_jsonapi_data:
+        youdao_phonetics = _extract_phonetics_from_youdao_jsonapi(youdao_jsonapi_data)
+        if not result["uk_phonetic"] and youdao_phonetics["uk_phonetic"]:
+            result["uk_phonetic"] = youdao_phonetics["uk_phonetic"]
+        if not result["us_phonetic"] and youdao_phonetics["us_phonetic"]:
+            result["us_phonetic"] = youdao_phonetics["us_phonetic"]
+        if youdao_phonetics["chinese_meaning"]:
+            result["chinese_meaning"] = youdao_phonetics["chinese_meaning"]
 
     youdao_entry = _query_youdao_api(word, timeout=8)
     if youdao_entry:
@@ -178,6 +271,152 @@ def lookup_word(
                     result["chinese_meaning"] = translate_data["responseData"]["translatedText"]
         except Exception:
             pass
+
+    return result
+
+
+PHRASE_TYPE_KEYWORDS = {
+    "prepositional_phrase": ["preposition", "prepositional phrase", "pp"],
+    "verb_phrase": ["verb phrase", "vp", "phrasal verb"],
+    "noun_phrase": ["noun phrase", "np"],
+    "adjective_phrase": ["adjective phrase", "adjp", "adjectival phrase"],
+    "adverb_phrase": ["adverb phrase", "advp", "adverbial phrase"],
+    "infinitive_phrase": ["infinitive", "infinitive phrase", "to-infinitive"],
+    "gerund_phrase": ["gerund", "gerund phrase", "-ing form"],
+    "participle_phrase": ["participle", "participle phrase", "present participle", "past participle"],
+    "conjunction_phrase": ["conjunction", "conjunctive phrase", "correlative conjunction"],
+    "clause_phrase": ["clause", "subordinate clause", "relative clause", "that-clause"],
+}
+
+SYNTACTIC_ROLE_KEYWORDS = {
+    "subject": ["subject", "as subject"],
+    "predicate": ["predicate", "as predicate", "predicative"],
+    "object": ["object", "as object", "direct object", "indirect object"],
+    "predicative": ["predicative", "subject complement", "as predicative"],
+    "attributive": ["attributive", "as attributive", "modifier", "as modifier"],
+    "adverbial": ["adverbial", "as adverbial", "adverbial modifier"],
+    "complement": ["complement", "object complement", "as complement"],
+    "appositive": ["appositive", "in apposition", "as appositive"],
+    "parenthetical": ["parenthetical", "parenthesis", "as parenthesis"],
+}
+
+def _detect_phrase_types(meaning: str, part_of_speech_list: list) -> List[str]:
+    detected = []
+    meaning_lower = meaning.lower() if meaning else ""
+    for ptype, keywords in PHRASE_TYPE_KEYWORDS.items():
+        for kw in keywords:
+            if kw in meaning_lower:
+                detected.append(ptype)
+                break
+    for pos in part_of_speech_list:
+        pos_lower = pos.lower()
+        if pos_lower in ("preposition",):
+            if "prepositional_phrase" not in detected:
+                detected.append("prepositional_phrase")
+        elif pos_lower in ("verb",):
+            if "verb_phrase" not in detected:
+                detected.append("verb_phrase")
+        elif pos_lower in ("noun",):
+            if "noun_phrase" not in detected:
+                detected.append("noun_phrase")
+        elif pos_lower in ("adjective",):
+            if "adjective_phrase" not in detected:
+                detected.append("adjective_phrase")
+        elif pos_lower in ("adverb",):
+            if "adverb_phrase" not in detected:
+                detected.append("adverb_phrase")
+    return detected
+
+def _detect_syntactic_roles(meaning: str) -> List[str]:
+    detected = []
+    meaning_lower = meaning.lower() if meaning else ""
+    for role, keywords in SYNTACTIC_ROLE_KEYWORDS.items():
+        for kw in keywords:
+            if kw in meaning_lower:
+                detected.append(role)
+                break
+    return detected
+
+
+@router.get("/lookup-phrase/{phrase:path}")
+def lookup_phrase(
+    phrase: str,
+    current_user: User = Depends(get_current_teaching_assistant_user),
+):
+    phrase = phrase.strip()
+    if not phrase:
+        raise HTTPException(status_code=400, detail="短语不能为空")
+
+    result = {
+        "phrase": phrase,
+        "phrase_type": [],
+        "syntactic_role": [],
+        "meaning": "",
+        "chinese_meaning": "",
+    }
+
+    youdao_jsonapi_data = _query_youdao_jsonapi(phrase, timeout=8)
+    if youdao_jsonapi_data:
+        youdao_phonetics = _extract_phonetics_from_youdao_jsonapi(youdao_jsonapi_data)
+        if youdao_phonetics["chinese_meaning"]:
+            result["chinese_meaning"] = youdao_phonetics["chinese_meaning"]
+
+    youdao_entry = _query_youdao_api(phrase, timeout=8)
+    if youdao_entry:
+        youdao_result = _extract_from_youdao_suggest(youdao_entry)
+        if youdao_result["chinese_meaning"] and not result["chinese_meaning"]:
+            result["chinese_meaning"] = youdao_result["chinese_meaning"]
+
+    dictapi_data = _query_free_dictionary_api(phrase, timeout=8)
+    if dictapi_data:
+        extracted = _extract_phonetics_from_dictapi(dictapi_data)
+        if extracted["meaning"]:
+            result["meaning"] = extracted["meaning"]
+
+        pos_list = []
+        first_entry = dictapi_data[0] if isinstance(dictapi_data, list) else dictapi_data
+        for meaning_entry in first_entry.get("meanings", []):
+            pos = (meaning_entry.get("partOfSpeech") or "").lower()
+            if pos and pos not in pos_list:
+                pos_list.append(pos)
+
+        if not result["phrase_type"]:
+            detected_types = _detect_phrase_types(result["meaning"], pos_list)
+            if detected_types:
+                result["phrase_type"] = detected_types
+
+    if not result["phrase_type"]:
+        phrase_lower = phrase.lower()
+        words = phrase_lower.split()
+        if words and words[0] == "to" and len(words) > 1:
+            if "infinitive_phrase" not in result["phrase_type"]:
+                result["phrase_type"].append("infinitive_phrase")
+        prepositions = {"in", "on", "at", "by", "with", "for", "from", "to", "of", "about", "under", "over", "between", "through", "during", "without", "against"}
+        if words and words[0] in prepositions:
+            if "prepositional_phrase" not in result["phrase_type"]:
+                result["phrase_type"].append("prepositional_phrase")
+
+    if not result["syntactic_role"] and result["meaning"]:
+        detected_roles = _detect_syntactic_roles(result["meaning"])
+        if detected_roles:
+            result["syntactic_role"] = detected_roles
+
+    if not result["chinese_meaning"] and result["meaning"]:
+        try:
+            translate_resp = http_requests.get(
+                "https://api.mymemory.translated.net/get",
+                params={"q": result["meaning"], "langpair": "en|zh-CN"},
+                timeout=8,
+            )
+            if translate_resp.status_code == 200:
+                translate_data = translate_resp.json()
+                if translate_data.get("responseData", {}).get("translatedText"):
+                    result["chinese_meaning"] = translate_data["responseData"]["translatedText"]
+        except Exception:
+            pass
+
+    if not result["meaning"] and not result["chinese_meaning"]:
+        raise HTTPException(status_code=404, detail=f"未找到\"{phrase}\"的相关信息，请手动填写")
 
     return result
 
