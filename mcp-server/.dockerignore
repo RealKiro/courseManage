@@ -1,0 +1,14 @@
+# 只把源码与元数据送进构建上下文
+* 
+!src/
+!requirements.txt
+!pyproject.toml
+!README.md
+
+# 即使被上面放行也要排除的内容
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/.ruff_cache/
+**/*.egg-info/

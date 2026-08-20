@@ -64,4 +64,11 @@ backups/
 uploads/
 
 # Machine ID persistence
+# Machine ID persistence
 .machine_id
+
+# Test / lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/

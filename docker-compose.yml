@@ -1,3 +1,12 @@
+# ============================================================
+# courseManage 开发 / 本地构建配置（从源码构建镜像）
+# 使用方法：
+#   docker compose up -d --build
+#
+# 可选：同时构建并启动 MCP 服务器
+#   docker compose --profile mcp up -d --build
+# ============================================================
+
 x-database-variables: &database-variables
   DB_HOST: postgres
   DB_PORT: ${DB_PORT:-5432}
@@ -69,6 +78,12 @@ services:
         aliases:
           - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status==200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   frontend:
     build:
@@ -81,6 +96,40 @@ services:
       - "${FRONTEND_PORT:-18080}:80"
     depends_on:
       - backend
+    networks:
+      - default
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # MCP 服务器（可选，profile: mcp）
+  # ----------------------------------------------------------
+  mcp:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        PIP_TRUSTED_HOST: ${PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
+    container_name: coursemanage-mcp
+    profiles: ["mcp"]
+    environment:
+      COURSEMANAGE_API_BASE: http://backend:8000
+      COURSEMANAGE_USERNAME: ${MCP_API_USERNAME:-admin}
+      COURSEMANAGE_PASSWORD: ${MCP_API_PASSWORD:-Admin.123}
+      COURSEMANAGE_MCP_TRANSPORT: ${MCP_TRANSPORT:-http}
+      COURSEMANAGE_MCP_HOST: 0.0.0.0
+      COURSEMANAGE_MCP_PORT: 8765
+      COURSEMANAGE_MCP_PATH: ${MCP_PATH:-/mcp}
+      COURSEMANAGE_MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      COURSEMANAGE_MCP_READONLY: ${MCP_READONLY:-false}
+      COURSEMANAGE_MCP_ALLOW_NOTIFICATIONS: ${MCP_ALLOW_NOTIFICATIONS:-false}
+      COURSEMANAGE_MCP_MAX_ITEMS: ${MCP_MAX_ITEMS:-50}
+      COURSEMANAGE_LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${MCP_BIND_HOST:-127.0.0.1}:${MCP_PORT:-8765}:8765"
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - default
     restart: unless-stopped

@@ -1,0 +1,16 @@
+{
+  "_comment": "AstrBot 与 MCP 服务器同机部署（AstrBot 直接拉起子进程）时可用 stdio 方式。需要 AstrBot 容器内能执行 docker 或已安装 coursemanage-mcp。",
+  "mcpServers": {
+    "coursemanage": {
+      "command": "coursemanage-mcp",
+      "args": [],
+      "env": {
+        "COURSEMANAGE_API_BASE": "http://127.0.0.1:35000",
+        "COURSEMANAGE_USERNAME": "admin",
+        "COURSEMANAGE_PASSWORD": "Admin.123",
+        "COURSEMANAGE_MCP_TRANSPORT": "stdio",
+        "COURSEMANAGE_MCP_READONLY": "true"
+      }
+    }
+  }
+}

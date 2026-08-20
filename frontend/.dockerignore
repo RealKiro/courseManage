@@ -1,0 +1,18 @@
+# 避免把本机 node_modules / 构建产物拷进镜像（体积大且架构相关）
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+*.log
+npm-debug.log*
+yarn-error.log*
+
+.env
+.env.*
+.DS_Store
+
+.git/
+.gitignore
+.idea/
+.vscode/

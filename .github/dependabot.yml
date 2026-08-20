@@ -1,0 +1,64 @@
+version: 2
+updates:
+  # GitHub Actions 版本更新
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'ci'
+    groups:
+      actions:
+        patterns: ['*']
+
+  # 后端 Python 依赖
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'deps(backend)'
+    ignore:
+      # 大版本升级需人工评估（FastAPI/SQLAlchemy/Pydantic 有破坏性变更史）
+      - dependency-name: fastapi
+        update-types: ['version-update:semver-major']
+      - dependency-name: sqlalchemy
+        update-types: ['version-update:semver-major']
+      - dependency-name: pydantic
+        update-types: ['version-update:semver-major']
+
+  # MCP 服务器依赖
+  - package-ecosystem: pip
+    directory: /mcp-server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'deps(mcp)'
+
+  # 前端依赖
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'deps(frontend)'
+    groups:
+      frontend-minor:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+
+  # 基础镜像
+  - package-ecosystem: docker
+    directories:
+      - /backend
+      - /frontend
+      - /mcp-server
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'deps(docker)'

@@ -1,0 +1,13 @@
+{
+  "_comment": "AstrBot → 配置 → 工具/MCP → 添加 MCP 服务器，粘贴下面 mcpServers 里的内容。远程 Streamable HTTP 方式，推荐。",
+  "mcpServers": {
+    "coursemanage": {
+      "transport": "streamable_http",
+      "url": "http://192.168.1.100:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer 把MCP_AUTH_TOKEN填在这里"
+      },
+      "timeout": 30
+    }
+  }
+}

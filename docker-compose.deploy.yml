@@ -1,8 +1,11 @@
-﻿# ============================================================
+# ============================================================
 # courseManage 部署配置（使用预构建镜像）
 # 使用方法：
 #   1. 复制 .env.example 为 .env 并修改配置
 #   2. docker compose -f docker-compose.deploy.yml up -d
+#
+# 可选：同时启动 MCP 服务器（对接 AstrBot 等第三方框架）
+#   docker compose -f docker-compose.deploy.yml --profile mcp up -d
 # ============================================================
 
 x-database-variables: &database-variables
@@ -53,7 +56,7 @@ services:
       retries: 5
 
   backend:
-    image: ghcr.io/daiyu116/coursemanage-backend:latest
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_OWNER:-daiyu116}/coursemanage-backend:${IMAGE_TAG:-latest}
     container_name: coursemanage-backend
     environment:
       <<: [*database-variables, *app-variables, *backend-variables]
@@ -71,9 +74,15 @@ services:
         aliases:
           - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status==200 else 1)\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   frontend:
-    image: ghcr.io/daiyu116/coursemanage-frontend:latest
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_OWNER:-daiyu116}/coursemanage-frontend:${IMAGE_TAG:-latest}
     container_name: coursemanage-frontend
     environment:
       <<: *app-variables
@@ -81,6 +90,43 @@ services:
       - "${FRONTEND_PORT:-18080}:80"
     depends_on:
       - backend
+    networks:
+      - default
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # MCP 服务器（可选组件，需显式启用 profile: mcp）
+  #   启动：docker compose -f docker-compose.deploy.yml --profile mcp up -d
+  #   用途：把课程管理能力以 Model Context Protocol 暴露给
+  #        AstrBot / Claude Desktop / Cherry Studio / Dify 等框架
+  # ----------------------------------------------------------
+  mcp:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_OWNER:-daiyu116}/coursemanage-mcp:${IMAGE_TAG:-latest}
+    container_name: coursemanage-mcp
+    profiles: ["mcp"]
+    environment:
+      # 容器内直连后端，无需经过宿主机端口
+      COURSEMANAGE_API_BASE: http://backend:8000
+      # 注意：这里不能用 ${VAR:?} 强制校验——Compose 会在解析阶段就报错，
+      # 即使没有启用 mcp profile 也会影响主服务启动。缺失时由 MCP 进程自己给出中文提示。
+      COURSEMANAGE_USERNAME: ${MCP_API_USERNAME:-}
+      COURSEMANAGE_PASSWORD: ${MCP_API_PASSWORD:-}
+      COURSEMANAGE_MCP_TRANSPORT: ${MCP_TRANSPORT:-http}
+      COURSEMANAGE_MCP_HOST: 0.0.0.0
+      COURSEMANAGE_MCP_PORT: 8765
+      COURSEMANAGE_MCP_PATH: ${MCP_PATH:-/mcp}
+      # 客户端访问令牌：强烈建议设置，否则任何能访问该端口的人都能操作系统数据
+      COURSEMANAGE_MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      COURSEMANAGE_MCP_READONLY: ${MCP_READONLY:-false}
+      COURSEMANAGE_MCP_ALLOW_NOTIFICATIONS: ${MCP_ALLOW_NOTIFICATIONS:-false}
+      COURSEMANAGE_MCP_MAX_ITEMS: ${MCP_MAX_ITEMS:-50}
+      COURSEMANAGE_LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      # 默认只监听回环地址；需被其它主机/容器访问时把 MCP_BIND_HOST 改为 0.0.0.0
+      - "${MCP_BIND_HOST:-127.0.0.1}:${MCP_PORT:-8765}:8765"
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - default
     restart: unless-stopped

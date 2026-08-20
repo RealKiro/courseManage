@@ -1,0 +1,33 @@
+# 构建缓存与本地产物不进入镜像上下文，可显著加快构建并提高层缓存命中率
+__pycache__/
+*.py[cod]
+*.so
+*.c
+build/
+dist/
+*.egg-info/
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# 本地数据与日志
+logs/
+backups/
+uploads/
+*.log
+*.sqlite
+*.db
+
+# 开发工具产物
+.venv/
+venv/
+.env
+.env.*
+_check_syntax.py
+
+# 版本控制与编辑器
+.git/
+.gitignore
+.idea/
+.vscode/

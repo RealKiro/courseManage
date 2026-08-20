@@ -90,6 +90,54 @@
             数据库恢复：从备份文件还原
             备份文件管理：列表查看、下载、删除
 
+**🔌 MCP 服务器（对接 AstrBot 等第三方框架）**
+
+    本项目内置一个 MCP（Model Context Protocol）服务器，把排课/学员/导师/课费/成绩/统计
+    等能力封装成标准工具，任何支持 MCP 的框架都能接入，让大模型用自然语言完成日常课务。
+
+    已验证客户端：AstrBot（QQ/微信/Telegram 机器人）、Claude Desktop、Cherry Studio、Dify、Cline
+    镜像地址：ghcr.io/<你的用户名小写>/coursemanage-mcp:latest（amd64 + arm64）
+    传输方式：Streamable HTTP（推荐，远程接入） / SSE（兼容旧客户端） / stdio（本地进程）
+
+    接好之后可以直接在群里问机器人：
+        今天有几节课？都是谁上的？
+        明天上午王老师的课在哪个教室？
+        张三还剩多少课时？该催费了吗？
+        把 128 号课延到下周三 19:00，原因是导师出差
+        给三年级A班周三 19 点排一节数学课
+
+    安全设计：
+        只读模式（默认）：MCP_READONLY=true 时写操作工具在协议层就不注册，模型无法误删误改
+        通知隔离：默认强制关闭 send_notification，避免机器人误发企业微信群通知
+        访问令牌：MCP_AUTH_TOKEN 提供 Bearer 鉴权，未设置时仅监听 127.0.0.1
+        专用账号：建议单独创建系统账号供 MCP 使用，按最小权限授予角色
+
+    一键启用：
+        **bash**
+        # 在 .env 中设置 MCP_API_USERNAME / MCP_API_PASSWORD / MCP_AUTH_TOKEN 后：
+        docker compose -f docker-compose.deploy.yml --profile mcp up -d
+
+    📖 完整接入指南（含 AstrBot 配置 JSON、排查表）：docs/MCP.md
+
+**🚀 镜像构建与发布（GitHub Actions）**
+
+    GitHub Actions 会自动把三个镜像推送到 GHCR，支持 linux/amd64 与 linux/arm64
+    （NAS、树莓派、Apple Silicon 可直接拉取）：
+
+        ghcr.io/<你的用户名小写>/coursemanage-backend
+        ghcr.io/<你的用户名小写>/coursemanage-frontend
+        ghcr.io/<你的用户名小写>/coursemanage-mcp
+
+    标签规则：
+        push main   →  main、sha-<短SHA>、latest
+        tag v1.4.2  →  1.4.2、1.4、1、sha-<短SHA>（并自动创建 GitHub Release）
+        Pull Request →  只验证构建，不推送
+
+    ⚠️ fork 本项目后镜像会推到你自己的命名空间，部署时请在 .env 中设置：
+        IMAGE_OWNER=你的github用户名小写
+
+    📖 流水线设计说明与首次启用步骤：docs/CICD.md
+
 **🧑‍💻 客户部署指南**
 
 **🖥️ A 在尚不具备docker的服务器上面如何部署**
@@ -148,16 +196,19 @@
             参数	说明	怎么改
             ★ POSTGRES_PASSWORD	数据库密码	改成强密码。Linux 执行 tr -dc A-Za-z0-9 </dev/urandom | head -c 24 生成
             ★ SECRET_KEY	应用密钥	执行 openssl rand -hex 32 生成，粘贴进去
+            ★ IMAGE_OWNER	镜像归属	改成镜像所在的 GitHub 用户名（全小写）。用官方镜像则保持 daiyu116
             可选修改的项：
             
             参数	默认值	何时需要改
             FRONTEND_PORT	18080	想换前端访问端口时
             BACKEND_PORT	35000	想换后端 API 端口时
+            IMAGE_TAG	latest	想锁定某个发布版本时（如 1.4.2）
             DOCKER_SUBNET	172.18.16.0/24	与宿主机网络冲突时
             POSTGRES_USER	cadbuser	想换数据库用户名时
             POSTGRES_DB	cadb	想换数据库名时
             UVICORN_WORKERS	4	建议设为 CPU 核心数
             ALLOWED_ORIGINS	localhost:18080	服务器有域名时改为 https://yourdomain.com
+            MCP_*	见 .env 注释	需要启用 MCP 服务器对接 AstrBot 时（详见 docs/MCP.md）
       
       步骤 3：启动服务
           **bash**
@@ -369,15 +420,30 @@
       # ===== 清理 =====
       # 停止并删除所有容器和数据卷（⚠️ 会删除数据库数据）
       docker compose -f docker-compose.deploy.yml down -v
+
+      # ===== MCP 服务器（可选组件） =====
+      # 启动（需先在 .env 配置 MCP_API_USERNAME / MCP_API_PASSWORD / MCP_AUTH_TOKEN）
+      docker compose -f docker-compose.deploy.yml --profile mcp up -d
+      # 查看日志
+      docker compose -f docker-compose.deploy.yml logs -f mcp
+      # 健康检查
+      curl http://127.0.0.1:8765/healthz
+      # 查看已注册的工具清单
+      docker exec coursemanage-mcp python -m coursemanage_mcp --list-tools
+      # 停止 MCP（不影响主服务）
+      docker compose -f docker-compose.deploy.yml --profile mcp stop mcp
       
 **NAS 常见问题排查**
 
     问题                |   原因	                                     |   解决方法
     无法拉取镜像        |   国内网络无法访问 GHCR                      |   配置 Docker 镜像加速器，或用 Gitee 镜像源
+    镜像架构不匹配      |   ARM 架构 NAS（如部分绿联/群晖机型）        |   镜像已提供 linux/arm64，直接 docker compose pull 即可
+    manifest 未找到     |   IMAGE_OWNER 填错或包仍为私有               |   核对 .env 中 IMAGE_OWNER（全小写）；私有包需先 docker login ghcr.io
     端口被占用	NAS       |  其他服务占用了 18080 或 35000	修改         |   .env 中的 FRONTEND_PORT 和 BACKEND_PORT
     子网冲突            | 	  NAS 已有 Docker 网络使用 172.18.16.0/24   |	 修改 .env 中的 DOCKER_SUBNET，如改为 172.28.16.0/24
     容器启动后立即退出   | 	.env 中密码/密钥未修改                    |	 检查 POSTGRES_PASSWORD 和 SECRET_KEY 是否已改
     页面打不开          | 	  防火墙阻止了端口                          |	 NAS 设置中开放 18080 端口
+    MCP 容器反复重启     |   未配置 MCP_API_USERNAME / MCP_API_PASSWORD |	 补齐 .env 中的 MCP_* 配置，详见 docs/MCP.md
     
 **配置 Docker 镜像加速器（如果拉取 GHCR 镜像超时）：**
 

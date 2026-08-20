@@ -1,172 +1,558 @@
+# ============================================================
+# courseManage —— 镜像构建与发布（GHCR）
+#
+# 设计要点：
+#   1. 组件矩阵：backend / frontend / mcp 三个镜像统一由一份配置驱动
+#   2. 增量构建：只有对应目录变更时才重建该组件（tag / 手动触发则全量）
+#   3. 多架构：amd64 与 arm64 分别在原生 Runner 上构建（NAS/树莓派可用）
+#      —— 比 QEMU 交叉编译快 5-10 倍，backend 的 Cython 编译尤其明显
+#   4. 按 digest 推送 + imagetools 合并 manifest，避免 tag 相互覆盖
+#   5. PR 只验证构建、不推送；main/tag 才推送
+#   6. 构建产物证明（provenance attestation）+ Trivy 漏洞扫描 + SBOM
+#   7. 打 tag 时自动创建 GitHub Release 并附带部署文件
+# ============================================================
 name: Build and Push Docker Images
 
 on:
   push:
     branches: [main]
     tags: ['v*']
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'init-repo.*'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'init-repo.*'
   workflow_dispatch:
+    inputs:
+      components:
+        description: '要构建的组件（all / backend / frontend / mcp，可逗号分隔）'
+        required: false
+        default: 'all'
+        type: string
+      push_images:
+        description: '是否推送镜像到 GHCR'
+        required: false
+        default: true
+        type: boolean
+      build_arm64:
+        description: '是否构建 linux/arm64（NAS/ARM 设备需要）'
+        required: false
+        default: true
+        type: boolean
+
+# 同一分支/PR 的重复触发自动取消，节省 Actions 额度
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# 默认最小权限，具体 job 再按需提升
+permissions:
+  contents: read
 
 env:
-  GHCR_REGISTRY: ghcr.io
-  IMAGE_NAME: coursemanage
+  REGISTRY: ghcr.io
 
 jobs:
-  build-backend:
+  # ----------------------------------------------------------
+  # 1. 准备阶段：计算镜像归属、组件矩阵、平台矩阵
+  # ----------------------------------------------------------
+  prepare:
+    name: Prepare build matrix
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-backend
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            PIP_INDEX_URL=https://pypi.org/simple
-            PIP_TRUSTED_HOST=pypi.org
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Get short SHA
-        id: sha
-        run: echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
-
-      - name: Pull image for scanning
-        run: docker pull ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-backend:sha-${{ steps.sha.outputs.short }}
-
-      - name: Run Trivy vulnerability scanner
-        if: success()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-backend:sha-${{ steps.sha.outputs.short }}
-          format: sarif
-          output: trivy-backend-results.sarif
-          severity: CRITICAL,HIGH
-          exit-code: 0
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-backend-results.sarif') != ''
-        with:
-          sarif_file: trivy-backend-results.sarif
-          category: backend
-
-  build-frontend:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-frontend
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Get short SHA
-        id: sha
-        run: echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
-
-      - name: Pull image for scanning
-        run: docker pull ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-frontend:sha-${{ steps.sha.outputs.short }}
-
-      - name: Run Trivy vulnerability scanner
-        if: success()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}-frontend:sha-${{ steps.sha.outputs.short }}
-          format: sarif
-          output: trivy-frontend-results.sarif
-          severity: CRITICAL,HIGH
-          exit-code: 0
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-frontend-results.sarif') != ''
-        with:
-          sarif_file: trivy-frontend-results.sarif
-          category: frontend
-
-  sync-to-gitee:
-    needs: [build-backend, build-frontend]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    outputs:
+      owner: ${{ steps.meta.outputs.owner }}
+      push: ${{ steps.meta.outputs.push }}
+      components: ${{ steps.matrix.outputs.components }}
+      platforms: ${{ steps.matrix.outputs.platforms }}
+      has_work: ${{ steps.matrix.outputs.has_work }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Mirror to Gitee
-        uses: Yikun/hub-mirror-action@master
+      - name: Resolve registry owner and push flag
+        id: meta
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PUSH: ${{ inputs.push_images }}
+        run: |
+          # GHCR 仓库名必须全小写，而 GitHub 用户名/组织名可能含大写
+          owner="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          echo "owner=${owner}" >> "$GITHUB_OUTPUT"
+
+          push=true
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            push=false
+          elif [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ "${INPUT_PUSH}" != "true" ]; then
+            push=false
+          fi
+          echo "push=${push}" >> "$GITHUB_OUTPUT"
+          echo "镜像归属：${owner}，推送：${push}"
+
+      - name: Compute component and platform matrix
+        id: matrix
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_COMPONENTS: ${{ inputs.components }}
+          INPUT_ARM64: ${{ inputs.build_arm64 }}
+          VAR_ARM64: ${{ vars.BUILD_ARM64 }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # ---------- 变更文件集合 ----------
+          changed=""
+          build_all=false
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] || [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            build_all=true
+          elif [ -z "${BASE_SHA}" ] || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ]; then
+            # 首次推送 / force-push 后拿不到基准提交，保守起见全量构建
+            build_all=true
+          elif ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            build_all=true
+          else
+            changed="$(git diff --name-only "${BASE_SHA}" "${GITHUB_SHA}" || true)"
+            echo "变更文件："
+            echo "${changed}"
+            # 构建脚本本身变更时全量构建，确保配置改动被验证
+            if echo "${changed}" | grep -qE '^\.github/workflows/docker-build\.yml$|^docker-compose'; then
+              build_all=true
+            fi
+          fi
+
+          # ---------- 手动指定组件 ----------
+          wanted="all"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ -n "${INPUT_COMPONENTS}" ]; then
+            wanted="${INPUT_COMPONENTS}"
+          fi
+
+          selected() {
+            local name="$1"
+            case ",${wanted}," in
+              *,all,*) return 0 ;;
+              *",${name},"*) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          touched() {
+            local prefix="$1"
+            [ "${build_all}" = "true" ] && return 0
+            echo "${changed}" | grep -qE "^${prefix}/" && return 0
+            return 1
+          }
+
+          components="[]"
+          add_component() {
+            local name="$1" context="$2" dockerfile="$3"
+            components="$(jq -c --arg n "$name" --arg c "$context" --arg d "$dockerfile" \
+              '. + [{name:$n, context:$c, dockerfile:$d}]' <<<"${components}")"
+          }
+
+          # 用 if 包裹而不是 `a && b && c`，避免 set -e 在脚本末尾对 AND-OR 列表的歧义
+          if selected backend  && touched backend;    then add_component backend  backend    backend/Dockerfile;  fi
+          if selected frontend && touched frontend;   then add_component frontend frontend   frontend/Dockerfile; fi
+          if selected mcp      && touched mcp-server; then add_component mcp      mcp-server mcp-server/Dockerfile; fi
+
+          # ---------- 平台矩阵 ----------
+          arm64=true
+          if [ "${VAR_ARM64}" = "false" ]; then arm64=false; fi
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ] && [ "${INPUT_ARM64}" != "true" ]; then arm64=false; fi
+
+          platforms='[{"platform":"linux/amd64","runner":"ubuntu-latest","arch":"amd64"}]'
+          if [ "${arm64}" = "true" ]; then
+            platforms="$(jq -c '. + [{platform:"linux/arm64",runner:"ubuntu-24.04-arm",arch:"arm64"}]' <<<"${platforms}")"
+          fi
+
+          count="$(jq 'length' <<<"${components}")"
+          has_work=true
+          if [ "${count}" -eq 0 ]; then has_work=false; fi
+
+          {
+            echo "components=${components}"
+            echo "platforms=${platforms}"
+            echo "has_work=${has_work}"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### 构建计划"
+            echo ""
+            echo "- 组件：\`$(jq -r '[.[].name] | join(", ") // "（无）"' <<<"${components}")\`"
+            echo "- 平台：\`$(jq -r '[.[].platform] | join(", ")' <<<"${platforms}")\`"
+            echo "- 全量构建：\`${build_all}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ----------------------------------------------------------
+  # 2. 分架构构建（原生 Runner，按 digest 推送）
+  # ----------------------------------------------------------
+  build:
+    name: Build ${{ matrix.component.name }} (${{ matrix.platform.arch }})
+    needs: prepare
+    if: needs.prepare.outputs.has_work == 'true'
+    runs-on: ${{ matrix.platform.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.prepare.outputs.components) }}
+        platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
+    env:
+      IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/coursemanage-${{ matrix.component.name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: needs.prepare.outputs.push == 'true'
+        uses: docker/login-action@v3
         with:
-          src: github/${{ github.repository_owner }}
-          dst: gitee/${{ secrets.GITEE_USERNAME }}
-          dst_key: ${{ secrets.GITEE_RSA_PRIVATE_KEY }}
-          dst_token: ${{ secrets.GITEE_TOKEN }}
-          static_list: ${{ github.event.repository.name }}
-          force_update: true
-          debug: true
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          labels: |
+            org.opencontainers.image.title=courseManage ${{ matrix.component.name }}
+            org.opencontainers.image.description=courseManage 教育培训机构综合管理平台 - ${{ matrix.component.name }}
+            org.opencontainers.image.vendor=courseManage Contributors
+            org.opencontainers.image.licenses=AGPL-3.0-only
+
+      # PR：只验证能否构建成功，不推送
+      - name: Build only (pull request validation)
+        if: needs.prepare.outputs.push != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.component.context }}
+          file: ${{ matrix.component.dockerfile }}
+          platforms: ${{ matrix.platform.platform }}
+          push: false
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PIP_INDEX_URL=https://pypi.org/simple
+            PIP_TRUSTED_HOST=pypi.org
+          cache-from: type=gha,scope=${{ matrix.component.name }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component.name }}-${{ matrix.platform.arch }}
+
+      # main / tag：按 digest 推送，稍后由 merge job 合并成多架构 manifest
+      - name: Build and push by digest
+        id: build
+        if: needs.prepare.outputs.push == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.component.context }}
+          file: ${{ matrix.component.dockerfile }}
+          platforms: ${{ matrix.platform.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PIP_INDEX_URL=https://pypi.org/simple
+            PIP_TRUSTED_HOST=pypi.org
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          # provenance / sbom 在合并后的 manifest 上统一生成，避免 push-by-digest 冲突
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=${{ matrix.component.name }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component.name }}-${{ matrix.platform.arch }}
+
+      - name: Export digest
+        if: needs.prepare.outputs.push == 'true'
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: needs.prepare.outputs.push == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.component.name }}-${{ matrix.platform.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ----------------------------------------------------------
+  # 3. 合并多架构 manifest 并打正式 tag
+  # ----------------------------------------------------------
+  merge:
+    name: Publish ${{ matrix.component.name }} manifest
+    needs: [prepare, build]
+    if: needs.prepare.outputs.push == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.prepare.outputs.components) }}
+    env:
+      IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/coursemanage-${{ matrix.component.name }}
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ matrix.component.name }}-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Create multi-arch manifest
+        working-directory: /tmp/digests
+        run: |
+          set -euo pipefail
+          ls -1
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "${DOCKER_METADATA_OUTPUT_JSON}") \
+            $(printf "${IMAGE}@sha256:%s " *)
+
+      - name: Inspect published image
+        id: inspect
+        run: |
+          set -euo pipefail
+          # 直接取 metadata-action 生成的第一个完整镜像引用，避免依赖 version 输出
+          ref="$(jq -r '.tags[0]' <<< "${DOCKER_METADATA_OUTPUT_JSON}")"
+          echo "参考引用：${ref}"
+          docker buildx imagetools inspect "${ref}"
+          digest="$(docker buildx imagetools inspect "${ref}" --format '{{.Manifest.Digest}}')"
+          if [ -z "${digest}" ] || [ "${digest}" = "null" ]; then
+            echo "::error::无法解析镜像 digest"
+            exit 1
+          fi
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.inspect.outputs.digest }}
+          push-to-registry: true
+
+      - name: Job summary
+        run: |
+          {
+            echo "### ✅ ${{ matrix.component.name }} 镜像已发布"
+            echo ""
+            echo '```'
+            jq -r '.tags[]' <<< "${DOCKER_METADATA_OUTPUT_JSON}"
+            echo '```'
+            echo ""
+            echo "digest: \`${{ steps.inspect.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ----------------------------------------------------------
+  # 4. 安全扫描（Trivy）+ SBOM
+  # ----------------------------------------------------------
+  scan:
+    name: Scan ${{ matrix.component.name }}
+    needs: [prepare, merge]
+    if: needs.prepare.outputs.push == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.prepare.outputs.components) }}
+    env:
+      IMAGE: ghcr.io/${{ needs.prepare.outputs.owner }}/coursemanage-${{ matrix.component.name }}
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image reference
+        id: ref
+        run: |
+          # type=sha,format=short 对分支推送和 tag 推送都会生成，所以统一用它最稳
+          echo "tag=sha-$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Run Trivy vulnerability scanner (SARIF)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.ref.outputs.tag }}
+          format: sarif
+          output: trivy-${{ matrix.component.name }}.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+
+      - name: Upload Trivy results to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.component.name)) != ''
+        with:
+          sarif_file: trivy-${{ matrix.component.name }}.sarif
+          category: ${{ matrix.component.name }}
+
+      - name: Generate SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.ref.outputs.tag }}
+          format: cyclonedx
+          output: sbom-${{ matrix.component.name }}.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        if: always() && hashFiles(format('sbom-{0}.cdx.json', matrix.component.name)) != ''
+        with:
+          name: sbom-${{ matrix.component.name }}
+          path: sbom-${{ matrix.component.name }}.cdx.json
+          retention-days: 30
+
+  # ----------------------------------------------------------
+  # 5. 打 tag 时创建 GitHub Release
+  # ----------------------------------------------------------
+  release:
+    name: Create GitHub Release
+    needs: [prepare, merge]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compose release notes
+        env:
+          OWNER: ${{ needs.prepare.outputs.owner }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          previous="$(git describe --tags --abbrev=0 "${version}^" 2>/dev/null || true)"
+          {
+            echo "## 镜像"
+            echo ""
+            echo '```yaml'
+            echo "backend:  ghcr.io/${OWNER}/coursemanage-backend:${version#v}"
+            echo "frontend: ghcr.io/${OWNER}/coursemanage-frontend:${version#v}"
+            echo "mcp:      ghcr.io/${OWNER}/coursemanage-mcp:${version#v}"
+            echo '```'
+            echo ""
+            echo "支持架构：\`linux/amd64\`、\`linux/arm64\`"
+            echo ""
+            echo "## 快速部署"
+            echo ""
+            echo '```bash'
+            echo "curl -O https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${version}/docker-compose.deploy.yml"
+            echo "curl -o .env https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${version}/.env.example"
+            echo "# 修改 .env 中的 POSTGRES_PASSWORD / SECRET_KEY / IMAGE_OWNER"
+            echo "docker compose -f docker-compose.deploy.yml up -d"
+            echo '```'
+            echo ""
+            if [ -n "${previous}" ]; then
+              echo "## 完整变更"
+              echo ""
+              echo "https://github.com/${GITHUB_REPOSITORY}/compare/${previous}...${version}"
+            fi
+          } > RELEASE_NOTES.md
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          # 只用 --notes-file：gh 不允许同时指定 --notes-file 与 --generate-notes
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release edit "${tag}" --title "${tag}" --notes-file RELEASE_NOTES.md
+            gh release upload "${tag}" docker-compose.deploy.yml .env.example --clobber
+          else
+            gh release create "${tag}" \
+              --title "${tag}" \
+              --notes-file RELEASE_NOTES.md \
+              docker-compose.deploy.yml \
+              .env.example
+          fi
+
+  # ----------------------------------------------------------
+  # 6. 同步到 Gitee（可选，缺少 Secret 时自动跳过）
+  # ----------------------------------------------------------
+  sync-to-gitee:
+    name: Mirror to Gitee
+    needs: [prepare, merge]
+    if: github.ref == 'refs/heads/main' && needs.prepare.outputs.push == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Gitee credentials
+        id: check
+        env:
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          if [ -n "${GITEE_USERNAME}" ] && [ -n "${GITEE_TOKEN}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::未配置 GITEE_USERNAME / GITEE_TOKEN，跳过 Gitee 同步"
+          fi
+
+      - name: Checkout repository
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push mirror to Gitee
+        if: steps.check.outputs.ready == 'true'
+        env:
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: ${{ vars.GITEE_REPO }}
+        run: |
+          set -euo pipefail
+          repo="${GITEE_REPO:-${GITHUB_REPOSITORY##*/}}"
+          # Secret 会被 Actions 自动遮蔽，凭据内嵌 URL 不会明文出现在日志中
+          git remote add gitee "https://${GITEE_USERNAME}:${GITEE_TOKEN}@gitee.com/${GITEE_USERNAME}/${repo}.git"
+          git push gitee "HEAD:refs/heads/main" --force --quiet
+          git push gitee --tags --force --quiet
+          echo "::notice::已同步到 gitee.com/${GITEE_USERNAME}/${repo}"

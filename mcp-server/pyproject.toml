@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coursemanage-mcp"
+version = "1.0.0"
+description = "courseManage MCP 服务器：把教育培训机构管理平台接入 AstrBot / Claude / Dify 等框架"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-only" }
+authors = [{ name = "courseManage Contributors" }]
+keywords = ["mcp", "model-context-protocol", "coursemanage", "astrbot", "education"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Education",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Education",
+]
+dependencies = [
+  "mcp>=1.9.0,<2",
+  "httpx>=0.27,<0.29",
+  "uvicorn>=0.30",
+  "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "respx>=0.21", "ruff>=0.6"]
+
+[project.scripts]
+coursemanage-mcp = "coursemanage_mcp.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/daiyu116/courseManage"
+Documentation = "https://github.com/daiyu116/courseManage/blob/main/docs/MCP.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "ASYNC", "RUF"]
+ignore = [
+  "B008",   # FastMCP 依赖注解中的默认值写法
+  "RUF001", # 中文全角标点属于有意为之
+  "RUF002",
+  "RUF003",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-ra"

@@ -1,0 +1,32 @@
+{
+  "_comment": "Claude Desktop: %APPDATA%\\Claude\\claude_desktop_config.json (Windows) 或 ~/Library/Application Support/Claude/claude_desktop_config.json (macOS)。Claude Desktop 只支持 stdio，远程服务器请用 mcp-remote 桥接。",
+  "mcpServers": {
+    "coursemanage": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "COURSEMANAGE_API_BASE",
+        "-e", "COURSEMANAGE_USERNAME",
+        "-e", "COURSEMANAGE_PASSWORD",
+        "-e", "COURSEMANAGE_MCP_TRANSPORT=stdio",
+        "-e", "COURSEMANAGE_MCP_READONLY=true",
+        "ghcr.io/daiyu116/coursemanage-mcp:latest"
+      ],
+      "env": {
+        "COURSEMANAGE_API_BASE": "http://host.docker.internal:35000",
+        "COURSEMANAGE_USERNAME": "admin",
+        "COURSEMANAGE_PASSWORD": "Admin.123"
+      }
+    },
+    "coursemanage-remote": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "http://192.168.1.100:8765/mcp",
+        "--header",
+        "Authorization: Bearer 把MCP_AUTH_TOKEN填在这里"
+      ]
+    }
+  }
+}
