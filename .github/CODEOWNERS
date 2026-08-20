@@ -1,28 +1,38 @@
-﻿# CODEOWNERS - 代码审查规则
+# CODEOWNERS - 代码审查规则
 # 所有变更至少需要一名代码所有者审查后才能合并
-# 请将 @daiyu116 替换为你的实际 GitHub 用户名
+#
+# ⚠️ fork 本仓库后请把 @RealKiro 全部替换为你自己的 GitHub 用户名，
+#    否则一旦启用分支保护的 require_code_owner_reviews，
+#    你的 PR 会因为「代码所有者不在本仓库」而永远无法合并。
 
 # 默认所有者
-*       @daiyu116
+*       @RealKiro
 
 # 关键安全模块 - 任何修改都必须经过审查
-/backend/utils/license.py          @daiyu116
-/backend/routers/license.py        @daiyu116
-/backend/optimizer.py              @daiyu116
-/backend/setup_cython.py           @daiyu116
-/backend/main.py                   @daiyu116
+/backend/utils/license.py          @RealKiro
+/backend/routers/license.py        @RealKiro
+/backend/optimizer.py              @RealKiro
+/backend/setup_cython.py           @RealKiro
+/backend/main.py                   @RealKiro
 
 # Docker 配置 - 影响部署安全
-/backend/Dockerfile                @daiyu116
-/frontend/Dockerfile               @daiyu116
-/docker-compose.yml                @daiyu116
-/docker-compose.deploy.yml         @daiyu116
-/.env.example                      @daiyu116
+/backend/Dockerfile                @RealKiro
+/frontend/Dockerfile               @RealKiro
+/mcp-server/Dockerfile             @RealKiro
+/docker-compose.yml                @RealKiro
+/docker-compose.deploy.yml         @RealKiro
+/.env.example                      @RealKiro
 
 # CI/CD 配置
-/.github/                          @daiyu116
+/.github/                          @RealKiro
+
+# MCP 服务器 - 持有系统账号凭据，改动影响对外暴露面
+/mcp-server/                       @RealKiro
+
+# 部署脚本 - 负责生成密钥
+/scripts/                          @RealKiro
 
 # 前端路由与授权
-/frontend/src/router/              @daiyu116
-/frontend/src/utils/license.js     @daiyu116
-/frontend/nginx.conf               @daiyu116
+/frontend/src/router/              @RealKiro
+/frontend/src/utils/license.js     @RealKiro
+/frontend/nginx.conf               @RealKiro

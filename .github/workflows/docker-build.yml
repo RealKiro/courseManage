@@ -22,7 +22,6 @@ on:
       - 'docs/**'
       - 'LICENSE'
       - '.gitignore'
-      - 'init-repo.*'
   pull_request:
     branches: [main]
     paths-ignore:
@@ -30,7 +29,6 @@ on:
       - 'docs/**'
       - 'LICENSE'
       - '.gitignore'
-      - 'init-repo.*'
   workflow_dispatch:
     inputs:
       components:
