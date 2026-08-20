@@ -133,10 +133,34 @@
         tag v1.4.2  →  1.4.2、1.4、1、sha-<短SHA>（并自动创建 GitHub Release）
         Pull Request →  只验证构建，不推送
 
-    ⚠️ fork 本项目后镜像会推到你自己的命名空间，部署时请在 .env 中设置：
-        IMAGE_OWNER=你的github用户名小写
+    镜像体积（各架构压缩后下载量会打印在每次构建的运行摘要里）：
+        frontend  nginx:1.27-alpine     本来就是 Alpine
+        mcp       python:3.12-alpine    依赖全部有 musllinux 轮子，约 60-70MB
+        backend   python:3.11-slim      刻意不用 Alpine：psycopg2-binary 只发 glibc 轮子，
+                                        pandas/numpy 在 musl-aarch64 上轮子不全，
+                                        换 Alpine 会退化成源码编译导致 arm64 构建超时。
+                                        改为 --no-install-recommends、精简中文字体、
+                                        清理站点包 tests/__pycache__ 来减小体积。
 
-    📖 流水线设计说明与首次启用步骤：docs/CICD.md
+    ⚠️ fork 本项目后镜像会自动推到你自己的命名空间（流水线读取当前仓库归属并转小写，
+       无需修改任何 workflow 文件）。部署时让 .env 指向自己的镜像，三种方式任选：
+
+        方式A 一键脚本（推荐，已 clone 仓库）：
+            **bash**
+            bash scripts/setup-env.sh                                          # Linux/macOS/NAS
+            powershell -ExecutionPolicy Bypass -File scripts\setup-env.ps1      # Windows
+            脚本会自动探测 IMAGE_OWNER，并随机生成
+            POSTGRES_PASSWORD / SECRET_KEY / MCP_AUTH_TOKEN
+
+        方式B 从 Release 下载（客户最省事）：
+            打 tag 后流水线会把 Release 附带的 .env.example 中的 IMAGE_OWNER
+            自动改写为当前仓库归属，客户下载后只需再改
+            POSTGRES_PASSWORD 与 SECRET_KEY 两项
+
+        方式C 手动改一行：
+            IMAGE_OWNER=你的github用户名小写
+
+    📖 流水线设计说明、fork 指引与首次启用步骤：docs/CICD.md
 
 **🧑‍💻 客户部署指南**
 
@@ -186,7 +210,12 @@
 
     步骤 2：配置环境变量
         **bash**
-        # 复制模板
+        # 方式一（推荐）：一键生成 .env —— 自动填好 IMAGE_OWNER 并随机生成强密钥
+        #   已 clone 仓库时可用：
+        bash scripts/setup-env.sh                                       # Linux
+        powershell -ExecutionPolicy Bypass -File scripts\setup-env.ps1   # Windows
+
+        # 方式二：手动复制模板后编辑
         cp .env.example .env
         # 编辑配置
         nano .env    # Linux

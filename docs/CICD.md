@@ -135,20 +135,93 @@ echo <你的PAT> | docker login ghcr.io -u <用户名> --password-stdin
 
 ## 5. fork 之后要改什么
 
-镜像会推到**你自己的**命名空间，所以部署时要改 `.env`：
+镜像会推到**你自己的**命名空间——流水线用 `github.repository_owner` 自动取当前
+仓库归属并转成小写，所以 fork 后 **不需要改任何 workflow 文件**，推一次 main
+就会得到 `ghcr.io/<你的用户名>/coursemanage-*`。
+
+唯一需要对齐的是部署时的 `.env`。有三种方式，任选其一：
+
+### 方式 A：一键脚本（推荐，clone 了仓库时）
+
+```bash
+bash scripts/setup-env.sh          # Linux / macOS / NAS
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup-env.ps1   # Windows
+```
+
+脚本会：
+
+1. 从 `git remote get-url origin` 自动探测归属并转小写，写入 `IMAGE_OWNER`
+2. 随机生成 `POSTGRES_PASSWORD`（28 位字母数字）、`SECRET_KEY`（32 字节 hex）、
+   `MCP_AUTH_TOKEN`（24 字节 hex）
+3. 由 `.env.example` 生成 `.env`（已存在时不会覆盖，除非加 `--force` / `-Force`）
+
+没有 clone 仓库时可手动指定：`bash scripts/setup-env.sh --owner 你的用户名`。
+
+### 方式 B：从 Release 下载（客户最省事）
+
+打 tag 后，`release` job 会在**上传前**把 `.env.example` 里的 `IMAGE_OWNER`
+改写成当前仓库归属：
+
+```bash
+sed -i "s|^IMAGE_OWNER=.*|IMAGE_OWNER=${OWNER}|" .env.example
+```
+
+也就是说，**任何人 fork 后自己发一个 tag，他 Release 里的 `.env.example`
+就已经指向他自己的 GHCR**，客户下载后只需再改 `POSTGRES_PASSWORD` 与
+`SECRET_KEY` 两项即可，不用理解镜像归属这件事。
+
+### 方式 C：手动改一行
 
 ```bash
 IMAGE_OWNER=你的github用户名小写
-IMAGE_TAG=latest
 ```
 
-`docker-compose.deploy.yml` 已改为
+`docker-compose.deploy.yml` 里镜像地址已参数化为
 `${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_OWNER:-daiyu116}/coursemanage-xxx:${IMAGE_TAG:-latest}`，
 不改文件、只改 `.env` 即可切换镜像来源与版本。
 
+> 每次 `merge` job 的运行摘要里都会直接打印
+> `请在 .env 中设置 IMAGE_OWNER=<owner>`，以及各架构镜像的压缩体积，
+> 不用去猜。
+
 ---
 
-## 6. 发布一个版本
+## 6. 镜像体积
+
+`merge` job 会在运行摘要里报告每个架构的**压缩后下载体积**（各层 size 之和），
+方便持续跟踪。当前的取舍：
+
+| 组件 | 基础镜像 | 说明 |
+| --- | --- | --- |
+| frontend | `nginx:1.27-alpine` | 本来就是 Alpine；构建阶段用 `node:18-alpine` |
+| mcp | `python:3.12-alpine` | 依赖只有 pydantic-core / rpds-py 两个二进制扩展，均提供 musllinux wheel |
+| backend | `python:3.11-slim-bookworm` | **刻意不用 Alpine**，原因见下 |
+
+### 为什么 backend 不换 Alpine
+
+- `psycopg2-binary` 官方只发布 glibc(manylinux) wheel，musl 上必须源码编译
+- `pandas` / `numpy` 在 **musl + aarch64** 组合下 wheel 覆盖不完整
+- 一旦退化成源码编译，arm64 构建会从几分钟涨到几十分钟，且容易在 Runner 上 OOM
+- musl 的 malloc 在这类数值计算负载下性能也弱于 glibc
+
+换 Alpine 省下的基础层（约 70MB）远小于它带来的构建风险，因此 backend 改为：
+
+- `--no-install-recommends`（原先缺失，apt 会顺带装一堆推荐包）
+- 只保留 `fonts-wqy-microhei` 一套中文字体，去掉 `fonts-wqy-zenhei`
+  （`routers/schedules.py` 的字体候选列表以 microhei 优先，导出 PDF 不受影响）
+- 清掉站点包里的 `tests/` 与 `__pycache__`（pandas / numpy 的测试套件就有数十 MB）
+- 基础镜像钉到 `slim-bookworm`，避免 Debian 大版本漂移
+
+如果后续确实要试 Alpine，建议先单独跑一次
+`workflow_dispatch → components=backend, build_arm64=true`
+验证 arm64 能在超时前完成，再决定是否合并。
+
+---
+
+## 7. 发布一个版本
 
 ```bash
 git tag v1.4.2

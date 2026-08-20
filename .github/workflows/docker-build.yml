@@ -344,9 +344,16 @@ jobs:
         run: |
           set -euo pipefail
           ls -1
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "${DOCKER_METADATA_OUTPUT_JSON}") \
-            $(printf "${IMAGE}@sha256:%s " *)
+          # 用数组拼参数，避免 $(...) 直接展开触发 shellcheck SC2046（词分割）
+          args=()
+          while IFS= read -r tag; do
+            args+=(-t "${tag}")
+          done < <(jq -r '.tags[]' <<< "${DOCKER_METADATA_OUTPUT_JSON}")
+          for file in *; do
+            args+=("${IMAGE}@sha256:${file}")
+          done
+          printf '合并参数：%s\n' "${args[*]}"
+          docker buildx imagetools create "${args[@]}"
 
       - name: Inspect published image
         id: inspect
@@ -370,16 +377,48 @@ jobs:
           subject-digest: ${{ steps.inspect.outputs.digest }}
           push-to-registry: true
 
-      - name: Job summary
+      # 体积统计与摘要合并到一个 step：GHA 的多行 output 不能直接内插进 shell
+      # 命令（会破坏引号配对），放在同一个 step 里用普通变量传递最稳。
+      - name: Job summary with image size
+        env:
+          OWNER: ${{ needs.prepare.outputs.owner }}
+          DIGEST: ${{ steps.inspect.outputs.digest }}
+          COMPONENT: ${{ matrix.component.name }}
         run: |
+          set -euo pipefail
+          ref="$(jq -r '.tags[0]' <<< "${DOCKER_METADATA_OUTPUT_JSON}")"
+
+          sizes=""
+          # 过滤掉 provenance/SBOM 那些 architecture=unknown 的附属 manifest
+          while read -r plat digest; do
+            if [ -z "${digest}" ]; then
+              continue
+            fi
+            bytes="$(docker buildx imagetools inspect "${IMAGE}@${digest}" --raw \
+              | jq '[.layers[].size] | add // 0')"
+            sizes="${sizes}- \`${plat}\`：压缩后约 **$(( bytes / 1048576 )) MB**"$'\n'
+          done < <(docker buildx imagetools inspect "${ref}" --raw \
+            | jq -r '.manifests[]
+                     | select(.platform.architecture != "unknown")
+                     | "\(.platform.os)/\(.platform.architecture) \(.digest)"')
+
+          printf '各架构体积：\n%s\n' "${sizes}"
+
           {
-            echo "### ✅ ${{ matrix.component.name }} 镜像已发布"
+            echo "### ✅ ${COMPONENT} 镜像已发布"
+            echo ""
+            echo "**标签**"
             echo ""
             echo '```'
             jq -r '.tags[]' <<< "${DOCKER_METADATA_OUTPUT_JSON}"
             echo '```'
             echo ""
-            echo "digest: \`${{ steps.inspect.outputs.digest }}\`"
+            echo "**体积（各架构压缩后下载量）**"
+            echo ""
+            printf '%s\n' "${sizes}"
+            echo "**digest**：\`${DIGEST}\`"
+            echo ""
+            echo "> 部署时请在 \`.env\` 中设置 \`IMAGE_OWNER=${OWNER}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ----------------------------------------------------------
@@ -469,6 +508,12 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
           previous="$(git describe --tags --abbrev=0 "${version}^" 2>/dev/null || true)"
+
+          # 关键：把随 Release 一起分发的 .env.example 里的 IMAGE_OWNER 改成本仓库归属，
+          # 这样任何人 fork 后发布的 Release 资产都直接指向他自己的 GHCR，无需手改。
+          sed -i "s|^IMAGE_OWNER=.*|IMAGE_OWNER=${OWNER}|" .env.example
+          grep '^IMAGE_OWNER=' .env.example
+
           {
             echo "## 镜像"
             echo ""
@@ -482,11 +527,22 @@ jobs:
             echo ""
             echo "## 快速部署"
             echo ""
+            echo "下面两个文件可直接从本 Release 的 Assets 下载，"
+            echo "其中 \`.env.example\` 的 \`IMAGE_OWNER\` 已自动设为 \`${OWNER}\`。"
+            echo ""
             echo '```bash'
-            echo "curl -O https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${version}/docker-compose.deploy.yml"
-            echo "curl -o .env https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${version}/.env.example"
-            echo "# 修改 .env 中的 POSTGRES_PASSWORD / SECRET_KEY / IMAGE_OWNER"
+            echo "mkdir coursemanage && cd coursemanage"
+            echo "# 从本 Release 下载 docker-compose.deploy.yml 与 .env.example"
+            echo "cp .env.example .env"
+            echo "# 只需再改 POSTGRES_PASSWORD 与 SECRET_KEY"
             echo "docker compose -f docker-compose.deploy.yml up -d"
+            echo '```'
+            echo ""
+            echo "若已 clone 仓库，可用脚本一键生成 \`.env\`（自动探测 IMAGE_OWNER 并生成强密钥）："
+            echo ""
+            echo '```bash'
+            echo "bash scripts/setup-env.sh          # Linux / macOS / NAS"
+            echo "pwsh -File scripts/setup-env.ps1   # Windows"
             echo '```'
             echo ""
             if [ -n "${previous}" ]; then

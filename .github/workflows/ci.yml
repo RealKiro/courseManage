@@ -133,11 +133,13 @@ jobs:
       - name: Report bundle size
         working-directory: frontend
         run: |
-          echo "### 前端产物体积" >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          du -sh dist >> "$GITHUB_STEP_SUMMARY"
-          du -ah dist/assets | sort -rh | head -n 15 >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### 前端产物体积"
+            echo '```'
+            du -sh dist
+            du -ah dist/assets | sort -rh | head -n 15
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   mcp:
     name: MCP server tests
@@ -164,21 +166,26 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
           pip install -e .
 
-      - name: Ruff
-        working-directory: mcp-server
-        run: ruff check .
-
+      # 先跑测试再跑 lint，且都用 always()，这样一次 CI 就能看到全部问题，
+      # 不会因为 lint 先失败而看不到测试结果
       - name: Pytest
+        id: pytest
         working-directory: mcp-server
         run: pytest -q
 
       - name: Verify tool registry
+        if: always() && steps.pytest.conclusion != 'skipped'
         working-directory: mcp-server
         env:
           COURSEMANAGE_API_BASE: http://localhost:8000
           COURSEMANAGE_USERNAME: ci
           COURSEMANAGE_PASSWORD: ci
         run: python -m coursemanage_mcp --list-tools
+
+      - name: Ruff
+        if: always() && steps.pytest.conclusion != 'skipped'
+        working-directory: mcp-server
+        run: ruff check --output-format=github .
 
   compose:
     name: Compose config validation

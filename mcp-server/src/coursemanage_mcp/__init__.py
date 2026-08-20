@@ -6,10 +6,10 @@
 可直接被 AstrBot、Claude Desktop、Cherry Studio、Dify 等第三方框架调用。
 """
 
-from .config import Settings
 from .client import ApiError, CourseManageClient
+from .config import Settings
 from .server import build_server
 
-__all__ = ["Settings", "ApiError", "CourseManageClient", "build_server", "__version__"]
+__all__ = ["ApiError", "CourseManageClient", "Settings", "__version__", "build_server"]
 
 __version__ = "1.0.0"

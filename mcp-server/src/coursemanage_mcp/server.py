@@ -450,7 +450,10 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     @tool()
     async def parse_smart_command(
         text: Annotated[str, Field(description="用户原始自然语言指令，例如「给三年级A班周三19点排一节数学课」")],
-        use_ai: Annotated[bool, Field(description="是否使用大模型解析（需在系统中配置 API KEY），否则用内置规则解析")] = False,
+        use_ai: Annotated[
+            bool,
+            Field(description="是否用大模型解析（需先在系统中配置 API KEY），否则使用内置规则解析"),
+        ] = False,
     ) -> Any:
         """解析自然语言指令并返回结构化预览，不会写入数据。
 

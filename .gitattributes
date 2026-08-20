@@ -1,0 +1,12 @@
+# Shell 脚本必须以 LF 结尾：带 CRLF 在 Linux / 容器里会报
+# "bash: $'\r': command not found" 之类的诡异错误。
+*.sh            text eol=lf
+
+# 容器构建文件同样运行在 Linux 上
+Dockerfile      text eol=lf
+*.dockerignore  text eol=lf
+
+# PowerShell 脚本在 Windows 上使用 CRLF。
+# 注意：scripts/setup-env.ps1 必须保存为 UTF-8 with BOM ——
+# Windows PowerShell 5.1 在没有 BOM 时会按 GBK 解析，中文字符串会乱码并导致语法错误。
+*.ps1           text eol=crlf

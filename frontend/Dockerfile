@@ -1,7 +1,6 @@
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app
 
@@ -44,11 +43,20 @@ RUN printf '%s\n' \
 
 RUN npm run build
 
-FROM nginx:alpine
+FROM nginx:1.27-alpine
+
+# 只保留 Asia/Shanghai 一个时区文件，装完 tzdata 立刻卸载
+RUN apk add --no-cache tzdata \
+    && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone \
+    && apk del tzdata
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
