@@ -3,7 +3,7 @@
 """
 迁移脚本：为schedules表添加schedule_type字段
 - 新增schedule_type字段，类型为VARCHAR(20)，默认值为'formal'（正式课）
-- 可选值：'formal'（正式课）、'trial'（试听课）
+- 可选值：'formal'（正式课）、'trial'（试读课）
 - 将现有所有记录设置为'formal'
 """
 from sqlalchemy import create_engine, text
@@ -43,7 +43,7 @@ def add_schedule_type():
         
         # 添加注释
         conn.execute(text("""
-            COMMENT ON COLUMN schedules.schedule_type IS '课程类型：formal-正式课, trial-试听课'
+            COMMENT ON COLUMN schedules.schedule_type IS '课程类型：formal-正式课, trial-试读课'
         """))
         
         # 确保现有记录都设置为formal

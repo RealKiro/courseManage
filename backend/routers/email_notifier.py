@@ -40,7 +40,7 @@ class EmailNotifier:
             self.from_name = from_name
     
     def load_promotion_info(self, website: str = "", wechat_qr: str = "", work_wechat_qr: str = ""):
-        """加载机构宣传信息"""
+        """加载学校宣传信息"""
         self.promotion_info = {
             "organization_website": website or "",
             "wechat_qrcode": wechat_qr or "",
@@ -51,7 +51,7 @@ class EmailNotifier:
         """获取宣传信息HTML"""
         html = '<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">'
         if self.promotion_info.get("organization_website"):
-            html += f'<p><a href="{self.promotion_info["organization_website"]}" target="_blank">🌐 访问机构官网</a></p>'
+            html += f'<p><a href="{self.promotion_info["organization_website"]}" target="_blank">🌐 访问学校官网</a></p>'
         if self.promotion_info.get("wechat_qrcode"):
             html += f'<p>关注公众号：<br/><img src="{self.promotion_info["wechat_qrcode"]}" alt="公众号二维码" style="max-width: 200px;"/></p>'
         if self.promotion_info.get("work_wechat_qrcode"):
@@ -176,17 +176,17 @@ class EmailNotifier:
         """
         
         for schedule in schedule_list:
-            # 获取学员列表
+            # 获取学生列表
             student_list = schedule.get('student_list', [])
             active_students = [s['name'] for s in student_list if s.get('is_active', True)]
             inactive_students = [s['name'] for s in student_list if not s.get('is_active', True)]
             
-            # 格式化学员列表
+            # 格式化学生列表
             student_text = ""
             if active_students:
-                student_text += f"在读学员：{', '.join(active_students)}<br>"
+                student_text += f"在读学生：{', '.join(active_students)}<br>"
             if inactive_students:
-                student_text += f"非在读学员：{', '.join(inactive_students)}<br>"
+                student_text += f"非在读学生：{', '.join(inactive_students)}<br>"
             
             html_content += f"""
                     <div class="schedule-item">
@@ -196,7 +196,7 @@ class EmailNotifier:
                         <div class="course">👨‍🏫 {schedule['teacher_name']}</div>
                         <div class="class">👥 {schedule['class_name']}</div>
                         <div class="class">🏫 {schedule['room_name']}</div>
-                        {f'<div class="class">👥 学员：</div><div style="margin-left: 20px;">{student_text}</div>' if student_text else ''}
+                        {f'<div class="class">👥 学生：</div><div style="margin-left: 20px;">{student_text}</div>' if student_text else ''}
                     </div>
             """
         

@@ -620,19 +620,19 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
         storage_data = {}
         
         # 检查是否是关联查询（X的Y）
-        relation_match = re.search(r'(学员|学生|导师|老师|班级|科目|课程)\s*(\S+?)\s*的\s*(班级|科目|课程|导师|老师|学员|学生|排课|课费|成绩)', example_text)
+        relation_match = re.search(r'(学生|学生|教师|老师|班级|科目|课程)\s*(\S+?)\s*的\s*(班级|科目|课程|教师|老师|学生|学生|排课|课费|成绩)', example_text)
         if relation_match:
             source_type_map = {
-                '学员': 'student', '学生': 'student',
-                '导师': 'teacher', '老师': 'teacher',
+                '学生': 'student', '学生': 'student',
+                '教师': 'teacher', '老师': 'teacher',
                 '班级': 'class',
                 '科目': 'course', '课程': 'course'
             }
             target_type_map = {
                 '班级': 'classes',
                 '科目': 'courses', '课程': 'courses',
-                '导师': 'teachers', '老师': 'teachers',
-                '学员': 'students', '学生': 'students',
+                '教师': 'teachers', '老师': 'teachers',
+                '学生': 'students', '学生': 'students',
                 '排课': 'schedules',
                 '课费': 'fees',
                 '成绩': 'grades'
@@ -663,10 +663,10 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
             return result
         
         # 检查是否带时间条件
-        time_match = re.search(r'(学员|学生|导师|老师|班级)?\s*(\S+?)\s*在\s*(今天|明天|后天|\d{4}-\d{2}-\d{2})', example_text)
+        time_match = re.search(r'(学生|学生|教师|老师|班级)?\s*(\S+?)\s*在\s*(今天|明天|后天|\d{4}-\d{2}-\d{2})', example_text)
         if time_match:
             entity_type = 'student'
-            if '导师' in example_text or '老师' in example_text:
+            if '教师' in example_text or '老师' in example_text:
                 entity_type = 'teacher'
             elif '班级' in example_text:
                 entity_type = 'class'
@@ -719,7 +719,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
         form_data = {}
         
         # 提取名称
-        name_match = re.search(r'(?:科目|课程|导师|老师|学员|学生|班级|教室)\s*(\S+?)(?:，|,|$)', example_text)
+        name_match = re.search(r'(?:科目|课程|教师|老师|学生|学生|班级|教室)\s*(\S+?)(?:，|,|$)', example_text)
         if name_match:
             form_data['name'] = name_match.group(1)
         
@@ -755,7 +755,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
         
         # 提取搜索关键词
         keyword = ''
-        keyword_match = re.search(r'(?:科目|课程|导师|老师|学员|学生|班级|教室)\s*(\S+?)(?:的|,|，|$)', example_text)
+        keyword_match = re.search(r'(?:科目|课程|教师|老师|学生|学生|班级|教室)\s*(\S+?)(?:的|,|，|$)', example_text)
         if keyword_match:
             keyword = keyword_match.group(1)
         
@@ -780,7 +780,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
             "mode": "create"
         }
         
-        # 提取学员姓名
+        # 提取学生姓名
         student_match = re.search(r'(?:为|给)\s*(\S+?)\s*(?:安排|创建|添加)', example_text)
         if not student_match:
             student_match = re.search(r'(?:安排|创建|添加)\s*(\S+?)\s*(?:的|在)', example_text)
@@ -819,7 +819,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
         
         storage_data = {}
         
-        # 提取学员姓名
+        # 提取学生姓名
         student_match = re.search(r'(?:完成|取消|推迟|延期)\s*(\S+?)(?:的|今天|明天)', example_text)
         if student_match:
             storage_data['student_name'] = student_match.group(1)
@@ -854,7 +854,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
             "mode": "create"
         }
         
-        # 提取学员姓名
+        # 提取学生姓名
         student_match = re.search(r'(\S+?)\s*(?:从|于)', example_text)
         if student_match:
             storage_data['form_data']['student_name'] = student_match.group(1)
@@ -909,7 +909,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
             "mode": "create"
         }
         
-        # 提取学员姓名
+        # 提取学生姓名
         student_match = re.search(r'(?:收取|退还)\s*(\S+?)(?:学费|课费|费用)', example_text)
         if student_match:
             storage_data['form_data']['student_name'] = student_match.group(1)
@@ -932,7 +932,7 @@ def generate_expected_fields_by_intent(example_text: str, intent: str) -> dict:
             "mode": "create"
         }
         
-        # 提取学员姓名
+        # 提取学生姓名
         student_match = re.search(r'(\S+?)\s*(?:的| )(?:数学|语文|英语|物理|化学|生物|历史|地理|政治)', example_text)
         if student_match:
             storage_data['form_data']['student_name'] = student_match.group(1)

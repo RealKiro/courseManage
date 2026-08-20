@@ -12,7 +12,7 @@ class CourseBase(BaseModel):
     parent_course_id: Optional[int] = Field(None, description="父科目ID")
 
 class CourseCreate(CourseBase):
-    teacher_ids: List[int] = Field(default=[], description="授课导师ID列表")
+    teacher_ids: List[int] = Field(default=[], description="授课教师ID列表")
     created_at: Optional[datetime] = Field(None, description="创建时间")
     updated_at: Optional[datetime] = Field(None, description="更新时间")
 
@@ -49,9 +49,9 @@ class SendEmailHomeworkRequest(BaseModel):
     images: Optional[List[str]] = Field(None, description="作业图片URL列表")
 
 class TeacherBase(BaseModel):
-    code: str = Field(..., description="导师代码")
-    name: str = Field(..., description="导师姓名")
-    join_date: Optional[date_type] = Field(None, description="进入机构日期")
+    code: str = Field(..., description="教师代码")
+    name: str = Field(..., description="教师姓名")
+    join_date: Optional[date_type] = Field(None, description="进入学校日期")
     title: Optional[str] = Field(None, description="职称")
     department: Optional[str] = Field(None, description="部门")
     contact_phone: Optional[str] = Field(None, description="联系电话")
@@ -61,7 +61,7 @@ class TeacherBase(BaseModel):
     available_time_slots: str = Field("08:00-10:00,10:00-12:00,13:30-15:30,15:30-17:30,17:30-19:30,19:30-21:30,14:00-16:00,16:00-18:00,18:00-20:00,20:00-22:00,14:30-16:30,16:30-18:30,18:30-20:30,20:30-22:30", description="可排课时间段")
     allow_holiday_scheduling: bool = Field(False, description="节假日可排课")
     no_feedback_required: bool = Field(False, description="无需反馈")
-    is_active: bool = Field(True, description="是否本机构在职")
+    is_active: bool = Field(True, description="是否本校在职")
     end_date: Optional[date_type] = Field(None, description="离职日期")
 
 class TeacherCreate(TeacherBase):
@@ -123,11 +123,11 @@ class Class(ClassBase):
         from_attributes = True
 
 class StudentBase(BaseModel):
-    code: str = Field(..., description="学员代码")
-    name: str = Field(..., description="学员姓名")
+    code: str = Field(..., description="学生代码")
+    name: str = Field(..., description="学生姓名")
     school: Optional[str] = Field(None, description="学校")
     grade: Optional[str] = Field(None, description="年级")
-    enrollment_date: Optional[date_type] = Field(None, description="进入机构日期")
+    enrollment_date: Optional[date_type] = Field(None, description="进入学校日期")
     # 删除 class_id: Optional[int] = Field(None, description="班级ID")
     # 添加：class_ids: List[int] = Field(default=[], description="班级ID列表")
     class_ids: List[int] = Field(default=[], description="班级ID列表")
@@ -137,7 +137,7 @@ class StudentBase(BaseModel):
     contact_person: Optional[str] = Field(None, description="联系人")
     contact_phone: Optional[str] = Field(None, description="联系方式")
     email: Optional[str] = Field(None, description="电子邮箱")
-    is_active: bool = Field(True, description="是否本机构在读")
+    is_active: bool = Field(True, description="是否本校在读")
     end_date: Optional[date_type] = Field(None, description="结束日期")
 
 class StudentCreate(StudentBase):
@@ -261,8 +261,8 @@ class Room(RoomBase):
 
 class LeaveBase(BaseModel):
     leave_type: str = Field(..., description="请假类型")
-    teacher_id: Optional[int] = Field(None, description="导师ID")
-    student_id: Optional[int] = Field(None, description="学员ID")
+    teacher_id: Optional[int] = Field(None, description="教师ID")
+    student_id: Optional[int] = Field(None, description="学生ID")
     start_date: datetime = Field(..., description="开始日期")
     end_date: datetime = Field(..., description="结束日期")
     reason: Optional[str] = Field(None, description="请假原因")
@@ -313,7 +313,7 @@ class RoomInfo(BaseModel):
 
 class ScheduleBase(BaseModel):
     course_id: int = Field(..., description="科目ID")
-    teacher_id: int = Field(..., description="导师ID")
+    teacher_id: int = Field(..., description="教师ID")
     class_id: int = Field(..., description="班级ID")
     room_type: str = Field(default="offline_physical", description="教室类型：offline_physical-线下物理, online_virtual-线上虚拟")
     meeting_link: Optional[str] = Field(None, description="会议室链接（线上虚拟课程必填）")
@@ -323,10 +323,10 @@ class ScheduleBase(BaseModel):
     end_time: str = Field(..., description="结束时间")
     start_date: date_type = Field(..., description="课程开始日期")
     end_date: date_type = Field(..., description="课程结束日期")
-    execution_status: str = Field(default="pending", description="执行状态：pending-待执行, completed-完训, postponed-延期, cancelled-取消")
+    execution_status: str = Field(default="pending", description="执行状态：pending-待执行, completed-完课, postponed-延期, cancelled-取消")
     content_feedback: str = Field(default="", description="内容反馈")
     cancel_reason: str = Field(default="", description="取消原因")
-    schedule_type: str = Field(default="formal", description="课程类型：formal-正式课, trial-试听课")
+    schedule_type: str = Field(default="formal", description="课程类型：formal-正式课, trial-试读课")
 
 class ScheduleCreate(ScheduleBase):
     created_at: Optional[datetime] = Field(None, description="创建时间")
@@ -377,7 +377,7 @@ class Schedule(ScheduleBase):
     renewal_intention: Optional[str] = None
     homework_regular: Optional[str] = None
     homework_images: Optional[str] = None
-    scheduled_students: Optional[List[StudentAttendanceInfo]] = Field(None, description="参与课程的学员列表及出勤状态")
+    scheduled_students: Optional[List[StudentAttendanceInfo]] = Field(None, description="参与课程的学生列表及出勤状态")
     schedule_type: str
     created_at: datetime
     updated_at: datetime
@@ -388,14 +388,14 @@ class Schedule(ScheduleBase):
 class ScheduleCompleteFeedback(BaseModel):
     content_feedback: str = Field(..., description="课程反馈：内容|作业|注意|；格式说明：用|分隔，如：内容：我是谁？我来自哪里？我往那里去？|作业：今天布置的10道题|注意：注意第三题的解题思路")
     word_check: Optional[str] = Field(None, description="单词检查反馈")
-    renewal_intention: Optional[str] = Field(None, description="续报意愿：high/medium/low/none")
-    student_attendance: Optional[Dict[int, str]] = Field(None, description="学员出勤状态字典，key为学员ID，value为出勤状态(present/absent/leave)")
-    absence_reasons: Optional[Dict[int, str]] = Field(None, description="缺勤原因字典，key为学员ID，value为缺勤原因")
+    renewal_intention: Optional[str] = Field(None, description="续读意愿：high/medium/low/none")
+    student_attendance: Optional[Dict[int, str]] = Field(None, description="学生出勤状态字典，key为学生ID，value为出勤状态(present/absent/leave)")
+    absence_reasons: Optional[Dict[int, str]] = Field(None, description="缺勤原因字典，key为学生ID，value为缺勤原因")
     send_notification: bool = Field(default=False, description="是否发送通知")
 
 class ScheduleAttendanceUpdate(BaseModel):
-    student_attendance: Dict[int, str] = Field(..., description="学员出勤状态字典，key为学员ID，value为出勤状态(present/absent/leave)")
-    absence_reasons: Optional[Dict[int, str]] = Field(None, description="缺勤原因字典，key为学员ID，value为缺勤原因")
+    student_attendance: Dict[int, str] = Field(..., description="学生出勤状态字典，key为学生ID，value为出勤状态(present/absent/leave)")
+    absence_reasons: Optional[Dict[int, str]] = Field(None, description="缺勤原因字典，key为学生ID，value为缺勤原因")
 
 class SchedulePostpone(BaseModel):
     start_date: datetime = Field(..., description="新的开始日期")
@@ -410,11 +410,11 @@ class ScheduleMakeup(BaseModel):
     end_date: datetime = Field(..., description="补课结束日期")
     start_time: str = Field(..., description="补课开始时间")
     end_time: str = Field(..., description="补课结束时间")
-    student_ids: List[int] = Field(..., description="补课学员ID列表")
+    student_ids: List[int] = Field(..., description="补课学生ID列表")
     room_id: int = Field(..., description="补课教室ID")
 
 class ScheduleDeclineMakeup(BaseModel):
-    student_ids: List[int] = Field(..., description="不补课学员ID列表")
+    student_ids: List[int] = Field(..., description="不补课学生ID列表")
     declined_reason: str = Field(..., description="不补课原因")
 
 class ScheduleCancel(BaseModel):
@@ -658,10 +658,10 @@ class AlertThresholdUpdate(BaseModel):
     alert_threshold: float = Field(..., gt=0, description="预警阈值")
 
 class SettingsBase(BaseModel):
-    site_name: str = Field(..., description="机构名称")
-    site_logo: Optional[str] = Field(None, description="机构LOGO")
+    site_name: str = Field(..., description="学校名称")
+    site_logo: Optional[str] = Field(None, description="学校LOGO")
     site_url: str = Field(..., description="本站内网真实IP地址（用于构建文件访问地址，如：10.11.12.99，必须准确填写否则文件无法上传和访问）")
-    organization_website: Optional[str] = Field(None, description="机构宣传网站链接")
+    organization_website: Optional[str] = Field(None, description="学校宣传网站链接")
     wechat_qrcode: Optional[str] = Field(None, description="公众号二维码图片URL")
     work_wechat_qrcode: Optional[str] = Field(None, description="企业微信二维码图片URL")
     wechat_webhook_config: Optional[str] = Field(None, description="微信通知配置(JSON字符串)")
@@ -669,14 +669,14 @@ class SettingsBase(BaseModel):
     email_config: Optional[str] = Field(None, description="邮件配置(JSON字符串)")
     email_notification_settings: Optional[str] = Field(None, description="邮件通知设置(JSON字符串)")
     teacher_visibility_restricted: Optional[bool] = Field(True, description="课程管理员可见性限制开关")
-    subject_teachers: Optional[List[int]] = Field(None, description="课程管理导师ID列表(逗号分隔)")
-    fee_managers: Optional[List[int]] = Field(None, description="费用管理导师ID列表(逗号分隔)")
-    grade_managers: Optional[List[int]] = Field(None, description="成绩管理导师ID列表(逗号分隔)")
-    evaluation_managers: Optional[List[int]] = Field(None, description="评价管理导师ID列表(逗号分隔)")
-    operation_managers: Optional[List[int]] = Field(None, description="运营管理导师ID列表")
-    completed_training_managers: Optional[List[int]] = Field(None, description="完训内容管理导师ID列表")
-    schedule_edit_restricted: Optional[bool] = Field(True, description="课程安排编辑限制：True-仅超级管理员可编辑已完训/延期/取消的课程，False-课程管理导师也可编辑")
-    schedule_delete_restricted: Optional[bool] = Field(True, description="课程安排删除限制：True-仅超级管理员可删除已完训/延期/取消的课程，False-课程管理导师也可删除")
+    subject_teachers: Optional[List[int]] = Field(None, description="课程管理教师ID列表(逗号分隔)")
+    fee_managers: Optional[List[int]] = Field(None, description="费用管理教师ID列表(逗号分隔)")
+    grade_managers: Optional[List[int]] = Field(None, description="成绩管理教师ID列表(逗号分隔)")
+    evaluation_managers: Optional[List[int]] = Field(None, description="评价管理教师ID列表(逗号分隔)")
+    operation_managers: Optional[List[int]] = Field(None, description="运营管理教师ID列表")
+    completed_training_managers: Optional[List[int]] = Field(None, description="完课内容管理教师ID列表")
+    schedule_edit_restricted: Optional[bool] = Field(True, description="课程安排编辑限制：True-仅超级管理员可编辑已完课/延期/取消的课程，False-课程管理教师也可编辑")
+    schedule_delete_restricted: Optional[bool] = Field(True, description="课程安排删除限制：True-仅超级管理员可删除已完课/延期/取消的课程，False-课程管理教师也可删除")
     log_enabled: Optional[bool] = Field(True, description="是否启用日志记录")
     log_level: Optional[str] = Field("INFO", description="日志级别：DEBUG, INFO, WARNING, ERROR")
     log_debug_enabled: Optional[bool] = Field(False, description="是否启用DEBUG级别日志")
@@ -878,7 +878,7 @@ class SmartCommandBatchTestResult(BaseModel):
     results: List[SmartCommandTestResult]
     test_duration_ms: float
 
-# ==================== 学员评价管理相关Schema ====================
+# ==================== 学生评价管理相关Schema ====================
 
 class EvaluationDimensionConfig(BaseModel):
     name: str = Field(..., description="维度名称")
@@ -911,7 +911,7 @@ class CourseEvaluationTemplate(CourseEvaluationTemplateBase):
         from_attributes = True
 
 class StudentComprehensiveEvaluationBase(BaseModel):
-    student_id: int = Field(..., description="学员ID")
+    student_id: int = Field(..., description="学生ID")
     eval_period: str = Field(..., description="评价周期")
     profile_type: str = Field("academic", description="画像类型：academic-学习态度/知识掌握/实践能力/创新思维/协作素养，virtue-德智体美劳")
     attitude_score: float = Field(..., ge=1, le=5, description="学习态度/德 (1-5)")
@@ -920,7 +920,7 @@ class StudentComprehensiveEvaluationBase(BaseModel):
     innovation_score: float = Field(..., ge=1, le=5, description="创新思维/美 (1-5)")
     collaboration_score: float = Field(..., ge=1, le=5, description="协作素养/劳 (1-5)")
     overall_comment: Optional[str] = Field(None, description="综合评语")
-    evaluator_id: Optional[int] = Field(None, description="评价导师ID")
+    evaluator_id: Optional[int] = Field(None, description="评价教师ID")
     eval_date: Optional[datetime] = Field(None, description="评价日期")
 
 class StudentComprehensiveEvaluationCreate(StudentComprehensiveEvaluationBase):
@@ -949,7 +949,7 @@ class StudentComprehensiveEvaluation(StudentComprehensiveEvaluationBase):
         from_attributes = True
 
 class StudentSubjectEvaluationBase(BaseModel):
-    student_id: int = Field(..., description="学员ID")
+    student_id: int = Field(..., description="学生ID")
     course_id: int = Field(..., description="科目ID")
     template_id: Optional[int] = Field(None, description="评价模板ID")
     eval_period: str = Field(..., description="评价周期")
@@ -957,7 +957,7 @@ class StudentSubjectEvaluationBase(BaseModel):
     comment: Optional[str] = Field(None, description="单科评语")
     strengths: Optional[str] = Field(None, description="优势/亮点")
     improvements: Optional[str] = Field(None, description="待提升方面")
-    evaluator_id: Optional[int] = Field(None, description="评价导师ID")
+    evaluator_id: Optional[int] = Field(None, description="评价教师ID")
     eval_date: Optional[datetime] = Field(None, description="评价日期")
 
 class StudentSubjectEvaluationCreate(StudentSubjectEvaluationBase):
@@ -1034,7 +1034,7 @@ class DailyWordBase(BaseModel):
     phrases: List[PhraseItem] = Field(default=[], description="短语列表")
 
 class DailyWordCreate(DailyWordBase):
-    created_by: Optional[int] = Field(None, description="创建人导师ID")
+    created_by: Optional[int] = Field(None, description="创建人教师ID")
 
 class DailyWordUpdate(BaseModel):
     grade: Optional[str] = None
@@ -1054,14 +1054,14 @@ class DailyWord(DailyWordBase):
 
 class WordCheckBase(BaseModel):
     schedule_id: int = Field(..., description="课程安排ID")
-    student_id: int = Field(..., description="学员ID")
+    student_id: int = Field(..., description="学生ID")
     daily_word_id: Optional[int] = Field(None, description="关联的每日单词ID")
     completion_status: str = Field("incomplete", description="完成状态：completed/partial/incomplete")
     attention_words: List[str] = Field(default=[], description="须注意的单词列表")
     notes: str = Field("", description="备注")
 
 class WordCheckCreate(WordCheckBase):
-    checked_by: Optional[int] = Field(None, description="检查人导师ID")
+    checked_by: Optional[int] = Field(None, description="检查人教师ID")
 
 class WordCheckUpdate(BaseModel):
     completion_status: Optional[str] = None

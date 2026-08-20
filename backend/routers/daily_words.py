@@ -824,7 +824,7 @@ def send_word_check_notification(
                             <p><strong>日期：</strong>{schedule.start_date} {schedule.start_time}-{schedule.end_time}</p>
                             <h3>单词完成情况</h3>
                             <table style="width:100%;border-collapse:collapse;">
-                                <tr style="background:#409eff;color:white;"><th style="padding:8px;border:1px solid #ddd;">学员</th><th style="padding:8px;border:1px solid #ddd;">年级</th><th style="padding:8px;border:1px solid #ddd;">状态</th><th style="padding:8px;border:1px solid #ddd;">须注意</th><th style="padding:8px;border:1px solid #ddd;">备注</th></tr>
+                                <tr style="background:#409eff;color:white;"><th style="padding:8px;border:1px solid #ddd;">学生</th><th style="padding:8px;border:1px solid #ddd;">年级</th><th style="padding:8px;border:1px solid #ddd;">状态</th><th style="padding:8px;border:1px solid #ddd;">须注意</th><th style="padding:8px;border:1px solid #ddd;">备注</th></tr>
                     """
                     for check in checks:
                         student = check.student
@@ -876,7 +876,7 @@ def send_word_check_notification(
                             smtp.quit()
                             success_count += 1
                         except Exception as e:
-                            log_operation(db, "单词检查", "发送邮件失败", f"学员: {student.email}, 错误: {str(e)}", current_user.username, "ERROR")
+                            log_operation(db, "单词检查", "发送邮件失败", f"学生: {student.email}, 错误: {str(e)}", current_user.username, "ERROR")
 
                     results["email"] = {"success": True, "message": f"邮件发送成功 {success_count}/{len(students_with_email)}"}
                     log_operation(db, "单词检查", "发送邮件通知", f"成功 {success_count}/{len(students_with_email)}", current_user.username)

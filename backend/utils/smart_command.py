@@ -58,9 +58,9 @@ class IntentParser:
             {
                 'name': 'complete_schedule',
                 'patterns': [
-                    r'(?:完成|完训|结束).*(?:课程|排课|安排)',
-                    r'(?:课程|排课|安排).*(?:完成|完训|结束)',
-                    r'(?:把|将).*(?:完成|完训|结束)',
+                    r'(?:完成|完课|结束).*(?:课程|排课|安排)',
+                    r'(?:课程|排课|安排).*(?:完成|完课|结束)',
+                    r'(?:把|将).*(?:完成|完课|结束)',
                 ],
                 'handler': self._parse_complete_schedule,
                 'priority': 12
@@ -118,20 +118,20 @@ class IntentParser:
                     # 模式16: 在|于DDD 将|把TTT的CCC课程 VVV给SSS
                     r'(?:在|于)\s*(?:\d{4}-\d{2}-\d{2}|今天|明天|后天|大后天|\d+[天后])\s*(?:将|把)\s*.+?(?:新增|新建|创建|安排|添加|增加|增添)\s*给\s*\S+',
                     
-                    # 模式17: 在|于DDD 将|把CCC课程 VVV给SSS，导师是TTT
+                    # 模式17: 在|于DDD 将|把CCC课程 VVV给SSS，教师是TTT
                     r'(?:在|于)\s*(?:\d{4}-\d{2}-\d{2}|今天|明天|后天|大后天|\d+[天后])\s*(?:将|把).+?(?:新增|新建|创建|安排|添加|增加|增添)\s*给\s*\S+',
                     
                     # 模式18: 将|把TTT的CCC课程 在|于DDD VVV给SSS
                     r'(?:将|把)\s*.+?(?:在|于)\s*(?:\d{4}-\d{2}-\d{2}|今天|明天|后天|大后天|\d+[天后])\s*(?:新增|新建|创建|安排|添加|增加|增添)\s*给\s*\S+',
                     
-                    # 模式19: 将|把CCC课程 在|于DDD VVV给SSS，导师是TTT
+                    # 模式19: 将|把CCC课程 在|于DDD VVV给SSS，教师是TTT
                     r'(?:将|把).+?(?:在|于)\s*(?:\d{4}-\d{2}-\d{2}|今天|明天|后天|大后天|\d+[天后])\s*(?:新增|新建|创建|安排|添加|增加|增添)\s*给\s*\S+',
                     
                     # 模式20-21: "SSS DDD VVV..." 和 "SSS VVV DDD..." 句式
-                    # 模式20: SSS DDD VVV TTT的CCC的课程安排 或 SSS DDD VVV CCC的课程安排，导师是TTT
+                    # 模式20: SSS DDD VVV TTT的CCC的课程安排 或 SSS DDD VVV CCC的课程安排，教师是TTT
                     r'\S+(?:\s*\S+)*\s*(?:\d{4}-\d{2}-\d{2}|今天|明天|后天|大后天|\d+[天后])\s*(?:新增|新建|创建|安排|添加|增加|增添).*(?:课程|课|排课|课程安排)',
                     
-                    # 模式21: SSS VVV DDD TTT的CCC的课程安排 或 SSS VVV DDD CCC的课程安排，导师是TTT
+                    # 模式21: SSS VVV DDD TTT的CCC的课程安排 或 SSS VVV DDD CCC的课程安排，教师是TTT
                     r'\S+(?:\s*\S+)*\s*(?:新增|新建|创建|安排|添加|增加|增添)\s*(?:\d{4}-\d{2}-\d{2}|今天|明天|后天|大后天|\d+[天后]).*(?:课程|课|排课|课程安排)',
                     
                     # ========== 通用兜底匹配 ==========
@@ -145,8 +145,8 @@ class IntentParser:
             {
                 'name': 'add_student',
                 'patterns': [
-                    r'(?:增加|添加|新增|创建|新建|增添)(?:一个|一位)?(?:学员|学生)\s*[:：]?\s*(.+)',
-                    r'(?:学员|学生)\s*[:：]?\s*(.+?)(?:增加|添加|新增|创建|新建|增添)'
+                    r'(?:增加|添加|新增|创建|新建|增添)(?:一个|一位)?(?:学生|学生)\s*[:：]?\s*(.+)',
+                    r'(?:学生|学生)\s*[:：]?\s*(.+?)(?:增加|添加|新增|创建|新建|增添)'
                 ],
                 'handler': self._parse_add_student,
                 'priority': 8
@@ -154,7 +154,7 @@ class IntentParser:
             {
                 'name': 'update_student',
                 'patterns': [
-                    r'(?:修改|更新|编辑|改变)(?:学员|学生)\s*[:：]?\s*(.+)',
+                    r'(?:修改|更新|编辑|改变)(?:学生|学生)\s*[:：]?\s*(.+)',
                 ],
                 'handler': self._parse_update_student,
                 'priority': 8
@@ -238,8 +238,8 @@ class IntentParser:
             {
                 'name': 'add_teacher',
                 'patterns': [
-                    r'(?:增加|添加|新增|创建|新建|增添)(?:一个)?(?:导师|老师|教师)\s*[:：]?\s*(.+)',
-                    r'(?:导师|老师|教师)\s*[:：]?\s*(.+?)(?:添加|新增|创建)'
+                    r'(?:增加|添加|新增|创建|新建|增添)(?:一个)?(?:教师|老师|教师)\s*[:：]?\s*(.+)',
+                    r'(?:教师|老师|教师)\s*[:：]?\s*(.+?)(?:添加|新增|创建)'
                 ],
                 'handler': self._parse_add_teacher,
                 'priority': 8
@@ -247,7 +247,7 @@ class IntentParser:
             {
                 'name': 'update_teacher',
                 'patterns': [
-                    r'(?:修改|更新|编辑|改变)(?:导师|老师|教师)\s*[:：]?\s*(.+)',
+                    r'(?:修改|更新|编辑|改变)(?:教师|老师|教师)\s*[:：]?\s*(.+)',
                 ],
                 'handler': self._parse_update_teacher,
                 'priority': 8
@@ -283,10 +283,10 @@ class IntentParser:
             {
                 'name': 'search_teachers',
                 'patterns': [
-                    r'(?:查询|搜索|查找|检索)(?:导师|老师|教师)',
-                    r'(?:导师|老师|教师)(?:查询|搜索|查找|检索)',
-                    r'查看(?:所有)?(?:导师|老师|教师)',
-                    r'(?:导师|老师|教师)列表',
+                    r'(?:查询|搜索|查找|检索)(?:教师|老师|教师)',
+                    r'(?:教师|老师|教师)(?:查询|搜索|查找|检索)',
+                    r'查看(?:所有)?(?:教师|老师|教师)',
+                    r'(?:教师|老师|教师)列表',
                 ],
                 'handler': self._parse_search_teachers,
                 'priority': 9
@@ -294,10 +294,10 @@ class IntentParser:
             {
                 'name': 'search_students',
                 'patterns': [
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)',
-                    r'(?:学员|学生)(?:查询|搜索|查找|检索)',
-                    r'查看(?:所有)?(?:学员|学生)',
-                    r'(?:学员|学生)列表',
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)',
+                    r'(?:学生|学生)(?:查询|搜索|查找|检索)',
+                    r'查看(?:所有)?(?:学生|学生)',
+                    r'(?:学生|学生)列表',
                 ],
                 'handler': self._parse_search_students,
                 'priority': 9
@@ -371,29 +371,29 @@ class IntentParser:
             {
                 'name': 'advanced_search',
                 'patterns': [
-                    # 学员相关复杂查询
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:班级)',
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:科目|课程)',
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:导师|老师)',
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:课费|费用|缴费)',
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:成绩|分数)',
-                    r'(?:查询|搜索|查找|检索)(?:学员|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:排课|课程安排|课表)',
+                    # 学生相关复杂查询
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:班级)',
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:科目|课程)',
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:教师|老师)',
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:课费|费用|缴费)',
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:成绩|分数)',
+                    r'(?:查询|搜索|查找|检索)(?:学生|学生)\s*(.+?)(?:相关的|关联的|的|所属)(?:排课|课程安排|课表)',
                     
-                    # 导师相关复杂查询
-                    r'(?:查询|搜索|查找|检索)(?:导师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:科目|课程)',
-                    r'(?:查询|搜索|查找|检索)(?:导师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:班级)',
-                    r'(?:查询|搜索|查找|检索)(?:导师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:学员|学生)',
-                    r'(?:查询|搜索|查找|检索)(?:导师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:排课|课程安排|课表)',
+                    # 教师相关复杂查询
+                    r'(?:查询|搜索|查找|检索)(?:教师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:科目|课程)',
+                    r'(?:查询|搜索|查找|检索)(?:教师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:班级)',
+                    r'(?:查询|搜索|查找|检索)(?:教师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:学生|学生)',
+                    r'(?:查询|搜索|查找|检索)(?:教师|老师|教师)\s*(.+?)(?:相关的|关联的|的|所教)(?:排课|课程安排|课表)',
                     
                     # 班级相关复杂查询
-                    r'(?:查询|搜索|查找|检索)(?:班级)\s*(.+?)(?:相关的|关联的|的|所属)(?:学员|学生)',
-                    r'(?:查询|搜索|查找|检索)(?:班级)\s*(.+?)(?:相关的|关联的|的|所属)(?:导师|老师)',
+                    r'(?:查询|搜索|查找|检索)(?:班级)\s*(.+?)(?:相关的|关联的|的|所属)(?:学生|学生)',
+                    r'(?:查询|搜索|查找|检索)(?:班级)\s*(.+?)(?:相关的|关联的|的|所属)(?:教师|老师)',
                     r'(?:查询|搜索|查找|检索)(?:班级)\s*(.+?)(?:相关的|关联的|的|所属)(?:科目|课程)',
                     r'(?:查询|搜索|查找|检索)(?:班级)\s*(.+?)(?:相关的|关联的|的|所属)(?:排课|课程安排|课表)',
                     
                     # 科目相关复杂查询
-                    r'(?:查询|搜索|查找|检索)(?:科目|课程)\s*(.+?)(?:相关的|关联的|的|所属)(?:导师|老师)',
-                    r'(?:查询|搜索|查找|检索)(?:科目|课程)\s*(.+?)(?:相关的|关联的|的|所属)(?:学员|学生)',
+                    r'(?:查询|搜索|查找|检索)(?:科目|课程)\s*(.+?)(?:相关的|关联的|的|所属)(?:教师|老师)',
+                    r'(?:查询|搜索|查找|检索)(?:科目|课程)\s*(.+?)(?:相关的|关联的|的|所属)(?:学生|学生)',
                     r'(?:查询|搜索|查找|检索)(?:科目|课程)\s*(.+?)(?:相关的|关联的|的|所属)(?:班级)',
                     r'(?:查询|搜索|查找|检索)(?:科目|课程)\s*(.+?)(?:相关的|关联的|的|所属)(?:排课|课程安排|课表)',
                     
@@ -456,11 +456,11 @@ class IntentParser:
         
         course_name = self._clean_text(name_match.group(1).strip())
         
-        # 提取可能的导师信息
-        teacher_match = re.search(r'(?:导师|老师|教师)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
+        # 提取可能的教师信息
+        teacher_match = re.search(r'(?:教师|老师|教师)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
         teacher_name = teacher_match.group(1).strip() if teacher_match else None
         
-        # 查询导师ID（如果提供了导师名称）
+        # 查询教师ID（如果提供了教师名称）
         teacher_id = None
         if teacher_name and db:
             teacher = db.query(Teacher).filter(Teacher.name == teacher_name).first()
@@ -520,7 +520,7 @@ class IntentParser:
         if priority_match:
             updates['priority'] = int(priority_match.group(1))
         
-        teacher_match = re.search(r'(?:导师|老师)\s*(?:改为|改成|变更为)?[:：]?\s*(.+?)(?:，|,|$)', text)
+        teacher_match = re.search(r'(?:教师|老师)\s*(?:改为|改成|变更为)?[:：]?\s*(.+?)(?:，|,|$)', text)
         if teacher_match:
             updates['teacher_name'] = teacher_match.group(1).strip()
         
@@ -541,7 +541,7 @@ class IntentParser:
     def _parse_complete_schedule(self, match, text, db) -> Optional[Dict[str, Any]]:
         """解析完成课程指令 - 返回导航信息"""
         
-        # 二次验证：确保文本中确实包含"完成/完训/结束"的意图
+        # 二次验证：确保文本中确实包含"完成/完课/结束"的意图
         # 如果文本中包含"创建"、"新增"等词，说明可能是创建排课而非完成
         #if re.search(r'(?:创建|新增|新建|添加)', text):
         #    return None
@@ -741,15 +741,15 @@ class IntentParser:
         }
     
     def _parse_add_teacher(self, match, text, db) -> Optional[Dict[str, Any]]:
-        """解析添加导师指令 - 返回导航信息"""
+        """解析添加教师指令 - 返回导航信息"""
         teacher_info = self._clean_text(match.group(1).strip())
         
-        # 优化：尝试多种方式提取导师姓名
+        # 优化：尝试多种方式提取教师姓名
         # 1. 尝试提取"名字叫XXX"或"名为XXX"格式
         name_match = re.search(r'(?:名字|姓名|叫|名为)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
         if not name_match:
-            # 2. 尝试提取"导师XXX"格式
-            name_match = re.search(r'(?:导师|老师|教师)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
+            # 2. 尝试提取"教师XXX"格式
+            name_match = re.search(r'(?:教师|老师|教师)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
         if not name_match:
             # 3. 使用原始匹配内容
             name_match = type('obj', (object,), {'group': lambda x: teacher_info})()
@@ -785,18 +785,18 @@ class IntentParser:
                 'title': title,
                 'department': department
             },
-            'message': '已为您打开添加导师页面，请确认信息后提交'
+            'message': '已为您打开添加教师页面，请确认信息后提交'
         }
     
     def _parse_update_teacher(self, match, text, db) -> Optional[Dict[str, Any]]:
-        """解析更新导师指令 - 返回导航信息"""
+        """解析更新教师指令 - 返回导航信息"""
         teacher_info = self._clean_text(match.group(1).strip())
         
-        # 提取导师名称或ID
-        teacher_match = re.search(r'(?:导师|老师|教师)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:的|，|,|$)', text)
+        # 提取教师名称或ID
+        teacher_match = re.search(r'(?:教师|老师|教师)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:的|，|,|$)', text)
         teacher_name_or_id = teacher_match.group(1).strip() if teacher_match else teacher_info
         
-        # 尝试查找导师ID
+        # 尝试查找教师ID
         teacher_id = None
         if teacher_name_or_id.isdigit():
             teacher_id = int(teacher_name_or_id)
@@ -808,7 +808,7 @@ class IntentParser:
         if not teacher_id:
             return {
                 'action': 'error',
-                'message': f'未找到导师"{teacher_name_or_id}"，请确认导师名称或ID是否正确'
+                'message': f'未找到教师"{teacher_name_or_id}"，请确认教师名称或ID是否正确'
             }
         
         # 提取要更新的字段
@@ -845,17 +845,17 @@ class IntentParser:
                 'teacher_id': teacher_id,
                 'updates': updates
             },
-            'message': '已为您打开导师编辑页面，请确认修改内容后提交'
+            'message': '已为您打开教师编辑页面，请确认修改内容后提交'
         }
     
     def _parse_add_student(self, match, text, db) -> Optional[Dict[str, Any]]:
-        """解析添加学员指令 - 返回导航信息"""
+        """解析添加学生指令 - 返回导航信息"""
         student_info = self._clean_text(match.group(1).strip())
         
-        # 优化：尝试多种方式提取学员姓名
+        # 优化：尝试多种方式提取学生姓名
         name_match = re.search(r'(?:名字|姓名|叫|名为)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
         if not name_match:
-            name_match = re.search(r'(?:学员|学生)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
+            name_match = re.search(r'(?:学生|学生)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:，|,|$)', text)
         if not name_match:
             name_match = type('obj', (object,), {'group': lambda x: student_info})()
         
@@ -893,18 +893,18 @@ class IntentParser:
                 'class_name': class_name,
                 'class_id': class_id
             },
-            'message': '已为您打开添加学员页面，请确认信息后提交'
+            'message': '已为您打开添加学生页面，请确认信息后提交'
         }
     
     def _parse_update_student(self, match, text, db) -> Optional[Dict[str, Any]]:
-        """解析更新学员指令 - 返回导航信息"""
+        """解析更新学生指令 - 返回导航信息"""
         student_info = self._clean_text(match.group(1).strip())
         
-        # 提取学员名称或ID
-        student_match = re.search(r'(?:学员|学生)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:的|，|,|$)', text)
+        # 提取学生名称或ID
+        student_match = re.search(r'(?:学生|学生)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:的|，|,|$)', text)
         student_name_or_id = student_match.group(1).strip() if student_match else student_info
         
-        # 尝试查找学员ID
+        # 尝试查找学生ID
         student_id = None
         if student_name_or_id.isdigit():
             student_id = int(student_name_or_id)
@@ -916,7 +916,7 @@ class IntentParser:
         if not student_id:
             return {
                 'action': 'error',
-                'message': f'未找到学员"{student_name_or_id}"，请确认学员名称或ID是否正确'
+                'message': f'未找到学生"{student_name_or_id}"，请确认学生名称或ID是否正确'
             }
         
         # 提取要更新的字段
@@ -952,7 +952,7 @@ class IntentParser:
                 'student_id': student_id,
                 'updates': updates
             },
-            'message': '已为您打开学员编辑页面，请确认修改内容后提交'
+            'message': '已为您打开学生编辑页面，请确认修改内容后提交'
         }
     
     def _parse_add_class(self, match, text, db) -> Optional[Dict[str, Any]]:
@@ -1122,7 +1122,7 @@ class IntentParser:
 
     def _parse_add_leave(self, match, text, db) -> Optional[Dict[str, Any]]:
         """解析添加请假指令 - 返回导航信息"""
-        # 提取人员名称（可能是导师或学员）
+        # 提取人员名称（可能是教师或学生）
         person_match = re.search(r'(?:为|给)\s*(.+?)\s*(?:请假|请个假)', text)
         if not person_match:
             person_match = re.search(r'(.+?)\s*(?:请假|请个假)', text)
@@ -1135,7 +1135,7 @@ class IntentParser:
         
         person_name = person_match.group(1).strip()
         
-        # 尝试查找是导师还是学员
+        # 尝试查找是教师还是学生
         teacher_id = None
         student_id = None
         person_type = None
@@ -1154,7 +1154,7 @@ class IntentParser:
         if not teacher_id and not student_id:
             return {
                 'action': 'error',
-                'message': f'未找到"{person_name}"，请确认是导师还是学员'
+                'message': f'未找到"{person_name}"，请确认是教师还是学生'
             }
         
         # 提取请假日期
@@ -1259,10 +1259,10 @@ class IntentParser:
         if not student_name or not amount:
             return {
                 'action': 'error',
-                'message': '缺少学员姓名或金额，请使用格式：收取张三科目数学费用500元'
+                'message': '缺少学生姓名或金额，请使用格式：收取张三科目数学费用500元'
             }
         
-        # 查询学员ID
+        # 查询学生ID
         student_id = None
         if db:
             student = db.query(Student).filter(Student.name == student_name).first()
@@ -1272,7 +1272,7 @@ class IntentParser:
         if not student_id:
             return {
                 'action': 'error',
-                'message': f'未找到学员"{student_name}"，请确认学员姓名是否正确'
+                'message': f'未找到学生"{student_name}"，请确认学生姓名是否正确'
             }
         
         # 查询科目ID
@@ -1302,7 +1302,7 @@ class IntentParser:
     
     def _parse_refund_fee(self, match, text, db) -> Optional[Dict[str, Any]]:
         """解析退费指令 - 返回导航信息"""
-        # 提取学员姓名
+        # 提取学生姓名
         student_match = re.search(r'(?:退费|退款)\s*(.+?)\s*(?:科目|课程)?\s*(.+?)?\s*(?:费用|学费)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*(?:元)?', text)
         
         if not student_match:
@@ -1319,7 +1319,7 @@ class IntentParser:
         date_match = re.search(r'(?:日期|时间)[:：]?\s*(\d{4}-\d{2}-\d{2})', text)
         refund_date = date_match.group(1) if date_match else None
         
-        # 查询学员ID
+        # 查询学生ID
         student_id = None
         if db:
             student = db.query(Student).filter(Student.name == student_name).first()
@@ -1329,7 +1329,7 @@ class IntentParser:
         if not student_id:
             return {
                 'action': 'error',
-                'message': f'未找到学员"{student_name}"，请确认学员姓名是否正确'
+                'message': f'未找到学生"{student_name}"，请确认学生姓名是否正确'
             }
         
         # 查询科目ID
@@ -1360,8 +1360,8 @@ class IntentParser:
         """解析添加成绩指令 - 返回导航信息"""
         grade_info = self._clean_text(match.group(1).strip())
         
-        # 提取学员姓名
-        student_match = re.search(r'(?:学员|学生)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:的|，|,|$)', text)
+        # 提取学生姓名
+        student_match = re.search(r'(?:学生|学生)\s*(?:是|为|叫|乃)?[:：]?\s*(.+?)(?:的|，|,|$)', text)
         student_name = student_match.group(1).strip() if student_match else None
         
         # 提取科目名称
@@ -1391,10 +1391,10 @@ class IntentParser:
         if not student_name or not course_name or not score:
             return {
                 'action': 'error',
-                'message': '缺少必要信息，请使用格式：添加成绩，学员张三，科目数学，成绩95分'
+                'message': '缺少必要信息，请使用格式：添加成绩，学生张三，科目数学，成绩95分'
             }
         
-        # 查询学员ID
+        # 查询学生ID
         student_id = None
         if db:
             student = db.query(Student).filter(Student.name == student_name).first()
@@ -1404,7 +1404,7 @@ class IntentParser:
         if not student_id:
             return {
                 'action': 'error',
-                'message': f'未找到学员"{student_name}"，请确认学员姓名是否正确'
+                'message': f'未找到学生"{student_name}"，请确认学生姓名是否正确'
             }
         
         # 查询科目ID
@@ -1470,7 +1470,7 @@ class IntentParser:
                 name_part = name_part.strip()
                 if name_part and 2 <= len(name_part) <= 4:
                     if not re.search(r'\d', name_part):
-                        invalid_words = ['添加', '安排', '排课', '课程', '导师', '老师', '学生', '学员', 
+                        invalid_words = ['添加', '安排', '排课', '课程', '教师', '老师', '学生', '学生', 
                                        '明天', '今天', '后天', '上午', '下午', '晚上', '点', '分', '时',
                                        '周一', '周二', '周三', '周四', '周五', '周六', '周日', '星期',
                                        '初三', '高一', '高二', '英语', '数学', '语文']
@@ -1507,7 +1507,7 @@ class IntentParser:
                 name_part = name_part.strip()
                 if name_part and 2 <= len(name_part) <= 4:
                     if not re.search(r'\d', name_part):
-                        invalid_words = ['添加', '安排', '排课', '课程', '导师', '老师', '学生', '学员',
+                        invalid_words = ['添加', '安排', '排课', '课程', '教师', '老师', '学生', '学生',
                                        '明天', '今天', '后天', '上午', '下午', '晚上', '点', '分', '时',
                                        '周一', '周二', '周三', '周四', '周五', '周六', '周日', '星期',
                                        '初三', '高一', '高二', '英语', '数学', '语文']
@@ -1542,7 +1542,7 @@ class IntentParser:
                 name_part = name_part.strip()
                 if name_part and 2 <= len(name_part) <= 4:
                     if not re.search(r'\d', name_part):
-                        invalid_words = ['添加', '安排', '排课', '课程', '导师', '老师', '学生', '学员',
+                        invalid_words = ['添加', '安排', '排课', '课程', '教师', '老师', '学生', '学生',
                                        '明天', '今天', '后天', '上午', '下午', '晚上', '点', '分', '时',
                                        '周一', '周二', '周三', '周四', '周五', '周六', '周日', '星期',
                                        '初三', '高一', '高二', '英语', '数学', '语文']
@@ -1567,7 +1567,7 @@ class IntentParser:
                 name_part = name_part.strip()
                 if name_part and 2 <= len(name_part) <= 4:
                     if not re.search(r'\d', name_part):
-                        invalid_words = ['添加', '安排', '排课', '课程', '导师', '老师', '学生', '学员',
+                        invalid_words = ['添加', '安排', '排课', '课程', '教师', '老师', '学生', '学生',
                                        '明天', '今天', '后天', '上午', '下午', '晚上', '点', '分', '时',
                                        '周一', '周二', '周三', '周四', '周五', '周六', '周日', '星期',
                                        '初三', '高一', '高二', '英语', '数学', '语文']
@@ -1725,24 +1725,24 @@ class IntentParser:
         
         支持的19种模式：
         1. 为|给 SSS VVV DDD的课程，科目是TTT的CCC
-        2. 为|给 SSS VVV DDD的CCC课程，导师是TTT
+        2. 为|给 SSS VVV DDD的CCC课程，教师是TTT
         3. DDD为|给 SSS VVV课程，科目是TTT的CCC
-        4. DDD为|给 SSS VVV CCC课程，导师是TTT
+        4. DDD为|给 SSS VVV CCC课程，教师是TTT
         5. VVV SSS DDD的课程，科目是TTT的CCC
-        6. VVV SSS DDD的CCC课程，导师是TTT
+        6. VVV SSS DDD的CCC课程，教师是TTT
         7. 为|给 SSS 在/于 DDD VVV TTT 的 CCC 课程
-        8. 为|给 SSS 在|于DDD VVV CCC 课程，导师是 TTT
+        8. 为|给 SSS 在|于DDD VVV CCC 课程，教师是 TTT
         9. 在|于 DDD 为|给 SSS VVV TTT 的 CCC 课程
-        10. 在|于 DDD 为|给 SSS VVV CCC 课程，导师是 TTT
+        10. 在|于 DDD 为|给 SSS VVV CCC 课程，教师是 TTT
         11. 为|给 SSS VVV 在|于 DDD TTT 的 CCC 课程
-        12. 为|给 SSS VVV 在|于 DDD 的 CCC 课程，导师是 TTT
+        12. 为|给 SSS VVV 在|于 DDD 的 CCC 课程，教师是 TTT
         13. 为|给 SSS VVV TTT 在|于 DDD 的 CCC 课程
         14. VVV 为|给 SSS 在|于 DDD TTT 的 CCC 课程
-        15. VVV 为|给 SSS 在|于 DDD 的 CCC 课程，导师是 TTT
+        15. VVV 为|给 SSS 在|于 DDD 的 CCC 课程，教师是 TTT
         16. 在|于DDD 将|把TTT 的 CCC 课程 VVV给SSS
-        17. 在/于DDD 将|把 CCC 课程 VVV给SSS，导师是 TTT
+        17. 在/于DDD 将|把 CCC 课程 VVV给SSS，教师是 TTT
         18. 将|把TTT 的 CCC 课程 在|于DDD VVV给SSS
-        19. 将|把 CCC 课程 在|于DDD VVV给SSS，导师是 TTT
+        19. 将|把 CCC 课程 在|于DDD VVV给SSS，教师是 TTT
         """
         
         log_operation(self.db, "智能指令解析", "解析排课指令", f"[DEBUG] 解析排课指令: {text}",  "SYSTEM", "DEBUG")
@@ -1896,7 +1896,7 @@ class IntentParser:
         
         log_operation(self.db, "智能指令解析", "DEBUG", f"提取到日期: {start_date} - {end_date}, 时间: {start_time} - {end_time}", level="DEBUG")
         
-        # ========== 第二步：提取学员姓名（SSS）==========
+        # ========== 第二步：提取学生姓名（SSS）==========
         person_names = self._extract_person_names(text)
         
         # 特殊处理："VVV给SSS"句式（模式16-19）
@@ -1904,47 +1904,47 @@ class IntentParser:
             give_match = re.search(r'(?:新增|新建|创建|安排|添加|增加|增添)\s*给\s*(.+?)(?:，|,|$)', text)
             if give_match:
                 names_str = give_match.group(1).strip()
-                # 分割多个学员
+                # 分割多个学生
                 name_parts = re.split(r'[和与及同、,，]', names_str)
                 for name_part in name_parts:
                     name_part = name_part.strip()
                     if name_part and 2 <= len(name_part) <= 4 and not re.search(r'\d', name_part):
                         person_names.append(name_part)
         
-        log_operation(self.db, "智能指令解析", "DEBUG", f"提取到学员: {person_names}", level="DEBUG")
+        log_operation(self.db, "智能指令解析", "DEBUG", f"提取到学生: {person_names}", level="DEBUG")
         
-        # ========== 第三步：提取导师姓名（TTT）==========
+        # ========== 第三步：提取教师姓名（TTT）==========
         teacher_name = None
         
-        # 策略1: 匹配"XXX老师"或"XXX导师"格式（优先级最高，如"张老师"、"李老师"）
-        teacher_suffix_pattern = re.finditer(r'([^\s，,。\n]{1,3})(?:老师|导师)', text)
+        # 策略1: 匹配"XXX老师"或"XXX教师"格式（优先级最高，如"张老师"、"李老师"）
+        teacher_suffix_pattern = re.finditer(r'([^\s，,。\n]{1,3})(?:老师|教师)', text)
         for match in teacher_suffix_pattern:
             candidate = match.group(1).strip()
             # 验证是否为有效人名（1-3个字符，不包含数字和标点）
             if 1 <= len(candidate) <= 3 and not re.search(r'[\d，,。\s]', candidate):
-                invalid_words = ['添加', '安排', '排课', '课程', '学生', '学员', '明天', '今天', 
+                invalid_words = ['添加', '安排', '排课', '课程', '学生', '学生', '明天', '今天', 
                                '后天', '上午', '下午', '晚上', '周一', '周二', '周三', '周四', 
                                '周五', '周六', '周日', '星期', '英语', '数学', '语文', '物理', '化学',
                                '点', '分', '时', '到', '至', '半', '一个', '刻']
                 # 只保留纯文字部分（排除单独的无效词）
                 if candidate and candidate not in ['老', '师', '导', '的老', '的导', '程', '程，', '，导']:
                     teacher_name = candidate + '老师'
-                    log_operation(self.db, "智能指令解析", "DEBUG", f"策略1提取到导师: {teacher_name}", level="DEBUG")
+                    log_operation(self.db, "智能指令解析", "DEBUG", f"策略1提取到教师: {teacher_name}", level="DEBUG")
                     break
         
-        # 策略2: 直接匹配"导师是XXX"或"老师是XXX"
+        # 策略2: 直接匹配"教师是XXX"或"老师是XXX"
         if not teacher_name:
-            teacher_is_pattern = re.search(r'(?:导师|老师)(?:是|为|乃|叫|叫做)[:：]?\s*(.+?)(?:，|,|$)', text)
+            teacher_is_pattern = re.search(r'(?:教师|老师)(?:是|为|乃|叫|叫做)[:：]?\s*(.+?)(?:，|,|$)', text)
             if teacher_is_pattern:
                 candidate = teacher_is_pattern.group(1).strip()
                 if 2 <= len(candidate) <= 4 and not re.search(r'\d', candidate):
-                    invalid_words = ['添加', '安排', '排课', '课程', '学生', '学员', '明天', '今天', 
+                    invalid_words = ['添加', '安排', '排课', '课程', '学生', '学生', '明天', '今天', 
                                    '后天', '上午', '下午', '晚上', '周一', '周二', '周三', '周四', 
                                    '周五', '周六', '周日', '星期', '英语', '数学', '语文', '物理', '化学',
                                    '点', '分', '时', '到', '至', '半']
                     if not any(word in candidate for word in invalid_words):
                         teacher_name = candidate
-                        log_operation(self.db, "智能指令解析", "DEBUG", f"策略2提取到导师: {teacher_name}", level="DEBUG")
+                        log_operation(self.db, "智能指令解析", "DEBUG", f"策略2提取到教师: {teacher_name}", level="DEBUG")
         
         # 策略3: 处理"代怀凯的英语课程"这种"XXX的YYY课程"结构
         if not teacher_name:
@@ -1960,15 +1960,15 @@ class IntentParser:
                     has_time_word = any(word in candidate for word in time_words)
                     
                     if not has_time_word:
-                        invalid_words = ['添加', '安排', '排课', '课程', '学生', '学员', '明天', '今天', 
+                        invalid_words = ['添加', '安排', '排课', '课程', '学生', '学生', '明天', '今天', 
                                        '后天', '周一', '周二', '周三', '周四', '周五', '周六', '周日', '星期']
                         if not any(word in candidate for word in invalid_words):
-                            # 关键判断：如果后面跟的是常见科目名，则candidate很可能是导师
+                            # 关键判断：如果后面跟的是常见科目名，则candidate很可能是教师
                             common_courses = ['英语', '数学', '语文', '物理', '化学', '生物', '历史', '地理', '政治', 
                                             '体育', '音乐', '美术', '编程', '科学']
                             if any(course in followed_word for course in common_courses):
                                 teacher_name = candidate
-                                log_operation(self.db, "智能指令解析", "DEBUG", f"策略3提取到导师: {teacher_name} (后面跟着: {followed_word})", level="DEBUG")
+                                log_operation(self.db, "智能指令解析", "DEBUG", f"策略3提取到教师: {teacher_name} (后面跟着: {followed_word})", level="DEBUG")
                                 break
         
         # 策略4: 从"科目是XXX的"结构中提取
@@ -1977,12 +1977,12 @@ class IntentParser:
             if course_is_pattern:
                 candidate = course_is_pattern.group(1).strip()
                 if 2 <= len(candidate) <= 4 and not re.search(r'\d', candidate):
-                    invalid_words = ['添加', '安排', '排课', '课程', '学生', '学员', '明天', '今天', 
+                    invalid_words = ['添加', '安排', '排课', '课程', '学生', '学生', '明天', '今天', 
                                    '后天', '上午', '下午', '晚上', '周一', '周二', '周三', '周四', 
                                    '周五', '周六', '周日', '星期', '英语', '数学', '语文', '点', '分', '时', '半']
                     if not any(word in candidate for word in invalid_words):
                         teacher_name = candidate
-                        log_operation(self.db, "智能指令解析", "DEBUG", f"策略4提取到导师: {teacher_name}", level="DEBUG")
+                        log_operation(self.db, "智能指令解析", "DEBUG", f"策略4提取到教师: {teacher_name}", level="DEBUG")
         
         # 策略5: 处理"将|把TTT的CCC课程"句式（模式16、18）
         if not teacher_name:
@@ -1994,14 +1994,14 @@ class IntentParser:
                     has_time_word = any(word in candidate for word in time_words)
                     
                     if not has_time_word:
-                        invalid_words = ['添加', '安排', '排课', '课程', '学生', '学员', '明天', '今天', 
+                        invalid_words = ['添加', '安排', '排课', '课程', '学生', '学生', '明天', '今天', 
                                        '后天', '上午', '下午', '晚上', '周一', '周二', '周三', '周四', 
                                        '周五', '周六', '周日', '星期', '英语', '数学', '语文']
                         if not any(word in candidate for word in invalid_words):
                             teacher_name = candidate
-                            log_operation(self.db, "智能指令解析", "DEBUG", f"策略5提取到导师: {teacher_name}", level="DEBUG")
+                            log_operation(self.db, "智能指令解析", "DEBUG", f"策略5提取到教师: {teacher_name}", level="DEBUG")
         
-        log_operation(self.db, "智能指令解析", "DEBUG", f"最终提取到导师: {teacher_name}", level="DEBUG")
+        log_operation(self.db, "智能指令解析", "DEBUG", f"最终提取到教师: {teacher_name}", level="DEBUG")
         
         # ========== 第四步：提取科目名称（CCC）==========
         course_name = None
@@ -2015,15 +2015,15 @@ class IntentParser:
         
         # 策略2: 从"XXX的YYY"结构中提取YYY作为科目（如"代怀凯的数学"中数学是科目）
         if not course_name:
-            # 寻找"导师名 + 的 + 科目名"的模式
-            possessive_course = re.search(r'(?:导师|老师|.{2,4})的\s*(.{1,10}?)(?:课程|课|排课)?(?:，|,|$)', text)
+            # 寻找"教师名 + 的 + 科目名"的模式
+            possessive_course = re.search(r'(?:教师|老师|.{2,4})的\s*(.{1,10}?)(?:课程|课|排课)?(?:，|,|$)', text)
             if possessive_course:
                 candidate = possessive_course.group(1).strip()
                 candidate = re.sub(r'(课程|课|排课|课程安排)$', '', candidate).strip()
                 
-                # 验证：不能是导师名、不能是常见非科目词
+                # 验证：不能是教师名、不能是常见非科目词
                 if candidate and 1 <= len(candidate) <= 10 and candidate != teacher_name:
-                    invalid_course_words = ['添加', '安排', '排课', '课程', '学生', '学员', '明天', '今天',
+                    invalid_course_words = ['添加', '安排', '排课', '课程', '学生', '学生', '明天', '今天',
                                           '后天', '上午', '下午', '晚上']
                     if not any(word in candidate for word in invalid_course_words):
                         course_name = candidate
@@ -2061,7 +2061,7 @@ class IntentParser:
                               '团队合作', '创新思维', '创业指导']
             for course in common_courses:
                 if course in text:
-                    # 确保科目名不在导师位置
+                    # 确保科目名不在教师位置
                     if teacher_name != course:
                         course_name = course
                         log_operation(self.db, "智能指令解析", "DEBUG", f"策略4提取到科目: {course_name}", level="DEBUG")
@@ -2240,13 +2240,13 @@ class IntentParser:
 注意：无论用户使用的是"添加"、"增加"、"创建"、"新建"、"新增"、"录入"、"更新"、"更改"、"修改"、"改正"、"改变"、"取消"，只要意图明确，都必须返回对应的 navigate 动作，严禁返回 error，除非完全无法理解意图。
 
 1. 添加科目 (add_course)
-   返回: {{"action": "navigate", "path": "/admin/courses", "query": {{"action": "add"}}, "storage_data": {{"course_name": "科目名称", "teacher_name": "导师姓名(可选)", "teacher_id": 导师ID(可选), "priority": 优先级数字(可选)}}, "message": "已为您打开添加科目页面，请确认信息后提交"}}
+   返回: {{"action": "navigate", "path": "/admin/courses", "query": {{"action": "add"}}, "storage_data": {{"course_name": "科目名称", "teacher_name": "教师姓名(可选)", "teacher_id": 教师ID(可选), "priority": 优先级数字(可选)}}, "message": "已为您打开添加科目页面，请确认信息后提交"}}
 
 2. 更新科目 (update_course)
    返回: {{"action": "navigate", "path": "/admin/courses", "query": {{"action": "edit", "id": "科目ID"}}, "storage_data": {{"course_id": 科目ID, "updates": {{"name": "新名称(可选)", "priority": 新优先级(可选)}}}}, "message": "已为您打开科目编辑页面，请确认修改内容后提交"}}
 
 3. 创建排课 (create_schedule)
-   返回: {{"action": "navigate", "path": "/admin/schedules", "query": {{"action": "add"}}, "storage_data": {{"studentNames": ["学生姓名列表"], "className": "班级名称", "courseName": "科目名称", "teacherName": "导师姓名", "roomName": "教室名称", "dayOfWeek": 星期几(1-7, 可选), "startTime": "开始时间(HH:MM)", "endTime": "结束时间(HH:MM)", "startDate": "开始日期(YYYY-MM-DD)", "endDate": "结束日期(YYYY-MM-DD)"}}, "message": "已为您打开添加排课页面，请确认信息后提交"}}
+   返回: {{"action": "navigate", "path": "/admin/schedules", "query": {{"action": "add"}}, "storage_data": {{"studentNames": ["学生姓名列表"], "className": "班级名称", "courseName": "科目名称", "teacherName": "教师姓名", "roomName": "教室名称", "dayOfWeek": 星期几(1-7, 可选), "startTime": "开始时间(HH:MM)", "endTime": "结束时间(HH:MM)", "startDate": "开始日期(YYYY-MM-DD)", "endDate": "结束日期(YYYY-MM-DD)"}}, "message": "已为您打开添加排课页面，请确认信息后提交"}}
 
 4. 完成课程 (complete_schedule)
    返回: {{"action": "navigate", "path": "/admin/schedules", "query": {{"action": "complete", "id": "排课ID"}}, "storage_data": {{"schedule_id": 排课ID, "content_feedback": "反馈内容(可选)"}}, "message": "已为您打开课程完成确认页面，请确认信息后提交"}}
@@ -2257,17 +2257,17 @@ class IntentParser:
 6. 延期课程 (postpone_schedule)
    返回: {{"action": "navigate", "path": "/admin/schedules", "query": {{"action": "postpone", "id": "排课ID"}}, "storage_data": {{"schedule_id": 排课ID, "start_date": "新开始日期", "end_date": "新结束日期", "start_time": "新开始时间", "end_time": "新结束时间", "postpone_reason": "延期原因"}}, "message": "已为您打开课程延期确认页面，请确认信息后提交"}}
 
-7. 添加导师 (add_teacher)
-   返回: {{"action": "navigate", "path": "/admin/teachers", "query": {{"action": "add"}}, "storage_data": {{"teacher_name": "导师姓名", "phone": "电话(可选)", "email": "邮箱(可选)", "title": "职称(可选)", "department": "部门(可选)"}}, "message": "已为您打开添加导师页面，请确认信息后提交"}}
+7. 添加教师 (add_teacher)
+   返回: {{"action": "navigate", "path": "/admin/teachers", "query": {{"action": "add"}}, "storage_data": {{"teacher_name": "教师姓名", "phone": "电话(可选)", "email": "邮箱(可选)", "title": "职称(可选)", "department": "部门(可选)"}}, "message": "已为您打开添加教师页面，请确认信息后提交"}}
 
-8. 更新导师 (update_teacher)
-   返回: {{"action": "navigate", "path": "/admin/teachers", "query": {{"action": "edit", "id": "导师ID"}}, "storage_data": {{"teacher_id": 导师ID, "updates": {{"name": "新姓名(可选)", "phone": "新电话(可选)", "email": "新邮箱(可选)"}}}}, "message": "已为您打开导师编辑页面，请确认修改内容后提交"}}
+8. 更新教师 (update_teacher)
+   返回: {{"action": "navigate", "path": "/admin/teachers", "query": {{"action": "edit", "id": "教师ID"}}, "storage_data": {{"teacher_id": 教师ID, "updates": {{"name": "新姓名(可选)", "phone": "新电话(可选)", "email": "新邮箱(可选)"}}}}, "message": "已为您打开教师编辑页面，请确认修改内容后提交"}}
 
-9. 添加学员 (add_student)
-   返回: {{"action": "navigate", "path": "/admin/students", "query": {{"action": "add"}}, "storage_data": {{"student_name": "学员姓名", "phone": "电话(可选)", "email": "邮箱(可选)", "class_ids": [班级ID列表]}}, "message": "已为您打开添加学员页面，请确认信息后提交"}}
+9. 添加学生 (add_student)
+   返回: {{"action": "navigate", "path": "/admin/students", "query": {{"action": "add"}}, "storage_data": {{"student_name": "学生姓名", "phone": "电话(可选)", "email": "邮箱(可选)", "class_ids": [班级ID列表]}}, "message": "已为您打开添加学生页面，请确认信息后提交"}}
 
-10. 更新学员 (update_student)
-    返回: {{"action": "navigate", "path": "/admin/students", "query": {{"action": "edit", "id": "学员ID"}}, "storage_data": {{"student_id": 学员ID, "updates": {{"name": "新姓名(可选)", "phone": "新电话(可选)", "email": "新邮箱(可选)"}}}}, "message": "已为您打开学员编辑页面，请确认修改内容后提交"}}
+10. 更新学生 (update_student)
+    返回: {{"action": "navigate", "path": "/admin/students", "query": {{"action": "edit", "id": "学生ID"}}, "storage_data": {{"student_id": 学生ID, "updates": {{"name": "新姓名(可选)", "phone": "新电话(可选)", "email": "新邮箱(可选)"}}}}, "message": "已为您打开学生编辑页面，请确认修改内容后提交"}}
 
 11. 添加班级 (add_class)
     返回: {{"action": "navigate", "path": "/admin/classes", "query": {{"action": "add"}}, "storage_data": {{"class_name": "班级名称", "grade_level": "年级(可选)"}}, "message": "已为您打开添加班级页面，请确认信息后提交"}}
@@ -2288,22 +2288,22 @@ class IntentParser:
     返回: {{"action": "navigate", "path": "/admin/holidays", "query": {{"action": "add"}}, "storage_data": {{"holiday_name": "节假日名称", "start_date": "开始日期", "end_date": "结束日期"}}, "message": "已为您打开添加节假日页面，请确认信息后提交"}}
 
 17. 收取费用 (collect_fee)
-    返回: {{"action": "navigate", "path": "/admin/feemanagement", "query": {{"action": "collect"}}, "storage_data": {{"student_id": 学员ID, "student_name": "学员姓名", "course_id": 科目ID, "course_name": "科目名称", "amount": 金额, "receivable_amount": 应收金额(可选), "fee_date": "收费日期"}}, "message": "已为您打开收费页面，请确认信息后提交"}}
+    返回: {{"action": "navigate", "path": "/admin/feemanagement", "query": {{"action": "collect"}}, "storage_data": {{"student_id": 学生ID, "student_name": "学生姓名", "course_id": 科目ID, "course_name": "科目名称", "amount": 金额, "receivable_amount": 应收金额(可选), "fee_date": "收费日期"}}, "message": "已为您打开收费页面，请确认信息后提交"}}
 
 18. 退费 (refund_fee)
-    返回: {{"action": "navigate", "path": "/admin/feemanagement", "query": {{"action": "refund"}}, "storage_data": {{"student_id": 学员ID, "student_name": "学员姓名", "course_id": 科目ID, "course_name": "科目名称", "amount": 金额, "refund_date": "退费日期"}}, "message": "已为您打开退费页面，请确认信息后提交"}}
+    返回: {{"action": "navigate", "path": "/admin/feemanagement", "query": {{"action": "refund"}}, "storage_data": {{"student_id": 学生ID, "student_name": "学生姓名", "course_id": 科目ID, "course_name": "科目名称", "amount": 金额, "refund_date": "退费日期"}}, "message": "已为您打开退费页面，请确认信息后提交"}}
 
 19. 添加成绩 (add_grade)
-    返回: {{"action": "navigate", "path": "/admin/grades", "query": {{"action": "add"}}, "storage_data": {{"student_id": 学员ID, "student_name": "学员姓名", "course_id": 科目ID, "course_name": "科目名称", "score": 分数, "total_score": 总分(可选), "exam_date": "考试日期(可选)", "grade_level": "年级(可选)", "exam_stage": "考试阶段(可选)"}}, "message": "已为您打开添加成绩页面，请确认信息后提交"}}
+    返回: {{"action": "navigate", "path": "/admin/grades", "query": {{"action": "add"}}, "storage_data": {{"student_id": 学生ID, "student_name": "学生姓名", "course_id": 科目ID, "course_name": "科目名称", "score": 分数, "total_score": 总分(可选), "exam_date": "考试日期(可选)", "grade_level": "年级(可选)", "exam_stage": "考试阶段(可选)"}}, "message": "已为您打开添加成绩页面，请确认信息后提交"}}
 
 20. 查询科目列表 (search_courses)
     返回: {{"action": "navigate", "path": "/admin/courses", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "courses"}}, "message": "已为您打开科目列表页面，您可以查看所有科目信息"}}
 
-21. 查询导师列表 (search_teachers)
-    返回: {{"action": "navigate", "path": "/admin/teachers", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "teachers"}}, "message": "已为您打开导师列表页面，您可以查看所有导师信息"}}
+21. 查询教师列表 (search_teachers)
+    返回: {{"action": "navigate", "path": "/admin/teachers", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "teachers"}}, "message": "已为您打开教师列表页面，您可以查看所有教师信息"}}
 
-22. 查询学员列表 (search_students)
-    返回: {{"action": "navigate", "path": "/admin/students", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "students"}}, "message": "已为您开学员列表页面，您可以查看所有学员信息"}}
+22. 查询学生列表 (search_students)
+    返回: {{"action": "navigate", "path": "/admin/students", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "students"}}, "message": "已为您开学生列表页面，您可以查看所有学生信息"}}
 
 23. 查询班级列表 (search_classes)
     返回: {{"action": "navigate", "path": "/admin/classes", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "classes"}}, "message": "已为您打开班级列表页面，您可以查看所有班级信息"}}
@@ -2324,26 +2324,26 @@ class IntentParser:
     返回: {{"action": "navigate", "path": "/admin/grades", "query": {{}}, "storage_data": {{"search_mode": true, "entity_type": "grades"}}, "message": "已为您打开成绩管理页面，您可以查看所有成绩信息"}}
 
 29. 高级关联查询 (advanced_search)
-    当用户想要查询某个实体的关联信息时，例如"学员张三的班级"、"导师李四的科目"等
+    当用户想要查询某个实体的关联信息时，例如"学生张三的班级"、"教师李四的科目"等
     返回格式根据具体情况而定：
     
-    a) 查询学员的班级：
-    {{"action": "navigate", "path": "/admin/students", "query": {{"search": "张三", "related_to": "classes"}}, "storage_data": {{"search_mode": true, "source_entity": "student", "source_name": "张三", "target_entity": "classes", "target_path": "/admin/classes", "target_label": "班级列表"}}, "message": "正在查询学员张三的班级列表..."}}
+    a) 查询学生的班级：
+    {{"action": "navigate", "path": "/admin/students", "query": {{"search": "张三", "related_to": "classes"}}, "storage_data": {{"search_mode": true, "source_entity": "student", "source_name": "张三", "target_entity": "classes", "target_path": "/admin/classes", "target_label": "班级列表"}}, "message": "正在查询学生张三的班级列表..."}}
     
-    b) 查询导师的科目：
-    {{"action": "navigate", "path": "/admin/teachers", "query": {{"search": "李四", "related_to": "courses"}}, "storage_data": {{"search_mode": true, "source_entity": "teacher", "source_name": "李四", "target_entity": "courses", "target_path": "/admin/courses", "target_label": "科目列表"}}, "message": "正在查询导师李四的科目列表..."}}
+    b) 查询教师的科目：
+    {{"action": "navigate", "path": "/admin/teachers", "query": {{"search": "李四", "related_to": "courses"}}, "storage_data": {{"search_mode": true, "source_entity": "teacher", "source_name": "李四", "target_entity": "courses", "target_path": "/admin/courses", "target_label": "科目列表"}}, "message": "正在查询教师李四的科目列表..."}}
     
     c) 查询某人在特定日期的排课：
-    {{"action": "navigate", "path": "/admin/schedules", "query": {{"filter_by": "student", "filter_value": "张三", "date": "明天"}}, "storage_data": {{"search_mode": true, "entity_type": "student", "entity_name": "张三", "date_filter": "明天", "target_entity": "schedules"}}, "message": "正在查询学员张三在明天的课程安排..."}}
+    {{"action": "navigate", "path": "/admin/schedules", "query": {{"filter_by": "student", "filter_value": "张三", "date": "明天"}}, "storage_data": {{"search_mode": true, "entity_type": "student", "entity_name": "张三", "date_filter": "明天", "target_entity": "schedules"}}, "message": "正在查询学生张三在明天的课程安排..."}}
     
     d) 查询实体的详细信息：
-    {{"action": "navigate", "path": "/admin/students", "query": {{"search": "张三", "view_detail": "true"}}, "storage_data": {{"search_mode": true, "entity_type": "student", "entity_name": "张三", "auto_view_detail": true}}, "message": "正在查询学员张三的详细信息..."}}
+    {{"action": "navigate", "path": "/admin/students", "query": {{"search": "张三", "view_detail": "true"}}, "storage_data": {{"search_mode": true, "entity_type": "student", "entity_name": "张三", "auto_view_detail": true}}, "message": "正在查询学生张三的详细信息..."}}
 
 【支持的关联查询类型】
-- 学员的：班级、科目、导师、课费、成绩、排课
-- 导师的：科目、班级、学员、排课
-- 班级的：学员、导师、科目、排课
-- 科目的：导师、学员、班级、排课
+- 学生的：班级、科目、教师、课费、成绩、排课
+- 教师的：科目、班级、学生、排课
+- 班级的：学生、教师、科目、排课
+- 科目的：教师、学生、班级、排课
 - 教室的：排课
     
 【错误处理】
@@ -2360,9 +2360,9 @@ class IntentParser:
 {{"action": "error", "message": "我无法理解您的指令，请尝试更清晰的表达，例如：'添加科目数学'"}}
 
 【当前系统中的实体】
-- 导师列表: {all_teachers[:100]}
+- 教师列表: {all_teachers[:100]}
 - 科目列表: {all_courses[:100]}
-- 学员列表: {all_students[:200]}
+- 学生列表: {all_students[:200]}
 - 班级列表: {all_classes[:200]}
 - 教室列表: {all_rooms[:50]}
 
@@ -2372,7 +2372,7 @@ class IntentParser:
 3. 如果涉及ID但用户未提供，尝试从名称推断，如果无法确定则设为null
 4. 日期格式必须是YYYY-MM-DD，时间格式必须是HH:MM
 5. 优先参考【参考示例】中的表达方式理解用户意图
-6. **对于"添加成绩"等操作，即使缺少总分、日期等非核心字段，只要有了学员、科目和分数，就必须返回 navigate 动作，不要返回 error**
+6. **对于"添加成绩"等操作，即使缺少总分、日期等非核心字段，只要有了学生、科目和分数，就必须返回 navigate 动作，不要返回 error**
 7. **日期处理规则：如果用户只说了"X月X号"而没有说年份，必须使用当前年份（{current_year}年）。例如：今天是{current_year}年，用户说"5月17号"，应该返回"{current_year}-05-17"，而不是其他年份！**
 
 用户输入：{text}
@@ -2494,7 +2494,7 @@ class IntentParser:
         }
     
     def _parse_search_teachers(self, match, text, db) -> Optional[Dict[str, Any]]:
-        """解析查询导师指令"""
+        """解析查询教师指令"""
         return {
             'action': 'navigate',
             'path': '/admin/teachers',
@@ -2503,11 +2503,11 @@ class IntentParser:
                 'search_mode': True,
                 'entity_type': 'teachers'
             },
-            'message': '已为您打开导师列表页面，您可以查看所有导师信息'
+            'message': '已为您打开教师列表页面，您可以查看所有教师信息'
         }
     
     def _parse_search_students(self, match, text, db) -> Optional[Dict[str, Any]]:
-        """解析查询学员指令"""
+        """解析查询学生指令"""
         return {
             'action': 'navigate',
             'path': '/admin/students',
@@ -2516,7 +2516,7 @@ class IntentParser:
                 'search_mode': True,
                 'entity_type': 'students'
             },
-            'message': '已为您开学员列表页面，您可以查看所有学员信息'
+            'message': '已为您开学生列表页面，您可以查看所有学生信息'
         }
     
     def _parse_search_classes(self, match, text, db) -> Optional[Dict[str, Any]]:
@@ -2602,40 +2602,40 @@ class IntentParser:
         解析高级搜索指令 - 支持复杂的自然语言关联查询
         
         支持的查询模式：
-        1. 学员张三的班级 → 查询学员张三，并显示其所属班级
-        2. 导师李四的科目 → 查询导师李四教的科目
-        3. 班级1v1的学员 → 查询班级1v1的所有学员
+        1. 学生张三的班级 → 查询学生张三，并显示其所属班级
+        2. 教师李四的科目 → 查询教师李四教的科目
+        3. 班级1v1的学生 → 查询班级1v1的所有学生
         4. 科目数学的排课 → 查询科目数学的所有排课
-        5. 学员张三在明天的排课 → 查询学员张三明天的课程安排
+        5. 学生张三在明天的排课 → 查询学生张三明天的课程安排
         """
         text_lower = text.lower()
         
         # ========== 模式1：查询X的Y（关联查询）==========
         # 提取实体名称和关联类型
         entity_patterns = [
-            # 学员相关
-            (r'(?:学员|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(班级)', 'student', 'classes'),
-            (r'(?:学员|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:科目|课程)', 'student', 'courses'),
-            (r'(?:学员|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:导师|老师)', 'student', 'teachers'),
-            (r'(?:学员|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:课费|费用|缴费)', 'student', 'fees'),
-            (r'(?:学员|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:成绩|分数)', 'student', 'grades'),
-            (r'(?:学员|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:排课|课程安排|课表)', 'student', 'schedules'),
+            # 学生相关
+            (r'(?:学生|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(班级)', 'student', 'classes'),
+            (r'(?:学生|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:科目|课程)', 'student', 'courses'),
+            (r'(?:学生|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:教师|老师)', 'student', 'teachers'),
+            (r'(?:学生|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:课费|费用|缴费)', 'student', 'fees'),
+            (r'(?:学生|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:成绩|分数)', 'student', 'grades'),
+            (r'(?:学生|学生)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:排课|课程安排|课表)', 'student', 'schedules'),
             
-            # 导师相关
-            (r'(?:导师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(?:科目|课程)', 'teacher', 'courses'),
-            (r'(?:导师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(班级)', 'teacher', 'classes'),
-            (r'(?:导师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(?:学员|学生)', 'teacher', 'students'),
-            (r'(?:导师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(?:排课|课程安排|课表)', 'teacher', 'schedules'),
+            # 教师相关
+            (r'(?:教师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(?:科目|课程)', 'teacher', 'courses'),
+            (r'(?:教师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(班级)', 'teacher', 'classes'),
+            (r'(?:教师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(?:学生|学生)', 'teacher', 'students'),
+            (r'(?:教师|老师|教师)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所教)\s*(?:排课|课程安排|课表)', 'teacher', 'schedules'),
             
             # 班级相关
-            (r'(?:班级)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:学员|学生)', 'class', 'students'),
-            (r'(?:班级)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:导师|老师)', 'class', 'teachers'),
+            (r'(?:班级)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:学生|学生)', 'class', 'students'),
+            (r'(?:班级)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:教师|老师)', 'class', 'teachers'),
             (r'(?:班级)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:科目|课程)', 'class', 'courses'),
             (r'(?:班级)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:排课|课程安排|课表)', 'class', 'schedules'),
             
             # 科目相关
-            (r'(?:科目|课程)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:导师|老师)', 'course', 'teachers'),
-            (r'(?:科目|课程)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:学员|学生)', 'course', 'students'),
+            (r'(?:科目|课程)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:教师|老师)', 'course', 'teachers'),
+            (r'(?:科目|课程)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:学生|学生)', 'course', 'students'),
             (r'(?:科目|课程)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(班级)', 'course', 'classes'),
             (r'(?:科目|课程)\s*([^\s的，,]+)\s*(?:相关的|关联的|的|所属)\s*(?:排课|课程安排|课表)', 'course', 'schedules'),
             
@@ -2650,16 +2650,16 @@ class IntentParser:
                 
                 # 构建导航数据
                 navigation_map = {
-                    'student': {'path': '/admin/students', 'label': '学员'},
-                    'teacher': {'path': '/admin/teachers', 'label': '导师'},
+                    'student': {'path': '/admin/students', 'label': '学生'},
+                    'teacher': {'path': '/admin/teachers', 'label': '教师'},
                     'class': {'path': '/admin/classes', 'label': '班级'},
                     'course': {'path': '/admin/courses', 'label': '科目'},
                     'room': {'path': '/admin/rooms', 'label': '教室'}
                 }
                 
                 target_map = {
-                    'students': {'path': '/admin/students', 'label': '学员列表'},
-                    'teachers': {'path': '/admin/teachers', 'label': '导师列表'},
+                    'students': {'path': '/admin/students', 'label': '学生列表'},
+                    'teachers': {'path': '/admin/teachers', 'label': '教师列表'},
                     'classes': {'path': '/admin/classes', 'label': '班级列表'},
                     'courses': {'path': '/admin/courses', 'label': '科目列表'},
                     'schedules': {'path': '/admin/schedules', 'label': '课程安排列表'},
@@ -2695,9 +2695,9 @@ class IntentParser:
             person_or_class = time_match.group(1).strip()
             date_str = time_match.group(2).strip()
             
-            # 判断是学员、导师还是班级
+            # 判断是学生、教师还是班级
             entity_type = 'student'
-            if '导师' in text or '老师' in text:
+            if '教师' in text or '老师' in text:
                 entity_type = 'teacher'
             elif '班级' in text:
                 entity_type = 'class'
@@ -2721,7 +2721,7 @@ class IntentParser:
             }
         
         # ========== 模式3：通用信息查询 ==========
-        info_pattern = r'(?:查询|搜索|查找|检索)(?:学员|学生|导师|老师|教师|班级|科目|课程|教室|房间)\s*(.+?)(?:的|的)(?:信息|详情|资料)'
+        info_pattern = r'(?:查询|搜索|查找|检索)(?:学生|学生|教师|老师|教师|班级|科目|课程|教室|房间)\s*(.+?)(?:的|的)(?:信息|详情|资料)'
         info_match = re.search(info_pattern, text)
         if info_match:
             entity_name = info_match.group(1).strip()
@@ -2729,12 +2729,12 @@ class IntentParser:
             # 判断实体类型
             entity_type = 'student'
             path = '/admin/students'
-            label = '学员'
+            label = '学生'
             
-            if '导师' in text or '老师' in text or '教师' in text:
+            if '教师' in text or '老师' in text or '教师' in text:
                 entity_type = 'teacher'
                 path = '/admin/teachers'
-                label = '导师'
+                label = '教师'
             elif '班级' in text:
                 entity_type = 'class'
                 path = '/admin/classes'
@@ -2833,13 +2833,13 @@ class CommandExecutor:
                 'course_name': '科目名称',
                 'amount': '金额',
                 'receivable_amount': '应收金额',
-                'student_name': '学员姓名',
+                'student_name': '学生姓名',
                 'score': '成绩',
                 'total_score': '总分',
                 'grade_level': '年级',
                 'exam_stage': '考试阶段',
                 'class_name': '班级名称',
-                'teacher_name': '导师姓名',
+                'teacher_name': '教师姓名',
                 'room_name': '教室名称',
                 'day_of_week': '星期几',
                 'date': '日期'
@@ -3004,25 +3004,25 @@ class CommandExecutor:
             priority=priority
         )
         
-        # 如果指定了导师，查找或创建导师
+        # 如果指定了教师，查找或创建教师
         created_teachers = []
         if teacher_name:
             teacher = self.db.query(Teacher).filter(Teacher.name == teacher_name).first()
             if not teacher:
-                # 导师不存在，查找相似导师
+                # 教师不存在，查找相似教师
                 similar_teachers = self._find_similar_items(Teacher, 'name', teacher_name)
                 if similar_teachers:
                     return {
                         'success': False,
-                        'message': f'未找到导师"{teacher_name}"，但找到以下相似导师：{", ".join([t["name"] for t in similar_teachers])}，请确认是否正确',
+                        'message': f'未找到教师"{teacher_name}"，但找到以下相似教师：{", ".join([t["name"] for t in similar_teachers])}，请确认是否正确',
                         'similar_items': similar_teachers,
                         'need_confirmation': True
                     }
                 else:
-                    # 没有相似导师，询问是否创建
+                    # 没有相似教师，询问是否创建
                     return {
                         'success': False,
-                        'message': f'导师"{teacher_name}"不存在，是否需要先创建该导师？',
+                        'message': f'教师"{teacher_name}"不存在，是否需要先创建该教师？',
                         'need_create_teacher': True,
                         'teacher_name': teacher_name
                     }
@@ -3036,7 +3036,7 @@ class CommandExecutor:
         
         result_msg = f'成功添加科目: {course_name}'
         if created_teachers:
-            result_msg += f'，并创建了导师: {", ".join(created_teachers)}'
+            result_msg += f'，并创建了教师: {", ".join(created_teachers)}'
         
         return {
             'success': True,
@@ -3084,9 +3084,9 @@ class CommandExecutor:
             teacher = self.db.query(Teacher).filter(Teacher.name == updates['teacher_name']).first()
             if teacher:
                 course.teachers = [teacher]
-                update_fields.append('导师')
+                update_fields.append('教师')
             else:
-                return {'success': False, 'message': f'导师"{updates["teacher_name"]}"不存在'}
+                return {'success': False, 'message': f'教师"{updates["teacher_name"]}"不存在'}
         
         self.db.commit()
         
@@ -3128,7 +3128,7 @@ class CommandExecutor:
         schedule.execution_status = 'completed'
         schedule.content_feedback = content_feedback
         
-        # 获取班级的活跃学员并设置默认出勤状态
+        # 获取班级的活跃学生并设置默认出勤状态
         from routers.schedules import get_students_by_class
         active_students = get_students_by_class(self.db, schedule.class_id, is_active=True)
         
@@ -3147,7 +3147,7 @@ class CommandExecutor:
             
             default_status = 'leave' if student_leave else 'present'
             
-            # 更新或创建学员出勤记录
+            # 更新或创建学生出勤记录
             from sqlalchemy import update as sql_update
             from models import schedule_student
             stmt = sql_update(schedule_student).where(
@@ -3178,7 +3178,7 @@ class CommandExecutor:
             temp_user = User(id=self.user_id, username="system", role="system_admin")
             consume_hours_with_attendance(schedule_id_int, self.db, temp_user)
         except Exception as e:
-            log_operation(self.db, "课程安排", "完训", f"消耗课时失败: {str(e)}", user="system", level="ERROR")
+            log_operation(self.db, "课程安排", "完课", f"消耗课时失败: {str(e)}", user="system", level="ERROR")
         
         log_operation(self.db, "课程安排", "完成课程", f"完成排课ID: {schedule_id}", 
                      user=self.username)
@@ -3279,7 +3279,7 @@ class CommandExecutor:
         self.db.add(new_schedule)
         self.db.flush()  # 先flush获取new_schedule.id
         
-        # 复制原课程的学员关联到新排课
+        # 复制原课程的学生关联到新排课
         for student in schedule.scheduled_students:
             new_schedule.scheduled_students.append(student)
         
@@ -3296,7 +3296,7 @@ class CommandExecutor:
         }
     
     def _execute_add_teacher(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """执行添加导师"""
+        """执行添加教师"""
         name = params.get('name')
         phone = params.get('phone')
         email = params.get('email')
@@ -3304,12 +3304,12 @@ class CommandExecutor:
         department = params.get('department')
         
         if not name:
-            return {'success': False, 'message': '缺少导师姓名'}
+            return {'success': False, 'message': '缺少教师姓名'}
         
-        # 检查导师是否已存在
+        # 检查教师是否已存在
         existing = self.db.query(Teacher).filter(Teacher.name == name).first()
         if existing:
-            return {'success': False, 'message': f'导师"{name}"已存在'}
+            return {'success': False, 'message': f'教师"{name}"已存在'}
         
         # 生成编码
         code = self._generate_code(Teacher, "TEACHER")
@@ -3328,24 +3328,24 @@ class CommandExecutor:
         self.db.commit()
         self.db.refresh(new_teacher)
         
-        log_operation(self.db, "导师管理", "添加导师", f"通过智能指令添加导师: {name}", 
+        log_operation(self.db, "教师管理", "添加教师", f"通过智能指令添加教师: {name}", 
                      user=self.username)
         
         return {
             'success': True,
-            'message': f'成功添加导师: {name}',
+            'message': f'成功添加教师: {name}',
             'data': {'id': new_teacher.id, 'name': new_teacher.name, 'code': new_teacher.code}
         }
     
     def _execute_update_teacher(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """执行更新导师"""
+        """执行更新教师"""
         teacher_identifier = params.get('teacher_identifier')
         updates = params.get('updates', {})
         
         if not teacher_identifier:
-            return {'success': False, 'message': '缺少导师标识'}
+            return {'success': False, 'message': '缺少教师标识'}
         
-        # 尝试查找导师
+        # 尝试查找教师
         teacher = None
         if teacher_identifier.isdigit():
             teacher = self.db.query(Teacher).filter(Teacher.id == int(teacher_identifier)).first()
@@ -3357,12 +3357,12 @@ class CommandExecutor:
             if similar_teachers:
                 return {
                     'success': False,
-                    'message': f'未找到导师"{teacher_identifier}"，但找到以下相似导师：{", ".join([t["name"] for t in similar_teachers])}',
+                    'message': f'未找到教师"{teacher_identifier}"，但找到以下相似教师：{", ".join([t["name"] for t in similar_teachers])}',
                     'similar_items': similar_teachers,
                     'need_confirmation': True
                 }
             else:
-                return {'success': False, 'message': f'导师"{teacher_identifier}"不存在'}
+                return {'success': False, 'message': f'教师"{teacher_identifier}"不存在'}
         
         # 执行更新
         update_fields = []
@@ -3373,17 +3373,17 @@ class CommandExecutor:
         
         self.db.commit()
         
-        log_operation(self.db, "导师管理", "更新导师", f"更新导师: {teacher.name} ({', '.join(update_fields)})", 
+        log_operation(self.db, "教师管理", "更新教师", f"更新教师: {teacher.name} ({', '.join(update_fields)})", 
                      user=self.username)
         
         return {
             'success': True,
-            'message': f'成功更新导师: {teacher.name}',
+            'message': f'成功更新教师: {teacher.name}',
             'data': {'id': teacher.id, 'name': teacher.name}
         }
     
     def _execute_add_student(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """执行添加学员"""
+        """执行添加学生"""
         name = params.get('name')
         phone = params.get('phone')
         school = params.get('school')
@@ -3393,12 +3393,12 @@ class CommandExecutor:
         class_name = params.get('class_name')
         
         if not name:
-            return {'success': False, 'message': '缺少学员姓名'}
+            return {'success': False, 'message': '缺少学生姓名'}
         
-        # 检查学员是否已存在
+        # 检查学生是否已存在
         existing = self.db.query(Student).filter(Student.name == name).first()
         if existing:
-            return {'success': False, 'message': f'学员"{name}"已存在'}
+            return {'success': False, 'message': f'学生"{name}"已存在'}
         
         # 生成编码
         code = self._generate_code(Student, "STUDENT")
@@ -3441,24 +3441,24 @@ class CommandExecutor:
         self.db.commit()
         self.db.refresh(new_student)
         
-        log_operation(self.db, "学员管理", "添加学员", f"通过智能指令添加学员: {name}", 
+        log_operation(self.db, "学生管理", "添加学生", f"通过智能指令添加学生: {name}", 
                      user=self.username)
         
         return {
             'success': True,
-            'message': f'成功添加学员: {name}',
+            'message': f'成功添加学生: {name}',
             'data': {'id': new_student.id, 'name': new_student.name, 'code': new_student.code}
         }
     
     def _execute_update_student(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """执行更新学员"""
+        """执行更新学生"""
         student_identifier = params.get('student_identifier')
         updates = params.get('updates', {})
         
         if not student_identifier:
-            return {'success': False, 'message': '缺少学员标识'}
+            return {'success': False, 'message': '缺少学生标识'}
         
-        # 尝试查找学员
+        # 尝试查找学生
         student = None
         if student_identifier.isdigit():
             student = self.db.query(Student).filter(Student.id == int(student_identifier)).first()
@@ -3470,12 +3470,12 @@ class CommandExecutor:
             if similar_students:
                 return {
                     'success': False,
-                    'message': f'未找到学员"{student_identifier}"，但找到以下相似学员：{", ".join([s["name"] for s in similar_students])}',
+                    'message': f'未找到学生"{student_identifier}"，但找到以下相似学生：{", ".join([s["name"] for s in similar_students])}',
                     'similar_items': similar_students,
                     'need_confirmation': True
                 }
             else:
-                return {'success': False, 'message': f'学员"{student_identifier}"不存在'}
+                return {'success': False, 'message': f'学生"{student_identifier}"不存在'}
         
         # 执行更新
         update_fields = []
@@ -3486,12 +3486,12 @@ class CommandExecutor:
         
         self.db.commit()
         
-        log_operation(self.db, "学员管理", "更新学员", f"更新学员: {student.name} ({', '.join(update_fields)})", 
+        log_operation(self.db, "学生管理", "更新学生", f"更新学生: {student.name} ({', '.join(update_fields)})", 
                      user=self.username)
         
         return {
             'success': True,
-            'message': f'成功更新学员: {student.name}',
+            'message': f'成功更新学生: {student.name}',
             'data': {'id': student.id, 'name': student.name}
         }
     
@@ -3697,14 +3697,14 @@ class CommandExecutor:
             if similar_persons:
                 return {
                     'success': False,
-                    'message': f'未找到{"导师" if is_teacher else "学员"}"{person_name}"，但找到以下相似人员：{", ".join([p["name"] for p in similar_persons])}',
+                    'message': f'未找到{"教师" if is_teacher else "学生"}"{person_name}"，但找到以下相似人员：{", ".join([p["name"] for p in similar_persons])}',
                     'similar_items': similar_persons,
                     'need_confirmation': True
                 }
             else:
                 return {
                     'success': False,
-                    'message': f'{"导师" if is_teacher else "学员"}"{person_name}"不存在，是否需要先创建？',
+                    'message': f'{"教师" if is_teacher else "学生"}"{person_name}"不存在，是否需要先创建？',
                     'need_create_person': True,
                     'person_name': person_name,
                     'is_teacher': is_teacher
@@ -3743,7 +3743,7 @@ class CommandExecutor:
         self.db.refresh(new_leave)
         
         log_operation(self.db, "请假管理", "添加请假", 
-                     f"为{'导师' if is_teacher else '学员'} {person_name} 添加请假: {reason}", 
+                     f"为{'教师' if is_teacher else '学生'} {person_name} 添加请假: {reason}", 
                      user=self.username)
         
         return {
@@ -3809,7 +3809,7 @@ class CommandExecutor:
         payment_date_str = params.get('payment_date')
         
         if not person_name:
-            return {'success': False, 'message': '缺少学员姓名'}
+            return {'success': False, 'message': '缺少学生姓名'}
         
         if not course_name:
             return {
@@ -3825,21 +3825,21 @@ class CommandExecutor:
                 'missing_fields': ['amount']
             }
         
-        # 查找学员
+        # 查找学生
         student = self.db.query(Student).filter(Student.name == person_name).first()
         if not student:
             similar_students = self._find_similar_items(Student, 'name', person_name)
             if similar_students:
                 return {
                     'success': False,
-                    'message': f'未找到学员"{person_name}"，但找到以下相似学员：{", ".join([s["name"] for s in similar_students])}',
+                    'message': f'未找到学生"{person_name}"，但找到以下相似学生：{", ".join([s["name"] for s in similar_students])}',
                     'similar_items': similar_students,
                     'need_confirmation': True
                 }
             else:
                 return {
                     'success': False,
-                    'message': f'学员"{person_name}"不存在，是否需要先创建？',
+                    'message': f'学生"{person_name}"不存在，是否需要先创建？',
                     'need_create_student': True,
                     'student_name': person_name
                 }
@@ -3874,7 +3874,7 @@ class CommandExecutor:
             # 需要用户提供课时费标准
             return {
                 'success': False,
-                'message': f'学员"{person_name}"在科目"{course_name}"下没有课时费记录，请先设置课时费标准（元/小时）',
+                'message': f'学生"{person_name}"在科目"{course_name}"下没有课时费记录，请先设置课时费标准（元/小时）',
                 'need_set_hourly_fee': True,
                 'student_id': student.id,
                 'course_id': course.id,
@@ -3910,12 +3910,12 @@ class CommandExecutor:
         self.db.add(fee_log)
         self.db.commit()
         
-        log_operation(self.db, "课费管理", "收取费用", f"向学员 {person_name} 收取科目 {course_name} 费用 {amount} 元", 
+        log_operation(self.db, "课费管理", "收取费用", f"向学生 {person_name} 收取科目 {course_name} 费用 {amount} 元", 
                      user=self.username)
         
         return {
             'success': True,
-            'message': f'成功收取学员 {person_name} 科目 {course_name} 费用 {amount} 元',
+            'message': f'成功收取学生 {person_name} 科目 {course_name} 费用 {amount} 元',
             'data': {'fee_log_id': fee_log.id, 'remaining_amount': student_fee.remaining_amount}
         }
     
@@ -3929,15 +3929,15 @@ class CommandExecutor:
         if not person_name or not course_name or not amount:
             return {
                 'success': False,
-                'message': '缺少必要信息：学员姓名、科目名称、退费金额',
+                'message': '缺少必要信息：学生姓名、科目名称、退费金额',
                 'missing_fields': [f for f in ['person_name', 'course_name', 'amount'] 
                                   if not locals().get(f)]
             }
         
-        # 查找学员
+        # 查找学生
         student = self.db.query(Student).filter(Student.name == person_name).first()
         if not student:
-            return {'success': False, 'message': f'学员"{person_name}"不存在'}
+            return {'success': False, 'message': f'学生"{person_name}"不存在'}
         
         # 查找科目
         course = self.db.query(Course).filter(Course.name == course_name).first()
@@ -3951,7 +3951,7 @@ class CommandExecutor:
         ).first()
         
         if not student_fee:
-            return {'success': False, 'message': f'学员"{person_name}"在科目"{course_name}"下没有课时费记录'}
+            return {'success': False, 'message': f'学生"{person_name}"在科目"{course_name}"下没有课时费记录'}
         
         # 解析退费日期
         from datetime import datetime as dt_datetime
@@ -3979,12 +3979,12 @@ class CommandExecutor:
         self.db.add(fee_log)
         self.db.commit()
         
-        log_operation(self.db, "课费管理", "退费", f"退给学员 {person_name} 科目 {course_name} 费用 {amount} 元", 
+        log_operation(self.db, "课费管理", "退费", f"退给学生 {person_name} 科目 {course_name} 费用 {amount} 元", 
                      user=self.username)
         
         return {
             'success': True,
-            'message': f'成功退给学员 {person_name} 科目 {course_name} 费用 {amount} 元',
+            'message': f'成功退给学生 {person_name} 科目 {course_name} 费用 {amount} 元',
             'data': {'fee_log_id': fee_log.id, 'remaining_amount': student_fee.remaining_amount}
         }
     
@@ -4001,7 +4001,7 @@ class CommandExecutor:
         
         if not student_name or not course_name or not score or not total_score or not grade_level or not exam_stage:
             missing = []
-            if not student_name: missing.append('学员姓名')
+            if not student_name: missing.append('学生姓名')
             if not course_name: missing.append('科目名称')
             if not score: missing.append('成绩')
             if not total_score: missing.append('总分')
@@ -4014,21 +4014,21 @@ class CommandExecutor:
                                   if not params.get(f)]
             }
         
-        # 查找学员
+        # 查找学生
         student = self.db.query(Student).filter(Student.name == student_name).first()
         if not student:
             similar_students = self._find_similar_items(Student, 'name', student_name)
             if similar_students:
                 return {
                     'success': False,
-                    'message': f'未找到学员"{student_name}"，但找到以下相似学员：{", ".join([s["name"] for s in similar_students])}',
+                    'message': f'未找到学生"{student_name}"，但找到以下相似学生：{", ".join([s["name"] for s in similar_students])}',
                     'similar_items': similar_students,
                     'need_confirmation': True
                 }
             else:
                 return {
                     'success': False,
-                    'message': f'学员"{student_name}"不存在，是否需要先创建？',
+                    'message': f'学生"{student_name}"不存在，是否需要先创建？',
                     'need_create_student': True,
                     'student_name': student_name
                 }
@@ -4086,7 +4086,7 @@ class CommandExecutor:
         self.db.commit()
         self.db.refresh(new_grade)
         
-        log_operation(self.db, "成绩管理", "添加成绩", f"录入学员 {student_name} 科目 {course_name} 成绩 {score}/{total_score}", 
+        log_operation(self.db, "成绩管理", "添加成绩", f"录入学生 {student_name} 科目 {course_name} 成绩 {score}/{total_score}", 
                      user=self.username)
         
         change_msg = ""
@@ -4100,7 +4100,7 @@ class CommandExecutor:
         
         return {
             'success': True,
-            'message': f'成功录入学员 {student_name} 科目 {course_name} 成绩 {score}/{total_score}{change_msg}',
+            'message': f'成功录入学生 {student_name} 科目 {course_name} 成绩 {score}/{total_score}{change_msg}',
             'data': {'id': new_grade.id, 'score_change': score_change}
         }
     
@@ -4119,7 +4119,7 @@ class CommandExecutor:
         missing = []
         if not class_name: missing.append('班级名称')
         if not course_name: missing.append('科目名称')
-        if not teacher_name: missing.append('导师姓名')
+        if not teacher_name: missing.append('教师姓名')
         if not room_name: missing.append('教室名称')
         if not day_of_week: missing.append('星期几')
         if not start_time: missing.append('开始时间')
@@ -4174,21 +4174,21 @@ class CommandExecutor:
                     'course_name': course_name
                 }
         
-        # 查找导师
+        # 查找教师
         teacher = self.db.query(Teacher).filter(Teacher.name == teacher_name).first()
         if not teacher:
             similar_teachers = self._find_similar_items(Teacher, 'name', teacher_name)
             if similar_teachers:
                 return {
                     'success': False,
-                    'message': f'未找到导师"{teacher_name}"，但找到以下相似导师：{", ".join([t["name"] for t in similar_teachers])}',
+                    'message': f'未找到教师"{teacher_name}"，但找到以下相似教师：{", ".join([t["name"] for t in similar_teachers])}',
                     'similar_items': similar_teachers,
                     'need_confirmation': True
                 }
             else:
                 return {
                     'success': False,
-                    'message': f'导师"{teacher_name}"不存在，是否需要先创建？',
+                    'message': f'教师"{teacher_name}"不存在，是否需要先创建？',
                     'need_create_teacher': True,
                     'teacher_name': teacher_name
                 }
@@ -4238,7 +4238,7 @@ class CommandExecutor:
         self.db.add(new_schedule)
         self.db.flush()  # 先flush获取new_schedule.id
         
-        # 自动关联班级中的活跃学员
+        # 自动关联班级中的活跃学生
         from routers.schedules import get_students_by_class
         from models import schedule_student
         active_students = get_students_by_class(self.db, class_obj.id, is_active=True)
@@ -4277,7 +4277,7 @@ class CommandExecutor:
             conflict_msg = ""
         
         log_operation(self.db, "排课管理", "创建排课", 
-                     f"为班级 {class_name} 安排 {course_name} 课程，导师 {teacher_name}，教室 {room_name}", 
+                     f"为班级 {class_name} 安排 {course_name} 课程，教师 {teacher_name}，教室 {room_name}", 
                      user=self.username)
         
         weekday_names = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日']

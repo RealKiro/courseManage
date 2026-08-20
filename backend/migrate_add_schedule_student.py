@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (C) 2024-2026 courseManage Contributors
 """
-数据库迁移脚本：添加schedule_student表并为现有课程安排创建学员关联记录
+数据库迁移脚本：添加schedule_student表并为现有课程安排创建学生关联记录
 """
 from sqlalchemy import create_engine, text
 from database import SessionLocal, engine
@@ -17,15 +17,15 @@ def migrate():
     Base.metadata.create_all(bind=engine)
     print("✓ schedule_student表创建成功")
     
-    # 为现有课程安排创建学员关联记录
+    # 为现有课程安排创建学生关联记录
     db = SessionLocal()
     try:
         schedules = db.query(Schedule).all()
         total = len(schedules)
-        print(f"找到 {total} 个课程安排，开始创建学员关联记录...")
+        print(f"找到 {total} 个课程安排，开始创建学生关联记录...")
         
         for i, schedule in enumerate(schedules, 1):
-            # 获取班级的所有活跃学员
+            # 获取班级的所有活跃学生
             class_ = db.query(Class).filter(Class.id == schedule.class_id).first()
             if not class_:
                 print(f"警告：课程安排ID {schedule.id} 的班级不存在，跳过")
@@ -34,7 +34,7 @@ def migrate():
             students = [s for s in class_.students if s.is_active]
             
             if not students:
-                print(f"警告：课程安排ID {schedule.id} 的班级没有活跃学员，跳过")
+                print(f"警告：课程安排ID {schedule.id} 的班级没有活跃学生，跳过")
                 continue
             
             # 检查是否已有记录
@@ -45,12 +45,12 @@ def migrate():
             result = db.execute(query).fetchone()
             
             if result:
-                print(f"课程安排ID {schedule.id} 已有学员记录，跳过 ({i}/{total})")
+                print(f"课程安排ID {schedule.id} 已有学生记录，跳过 ({i}/{total})")
                 continue
             
-            # 创建学员关联记录
+            # 创建学生关联记录
             for student in students:
-                # 如果是已完训的课程，默认为出席；否则为pending
+                # 如果是已完课的课程，默认为出席；否则为pending
                 attendance_status = 'present' if schedule.execution_status == 'completed' else 'pending'
                 
                 association = schedule_student.insert().values(
@@ -66,7 +66,7 @@ def migrate():
                 print(f"进度: {i}/{total}")
         
         db.commit()
-        print("✓ 迁移完成！所有课程安排已关联学员记录")
+        print("✓ 迁移完成！所有课程安排已关联学生记录")
         
     except Exception as e:
         db.rollback()

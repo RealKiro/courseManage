@@ -27,7 +27,7 @@ def send_email_homework(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_teaching_assistant_user)
 ):
-    """发送作业安排邮件（同时发送给学员和家长）"""
+    """发送作业安排邮件（同时发送给学生和家长）"""
     settings = db.query(Settings).first()
     if not settings:
         log_operation(db, "邮件通知", "发送作业邮件失败", "尝试发送作业邮件但站点参数不存在", current_user.username, "ERROR")
@@ -50,11 +50,11 @@ def send_email_homework(
     ).all()
     
     if not students:
-        return {"message": "班级中没有在读学员"}
+        return {"message": "班级中没有在读学生"}
     
     students_with_email = [s for s in students if s.email]
     if not students_with_email:
-        return {"message": "班级中没有配置邮箱的学员"}
+        return {"message": "班级中没有配置邮箱的学生"}
     
     msg = MIMEMultipart()
     msg['From'] = formataddr((email_config.get('smtp_from_name', settings.site_name), email_config.get('smtp_user', '')))
@@ -95,7 +95,7 @@ def send_email_homework(
             </div>
             {f'''
             <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                {f'<p><a href="{settings.organization_website}" target="_blank" style="color: #409eff; text-decoration: none;">🌐 访问机构官网</a></p>' if settings.organization_website else ''}
+                {f'<p><a href="{settings.organization_website}" target="_blank" style="color: #409eff; text-decoration: none;">🌐 访问学校官网</a></p>' if settings.organization_website else ''}
                 {f'<p style="text-align: center;">关注公众号：<br/><img src="{settings.wechat_qrcode}" alt="公众号二维码" style="max-width: 200px;"/></p>' if settings.wechat_qrcode else ''}
                 {f'<p style="text-align: center;">添加企业微信：<br/><img src="{settings.work_wechat_qrcode}" alt="企业微信二维码" style="max-width: 200px;"/></p>' if settings.work_wechat_qrcode else ''}
             </div>

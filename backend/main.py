@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 from database import engine, Base, SessionLocal, get_pool_status
 from routers import auth, logs, database, settings, wechat, email
 from routers import courses, teachers, students, classes, rooms, leaves, conditions, holidays
-from routers import fees, grades, schedules, statistics
+from routers import grades, schedules, statistics
 from routers import smart_command, smart_command_examples
 from routers import license
 from routers import evaluations
@@ -114,7 +114,6 @@ app.add_middleware(
 
 PREMIUM_PATH_MAP = {
     "/api/grades": "grade_trend",
-    "/api/fees": "fee_management",
     "/api/schedules/optimize": "smart_scheduling",
     "/api/wechat": "wechat_notify",
     "/api/smart-command": "smart_command",
@@ -348,7 +347,7 @@ def add_homework_columns():
         print("字段 homework_images 已存在于表 schedules")
 
 def add_word_check_and_renewal_intention():
-    """添加课程安排表的单词检查和续报意愿字段"""
+    """添加课程安排表的单词检查和续读意愿字段"""
     from sqlalchemy import inspect, text
     inspector = inspect(engine)
     columns = [col['name'] for col in inspector.get_columns('schedules')]
@@ -545,16 +544,15 @@ create_default_admin()
 
 app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
 app.include_router(courses.router, prefix="/api/courses", tags=["科目管理"])
-app.include_router(teachers.router, prefix="/api/teachers", tags=["导师管理"])
+app.include_router(teachers.router, prefix="/api/teachers", tags=["教师管理"])
 app.include_router(classes.router, prefix="/api/classes", tags=["班级管理"])
-app.include_router(students.router, prefix="/api/students", tags=["学员管理"])
+app.include_router(students.router, prefix="/api/students", tags=["学生管理"])
 app.include_router(rooms.router, prefix="/api/rooms", tags=["教室管理"])
 app.include_router(leaves.router, prefix="/api/leaves", tags=["请假管理"])
 app.include_router(schedules.router, prefix="/api/schedules", tags=["排课管理"])
 app.include_router(conditions.router, prefix="/api/conditions", tags=["条件管理"])
 app.include_router(logs.router, prefix="/api/logs", tags=["logs"])
 app.include_router(database.router, prefix="/api/database", tags=["database"])
-app.include_router(fees.router, prefix="/api/fees", tags=["课费管理"])
 app.include_router(settings.router, prefix="/api/settings", tags=["站点参数"])
 app.include_router(grades.router, prefix="/api/grades", tags=["成绩管理"])
 app.include_router(holidays.router, prefix="/api/holidays", tags=["节假日管理"])
@@ -564,7 +562,7 @@ app.include_router(smart_command_examples.router, prefix="/api/smart-command-exa
 app.include_router(wechat.router, prefix="/api/wechat", tags=["微信通知"])
 app.include_router(email.router, prefix="/api/email", tags=["邮件通知"])
 app.include_router(license.router, prefix="/api", tags=["系统授权"])
-app.include_router(evaluations.router, prefix="/api/evaluations", tags=["学员评价管理"])
+app.include_router(evaluations.router, prefix="/api/evaluations", tags=["学生评价管理"])
 app.include_router(daily_words.router, prefix="/api/daily-words", tags=["每日单词管理"])
 
 

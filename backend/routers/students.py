@@ -28,17 +28,17 @@ def get_students(
 ):
     query = db.query(Student)
 
-    #应用导师可见性过滤
+    #应用教师可见性过滤
     teacher_filter = get_teacher_visibility_filter(db, current_user)
     
     if teacher_filter is not None:
         if hasattr(teacher_filter, 'compile'):
             query = query.filter(teacher_filter)
         else:
-            log_operation(db, "学员管理", "应用导师过滤", f"教师ID: {teacher_filter} - {current_user.username}", current_user.username, "DEBUG")
+            log_operation(db, "学生管理", "应用教师过滤", f"教师ID: {teacher_filter} - {current_user.username}", current_user.username, "DEBUG")
             
-            # 逻辑链条：导师 -> 他的排课(Schedule) -> 涉及的班级(Class) -> 班级里的学生(Student)
-            # 1. 先找到该导师排课的所有班级 ID（使用更高效的查询）
+            # 逻辑链条：教师 -> 他的排课(Schedule) -> 涉及的班级(Class) -> 班级里的学生(Student)
+            # 1. 先找到该教师排课的所有班级 ID（使用更高效的查询）
             allowed_class_ids_subquery = db.query(Schedule.class_id).filter(
                 Schedule.teacher_id == teacher_filter,
                 Schedule.class_id.isnot(None)  # 排除空值
@@ -56,13 +56,13 @@ def get_students(
                     # 如果请求的class_id不在允许列表中，返回空结果
                     return {"items": [], "total": 0}
             else:
-                # 如果导师没有任何排课，返回空结果
+                # 如果教师没有任何排课，返回空结果
                 return {"items": [], "total": 0}
                 
             # 使用 distinct 防止一个学生在多个允许班级时重复出现
             query = query.distinct()
     else:
-        log_operation(db, "学员管理", "导师可见性限制未启用", f"教师ID: {current_user.id} - {current_user.username}", current_user.username, "DEBUG")
+        log_operation(db, "学生管理", "教师可见性限制未启用", f"教师ID: {current_user.id} - {current_user.username}", current_user.username, "DEBUG")
         # 如果没有开启限制，但前端传了 class_id，正常过滤
         if class_id is not None:
             query = query.join(Student.classes).filter(Class.id == class_id)
@@ -79,7 +79,7 @@ def get_students(
         )
     if is_active is not None:
         query = query.filter(Student.is_active == is_active)
-    # 注意：class_id 的过滤已经在上面的导师过滤逻辑中处理了
+    # 注意：class_id 的过滤已经在上面的教师过滤逻辑中处理了
 
     # 应用排序
     if sort_field:
@@ -138,8 +138,8 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
     # 使用joinedload加载classes关系，确保编辑时能正确获取班级信息
     student = db.query(Student).options(joinedload(Student.classes)).filter(Student.id == student_id).first()
     if not student:
-        log_operation(db, "学员管理", "获取学员详情失败", f"学员ID {student_id} 不存在", get_current_user(db).username, "WARNING")
-        raise HTTPException(status_code=404, detail="学员不存在")
+        log_operation(db, "学生管理", "获取学生详情失败", f"学生ID {student_id} 不存在", get_current_user(db).username, "WARNING")
+        raise HTTPException(status_code=404, detail="学生不存在")
     
     # 手动构建返回数据，确保class_ids正确填充
     class_ids = [c.id for c in student.classes] if student.classes else []
@@ -174,14 +174,14 @@ def create_student(
 ):
     db_student = db.query(Student).filter(Student.code == student.code).first()
     if db_student:
-        log_operation(db, "学员管理", "创建学员失败", f"学员代码 {student.code} 已存在", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="学员代码已存在")
+        log_operation(db, "学生管理", "创建学生失败", f"学生代码 {student.code} 已存在", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail="学生代码已存在")
     
     if not force:
         existing_student = db.query(Student).filter(Student.name == student.name).first()
         if existing_student:
-            log_operation(db, "学员管理", "创建学员提示", f"同名学员 {student.name} 已存在 (ID: {existing_student.id}, 代码: {existing_student.code})", current_user.username, "WARNING")
-            raise HTTPException(status_code=409, detail=f"同名学员已存在：{existing_student.name}（代码：{existing_student.code}），请确认是否为不同人员")
+            log_operation(db, "学生管理", "创建学生提示", f"同名学生 {student.name} 已存在 (ID: {existing_student.id}, 代码: {existing_student.code})", current_user.username, "WARNING")
+            raise HTTPException(status_code=409, detail=f"同名学生已存在：{existing_student.name}（代码：{existing_student.code}），请确认是否为不同人员")
     
     db_student = Student(
         code=student.code,
@@ -213,7 +213,7 @@ def create_student(
 
     # 手动构建返回数据，确保class_ids正确填充
     class_ids = [c.id for c in db_student.classes] if db_student.classes else []
-    log_operation(db, "学员管理", "新增",  f"成功创建学员: {db_student.code} - {db_student.name}", current_user.username)
+    log_operation(db, "学生管理", "新增",  f"成功创建学生: {db_student.code} - {db_student.name}", current_user.username)
     return StudentSchema(
         id=db_student.id,
         code=db_student.code,
@@ -243,15 +243,15 @@ def update_student(
 ):
     db_student = db.query(Student).filter(Student.id == student_id).first()
     if not db_student:
-        log_operation(db, "学员管理", "修改学员失败", f"学员ID {student_id} 不存在", current_user.username, "WARNING")
-        raise HTTPException(status_code=404, detail="学员不存在")
+        log_operation(db, "学生管理", "修改学生失败", f"学生ID {student_id} 不存在", current_user.username, "WARNING")
+        raise HTTPException(status_code=404, detail="学生不存在")
     
     # 检查同名冲突（名称发生变化时）
     if not force and student.name is not None and student.name != db_student.name:
         existing_student = db.query(Student).filter(Student.name == student.name, Student.id != student_id).first()
         if existing_student:
-            log_operation(db, "学员管理", "修改学员提示", f"同名学员 {student.name} 已存在 (ID: {existing_student.id}, 代码: {existing_student.code})", current_user.username, "WARNING")
-            raise HTTPException(status_code=409, detail=f"同名学员已存在：{existing_student.name}（代码：{existing_student.code}），请确认是否为不同人员")
+            log_operation(db, "学生管理", "修改学生提示", f"同名学生 {student.name} 已存在 (ID: {existing_student.id}, 代码: {existing_student.code})", current_user.username, "WARNING")
+            raise HTTPException(status_code=409, detail=f"同名学生已存在：{existing_student.name}（代码：{existing_student.code}），请确认是否为不同人员")
     
     # 检查is_active是否从True变为False
     is_becoming_inactive = (db_student.is_active == True and student.is_active == False)
@@ -294,16 +294,16 @@ def update_student(
     
     # 如果从在读变为非在读，检查是否填写了结束日期
     if is_becoming_inactive and db_student.end_date is None:
-        log_operation(db, "学员管理", "修改学员失败", f"学员 {db_student.name} (ID: {db_student.id}) 非在读但未填写结束日期", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="学员非在读时必须填写结束日期")
+        log_operation(db, "学生管理", "修改学生失败", f"学生 {db_student.name} (ID: {db_student.id}) 非在读但未填写结束日期", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail="学生非在读时必须填写结束日期")
     
     db.commit()
-    log_operation(db, "学员管理", "修改", f"学员 {db_student.name} (ID: {db_student.id}) 信息成功更新", current_user.username)
+    log_operation(db, "学生管理", "修改", f"学生 {db_student.name} (ID: {db_student.id}) 信息成功更新", current_user.username)
     db.refresh(db_student)
     
     # 如果从在读变为非在读，写入日志
     if is_becoming_inactive:
-        log_operation(db, "学员管理", "修改", f"学员 {db_student.name} (ID: {db_student.id}) 在读状态更新为非在读，结束日期: {db_student.end_date}")
+        log_operation(db, "学生管理", "修改", f"学生 {db_student.name} (ID: {db_student.id}) 在读状态更新为非在读，结束日期: {db_student.end_date}")
     
     # 获取班级ID列表
     class_ids = [c.id for c in db_student.classes]
@@ -332,27 +332,27 @@ def delete_student(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_user)
 ):
-    log_operation(db, "学员管理", "删除学员", f"尝试删除学员ID {student_id}", current_user.username, "DEBUG")
+    log_operation(db, "学生管理", "删除学生", f"尝试删除学生ID {student_id}", current_user.username, "DEBUG")
     db_student = db.query(Student).filter(Student.id == student_id).first()
     if not db_student:
-        log_operation(db, "学员管理", "删除学员失败", f"学员ID {student_id} 不存在", current_user.username, "WARNING")
-        raise HTTPException(status_code=404, detail="学员不存在")
+        log_operation(db, "学生管理", "删除学生失败", f"学生ID {student_id} 不存在", current_user.username, "WARNING")
+        raise HTTPException(status_code=404, detail="学生不存在")
     
-    # 检查学员是否关联班级
+    # 检查学生是否关联班级
     if db_student.classes and len(db_student.classes) > 0:
         class_names = ", ".join([c.name for c in db_student.classes])
-        log_operation(db, "学员管理", "删除学员失败", f"学员 {db_student.code} - {db_student.name} 已关联班级：{class_names}，无法删除", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail=f"该学员已关联班级：{class_names}，无法删除")
+        log_operation(db, "学生管理", "删除学生失败", f"学生 {db_student.code} - {db_student.name} 已关联班级：{class_names}，无法删除", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail=f"该学生已关联班级：{class_names}，无法删除")
     
-    # 检查学员是否关联课程安排（通过schedule_student表）
+    # 检查学生是否关联课程安排（通过schedule_student表）
     schedule_count = db.query(schedule_student).filter(schedule_student.c.student_id == student_id).count()
     if schedule_count > 0:
-        log_operation(db, "学员管理", "删除学员失败", f"学员 {db_student.code} - {db_student.name} 已有{schedule_count}条课程安排记录，无法删除", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail=f"该学员已有{schedule_count}条课程安排记录，无法删除")
+        log_operation(db, "学生管理", "删除学生失败", f"学生 {db_student.code} - {db_student.name} 已有{schedule_count}条课程安排记录，无法删除", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail=f"该学生已有{schedule_count}条课程安排记录，无法删除")
     
     db.delete(db_student)
     db.commit()
-    log_operation(db, "学员管理", "删除", f"成功删除学员: {db_student.code} - {db_student.name}", current_user.username, "WARNING")
+    log_operation(db, "学生管理", "删除", f"成功删除学生: {db_student.code} - {db_student.name}", current_user.username, "WARNING")
     return {"message": "删除成功"}
 
 # 年级升级映射表
@@ -372,7 +372,7 @@ def upgrade_grades(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_user)
 ):
-    """每年9月1日后手动触发年级升级，将所有活跃学员升级到下一级"""
+    """每年9月1日后手动触发年级升级，将所有活跃学生升级到下一级"""
     today = date.today()
     current_year = today.year
 
@@ -422,7 +422,7 @@ def upgrade_grades(
 
     if upgraded:
         db.commit()
-        log_operation(db, "学员管理", "年级升级", f"成功升级 {len(upgraded)} 名学员的年级，跳过 {len(skipped)} 名", current_user.username)
+        log_operation(db, "学生管理", "年级升级", f"成功升级 {len(upgraded)} 名学生的年级，跳过 {len(skipped)} 名", current_user.username)
 
     return {
         "upgraded_count": len(upgraded),

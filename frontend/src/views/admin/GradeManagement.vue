@@ -598,7 +598,7 @@ const fetchStudents = async () => {
     const response = await api.get('/students', { params: { skip: 0, limit: 100000 } })
     students.value = response.data.items || response.data
   } catch (error) {
-    window.logger.error('获取学员列表失败:', error)
+    window.logger.error('获取学生列表失败:', error)
     ElMessage.error(t('grade.fetchStudentsFailed'))
   }
 }

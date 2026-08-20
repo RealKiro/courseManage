@@ -30,7 +30,7 @@ def check_grade_manager_permission(db: Session, current_user: User):
                     return True
             except:
                 pass
-    raise HTTPException(status_code=403, detail="权限不足，需要管理员或成绩管理导师权限")
+    raise HTTPException(status_code=403, detail="权限不足，需要管理员或成绩管理教师权限")
 
 @router.get("", response_model=PaginatedGradeResponse)
 def get_grades(
@@ -144,8 +144,8 @@ def export_grades(
 
     _t_map = {
         "zh-CN": {
-            "sheet": "学员成绩",
-            "headers": ["学员", "科目", "年级", "考试阶段", "考试日期", "得分", "满分", "得分率", "备注"],
+            "sheet": "学生成绩",
+            "headers": ["学生", "科目", "年级", "考试阶段", "考试日期", "得分", "满分", "得分率", "备注"],
         },
         "en": {
             "sheet": "Student Grades",

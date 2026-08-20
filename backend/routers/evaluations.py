@@ -93,7 +93,7 @@ SUBJECT_TYPE_PRESETS = {
 
 def _check_evaluation_permission(db: Session, current_user: User):
     if not _check_premium_feature('student_evaluation', db):
-        raise HTTPException(status_code=403, detail="学员评价管理功能需要购买授权后才能使用")
+        raise HTTPException(status_code=403, detail="学生评价管理功能需要购买授权后才能使用")
     if current_user.role in ['super_admin', 'system_admin']:
         return True
     if current_user.teacher_id:
@@ -105,7 +105,7 @@ def _check_evaluation_permission(db: Session, current_user: User):
                     return True
             except:
                 pass
-    raise HTTPException(status_code=403, detail="权限不足，需要管理员或评价管理导师权限")
+    raise HTTPException(status_code=403, detail="权限不足，需要管理员或评价管理教师权限")
 
 
 # ==================== 评价模板 ====================
@@ -202,7 +202,7 @@ def create_evaluation_template(
     db.add(t)
     db.commit()
     db.refresh(t)
-    log_operation(db, "学员评价管理", "新增模板", f"模板: {t.template_name}", current_user.username)
+    log_operation(db, "学生评价管理", "新增模板", f"模板: {t.template_name}", current_user.username)
     course_name = None
     if t.course_id:
         course = db.query(Course).filter(Course.id == t.course_id).first()
@@ -241,7 +241,7 @@ def update_evaluation_template(
         t.is_active = data.is_active
     db.commit()
     db.refresh(t)
-    log_operation(db, "学员评价管理", "修改模板", f"模板: {t.template_name}", current_user.username)
+    log_operation(db, "学生评价管理", "修改模板", f"模板: {t.template_name}", current_user.username)
     course_name = None
     if t.course_id:
         course = db.query(Course).filter(Course.id == t.course_id).first()
@@ -273,7 +273,7 @@ def delete_evaluation_template(
         raise HTTPException(status_code=400, detail="该模板已有评价记录，无法删除")
     db.delete(t)
     db.commit()
-    log_operation(db, "学员评价管理", "删除模板", f"模板: {t.template_name}", current_user.username)
+    log_operation(db, "学生评价管理", "删除模板", f"模板: {t.template_name}", current_user.username)
     return {"message": "删除成功"}
 
 
@@ -336,7 +336,7 @@ def create_comprehensive_evaluation(
     _check_evaluation_permission(db, current_user)
     student = db.query(Student).filter(Student.id == data.student_id).first()
     if not student:
-        raise HTTPException(status_code=404, detail="学员不存在")
+        raise HTTPException(status_code=404, detail="学生不存在")
     e = StudentComprehensiveEvaluation(
         student_id=data.student_id,
         eval_period=data.eval_period,
@@ -357,7 +357,7 @@ def create_comprehensive_evaluation(
     if e.evaluator_id:
         teacher = db.query(Teacher).filter(Teacher.id == e.evaluator_id).first()
         evaluator_name = teacher.name if teacher else None
-    log_operation(db, "学员评价管理", "新增综合评价", f"学员: {student.name}, 周期: {data.eval_period}", current_user.username)
+    log_operation(db, "学生评价管理", "新增综合评价", f"学生: {student.name}, 周期: {data.eval_period}", current_user.username)
     return StudentComprehensiveEvaluationSchema(
         id=e.id,
         student_id=e.student_id,
@@ -397,7 +397,7 @@ def update_comprehensive_evaluation(
             setattr(e, field, val)
     db.commit()
     db.refresh(e)
-    log_operation(db, "学员评价管理", "修改综合评价", f"评价ID: {eval_id}", current_user.username)
+    log_operation(db, "学生评价管理", "修改综合评价", f"评价ID: {eval_id}", current_user.username)
     evaluator_name = None
     if e.evaluator_id:
         teacher = db.query(Teacher).filter(Teacher.id == e.evaluator_id).first()
@@ -434,7 +434,7 @@ def delete_comprehensive_evaluation(
         raise HTTPException(status_code=404, detail="评价记录不存在")
     db.delete(e)
     db.commit()
-    log_operation(db, "学员评价管理", "删除综合评价", f"评价ID: {eval_id}", current_user.username)
+    log_operation(db, "学生评价管理", "删除综合评价", f"评价ID: {eval_id}", current_user.username)
     return {"message": "删除成功"}
 
 
@@ -501,7 +501,7 @@ def create_subject_evaluation(
     _check_evaluation_permission(db, current_user)
     student = db.query(Student).filter(Student.id == data.student_id).first()
     if not student:
-        raise HTTPException(status_code=404, detail="学员不存在")
+        raise HTTPException(status_code=404, detail="学生不存在")
     course = db.query(Course).filter(Course.id == data.course_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="科目不存在")
@@ -537,7 +537,7 @@ def create_subject_evaluation(
     if e.template_id:
         t = db.query(CourseEvaluationTemplate).filter(CourseEvaluationTemplate.id == e.template_id).first()
         template_name = t.template_name if t else None
-    log_operation(db, "学员评价管理", "新增单科评价", f"学员: {student.name}, 科目: {course.name}", current_user.username)
+    log_operation(db, "学生评价管理", "新增单科评价", f"学生: {student.name}, 科目: {course.name}", current_user.username)
     return StudentSubjectEvaluationSchema(
         id=e.id,
         student_id=e.student_id,
@@ -591,7 +591,7 @@ def update_subject_evaluation(
         e.eval_date = data.eval_date
     db.commit()
     db.refresh(e)
-    log_operation(db, "学员评价管理", "修改单科评价", f"评价ID: {eval_id}", current_user.username)
+    log_operation(db, "学生评价管理", "修改单科评价", f"评价ID: {eval_id}", current_user.username)
     evaluator_name = None
     if e.evaluator_id:
         teacher = db.query(Teacher).filter(Teacher.id == e.evaluator_id).first()
@@ -634,11 +634,11 @@ def delete_subject_evaluation(
         raise HTTPException(status_code=404, detail="评价记录不存在")
     db.delete(e)
     db.commit()
-    log_operation(db, "学员评价管理", "删除单科评价", f"评价ID: {eval_id}", current_user.username)
+    log_operation(db, "学生评价管理", "删除单科评价", f"评价ID: {eval_id}", current_user.username)
     return {"message": "删除成功"}
 
 
-# ==================== 学员画像 ====================
+# ==================== 学生画像 ====================
 
 @router.get("/student/{student_id}/profile", response_model=StudentEvaluationProfile)
 def get_student_evaluation_profile(
@@ -649,7 +649,7 @@ def get_student_evaluation_profile(
     _check_evaluation_permission(db, current_user)
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
-        raise HTTPException(status_code=404, detail="学员不存在")
+        raise HTTPException(status_code=404, detail="学生不存在")
 
     comp_evals = db.query(StudentComprehensiveEvaluation).options(
         joinedload(StudentComprehensiveEvaluation.evaluator),
@@ -735,7 +735,7 @@ def export_comprehensive_evaluations(
     _t_map = {
         "zh-CN": {
             "sheet": "综合评价",
-            "headers": ["学员", "评价周期", "画像类型", "学习态度", "知识掌握", "实践能力", "创新思维", "协作素养", "德", "智", "体", "美", "劳", "总体评语", "评价人", "评价日期"],
+            "headers": ["学生", "评价周期", "画像类型", "学习态度", "知识掌握", "实践能力", "创新思维", "协作素养", "德", "智", "体", "美", "劳", "总体评语", "评价人", "评价日期"],
             "academic": "学术维度", "virtue": "德智体美劳",
         },
         "en": {
@@ -791,7 +791,7 @@ def export_comprehensive_evaluations(
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-    log_operation(db, "学员评价管理", "导出综合评价", f"成功导出 {len(evals)} 条", current_user.username)
+    log_operation(db, "学生评价管理", "导出综合评价", f"成功导出 {len(evals)} 条", current_user.username)
 
     return StreamingResponse(
         output,
@@ -818,7 +818,7 @@ def export_subject_evaluations(
     _t_map = {
         "zh-CN": {
             "sheet": "单科评价",
-            "headers": ["学员", "科目", "评价周期", "平均分", "优势方面", "待提升方面", "单科评语", "评价人", "评价日期"],
+            "headers": ["学生", "科目", "评价周期", "平均分", "优势方面", "待提升方面", "单科评语", "评价人", "评价日期"],
         },
         "en": {
             "sheet": "Subject Evaluation",
@@ -865,7 +865,7 @@ def export_subject_evaluations(
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-    log_operation(db, "学员评价管理", "导出单科评价", f"成功导出 {len(evals)} 条", current_user.username)
+    log_operation(db, "学生评价管理", "导出单科评价", f"成功导出 {len(evals)} 条", current_user.username)
 
     return StreamingResponse(
         output,

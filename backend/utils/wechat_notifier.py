@@ -87,7 +87,7 @@ class WeChatNotifier:
                     pass
 
     def load_promotion_info(self, website: str = "", wechat_qr: str = "", work_wechat_qr: str = ""):
-        """加载机构宣传信息"""
+        """加载学校宣传信息"""
         self.promotion_info = {
             "organization_website": website or "",
             "wechat_qrcode": wechat_qr or "",
@@ -98,7 +98,7 @@ class WeChatNotifier:
         """获取宣传信息footer"""
         footer = "\n\n---\n"
         if self.promotion_info.get("organization_website"):
-            footer += f"[🌐 机构官网]({self.promotion_info['organization_website']})\n"
+            footer += f"[🌐 学校官网]({self.promotion_info['organization_website']})\n"
         if self.promotion_info.get("wechat_qrcode"):
             footer += f"![公众号二维码]({self.promotion_info['wechat_qrcode']})\n"
         if self.promotion_info.get("work_wechat_qrcode"):
@@ -152,13 +152,13 @@ class WeChatNotifier:
         if class_allowed and class_webhook:       
             urls.append(class_webhook)
             log_operation(db, "微信通知", "send_message_by_type 调用", f"使用班级表中的webhook: {class_webhook}", "system", "DEBUG")
-        # 2. 从全局配置中查找导师信息群webhook地址（不管班级webhook是否存在，都要检查）
+        # 2. 从全局配置中查找教师信息群webhook地址（不管班级webhook是否存在，都要检查）
         if isinstance(config_item, dict):
             # 先添加班级群（如果存在且班级在允许列表中）
             if class_allowed and class_id and f"class_{class_id}" in config_item:
                 urls.extend(config_item[f"class_{class_id}"])
                 log_operation(db, "微信通知", "send_message_by_type 调用", f"使用全局配置中的班级webhook: class_{class_id}", "system", "DEBUG")
-            # 再添加导师信息群（default）
+            # 再添加教师信息群（default）
             if "default" in config_item:
                 urls.extend(config_item["default"])
                 log_operation(db, "微信通知", "send_message_by_type 调用", f"使用全局配置中的默认webhook: default", "system", "DEBUG")
@@ -175,7 +175,7 @@ class WeChatNotifier:
         if not urls:
             error_message = "未配置微信通知地址"
             if class_id and not class_allowed:
-                error_message = f"该班级不属于允许微信通知的班级中，且未配置导师信息群，如需向该班级发送微信通知，请联系系统管理员修改'课程安排提醒-班级信息群'班级列表，同时保证该班级webhook地址准确。"
+                error_message = f"该班级不属于允许微信通知的班级中，且未配置教师信息群，如需向该班级发送微信通知，请联系系统管理员修改'课程安排提醒-班级信息群'班级列表，同时保证该班级webhook地址准确。"
             log_operation(db, "微信通知", "send_message_by_type 调用", error_message, "system", "ERROR")
             return {
                 "success": False,
@@ -223,17 +223,17 @@ class WeChatNotifier:
 
             student_text = ""
             if active_students:
-                student_text += f"在读学员：{', '.join(active_students)}\n"
+                student_text += f"在读学生：{', '.join(active_students)}\n"
             if inactive_students:
-                student_text += f"非在读学员：{', '.join(inactive_students)}\n"
+                student_text += f"非在读学生：{', '.join(inactive_students)}\n"
 
             content += f"- **日期**: {schedule['start_date']}\n"
             content += f"  **时间**: {schedule['start_time']}-{schedule['end_time']}\n"
             content += f"  **科目**: {schedule['course_name']}\n"
-            content += f"  **导师**: {schedule['teacher_name']}\n"
+            content += f"  **教师**: {schedule['teacher_name']}\n"
             content += f"  **班级**: {schedule['class_name']}\n"
             if student_text:
-                content += f"  **学员**:\n"
+                content += f"  **学生**:\n"
                 for line in student_text.split('\n'):
                     if line:
                         content += f"    {line}\n"
@@ -256,7 +256,7 @@ class WeChatNotifier:
         log_operation(db, "微信通知", "send_course_reminder 调用", f"标题: {title}, 课程数: {len(schedule_list)}, 课程列表: {[(s.get('class_name'), s.get('course_name'), s.get('class_id')) for s in schedule_list]}, enabled_classes: {enabled_classes}", "system", "DEBUG")
         all_results = {}
 
-        # === 第一步：向教师群（导师信息群）发送所有课程的汇总消息 ===
+        # === 第一步：向教师群（教师信息群）发送所有课程的汇总消息 ===
         teacher_urls = []
         if isinstance(self.webhook_config.get('schedule_arrange'), dict):
             teacher_urls = self.webhook_config['schedule_arrange'].get('default', [])
@@ -264,7 +264,7 @@ class WeChatNotifier:
         if teacher_urls:
             teacher_content = self._build_course_content(schedule_list, title)
             final_content = teacher_content + self.get_promotion_footer()
-            log_operation(db, "微信通知", "send_course_reminder 调用", f"向导师信息群发送汇总消息，课程数: {len(schedule_list)}, URL数: {len(teacher_urls)}", "system", "DEBUG")
+            log_operation(db, "微信通知", "send_course_reminder 调用", f"向教师信息群发送汇总消息，课程数: {len(schedule_list)}, URL数: {len(teacher_urls)}", "system", "DEBUG")
             for url in teacher_urls:
                 if not url:
                     continue
@@ -276,12 +276,12 @@ class WeChatNotifier:
                         timeout=10
                     )
                     all_results[url] = response.status_code == 200
-                    log_operation(db, "微信通知", "send_course_reminder 调用", f"导师信息群发送到 {url[:80]}...结果: {'成功' if response.status_code == 200 else '失败'}, 状态码: {response.status_code}", "system", "DEBUG")
+                    log_operation(db, "微信通知", "send_course_reminder 调用", f"教师信息群发送到 {url[:80]}...结果: {'成功' if response.status_code == 200 else '失败'}, 状态码: {response.status_code}", "system", "DEBUG")
                 except Exception as e:
-                    log_operation(db, "微信通知", "send_course_reminder 调用", f"导师信息群发送到 {url[:80]}...异常: {str(e)}", "system", "ERROR")
+                    log_operation(db, "微信通知", "send_course_reminder 调用", f"教师信息群发送到 {url[:80]}...异常: {str(e)}", "system", "ERROR")
                     all_results[url] = False
         else:
-            log_operation(db, "微信通知", "send_course_reminder 调用", "未配置导师信息群webhook，跳过教师群发送", "system", "DEBUG")
+            log_operation(db, "微信通知", "send_course_reminder 调用", "未配置教师信息群webhook，跳过教师群发送", "system", "DEBUG")
 
         # === 第二步：按班级分组，向各班级群发送本班级课程消息 ===
         class_groups = {}

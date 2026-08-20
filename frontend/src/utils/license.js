@@ -107,9 +107,21 @@ export function calcTotalPrice(selectedFeatures, licenseType) {
   return total
 }
 
+// 本部署已放开全部功能门禁，但有些模块并不适用于中小学教务场景，
+// 在这里集中关闭。关闭后：菜单、页面按钮、运营大屏图表、快捷球入口
+// 以及路由守卫都会自动隐藏/拦截 —— 复用的是各处已有的 hasFeature 判断，
+// 不需要逐个文件去删模板，改动面最小。
+//
+// fee_management：课时费/缴费/退费/催缴。义务教育阶段不向学生按课时收费，
+//                 后端 /api/fees/* 接口与相关报表已一并移除。
+export const DISABLED_FEATURES = [
+  FEATURES.FEE_MANAGEMENT,
+]
+
 // 本部署已放开全部高级功能：初始状态即为「已激活 + 全部功能可用」。
 // 这样即使 /license/status 请求失败或后端未就绪，路由守卫与界面也不会误锁功能。
 const ALL_FEATURES_ENABLED = Object.values(FEATURES)
+  .filter((feature) => !DISABLED_FEATURES.includes(feature))
   .reduce((acc, feature) => { acc[feature] = true; return acc }, {})
 
 export const licenseState = reactive({
@@ -177,11 +189,11 @@ export async function loadLicenseStatus() {
   }
 }
 
-// 门禁已移除：恒返回 true。
-// 保留函数签名，因为 App.vue / FloatingSphere.vue / Dashboard.vue 等
-// 十余处模板仍在调用它。
+// 门禁已移除：除 DISABLED_FEATURES 里被显式关闭的模块外，一律返回 true。
+// 保留函数签名，因为 App.vue / FloatingSphere.vue / Dashboard.vue /
+// DashboardView.vue / Students.vue 等十余处模板仍在调用它。
 export function hasFeature(featureName) {
-  return true
+  return !DISABLED_FEATURES.includes(featureName)
 }
 
 export async function activateLicense(licenseKey, selectedFeatures = null, contactInfo = {}) {

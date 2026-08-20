@@ -195,7 +195,7 @@
           </div>
         </el-card>
       </el-col>
-      <!-- 学员进步榜TopN -->
+      <!-- 学生进步榜TopN -->
       <el-col :xs="24" :sm="24" :md="12" :lg="12">
         <el-card class="chart-card" shadow="hover">
           <template #header>
@@ -421,7 +421,7 @@
       </el-col>
     </el-row>
 
-    <!-- 未完训排课 -->
+    <!-- 未完课排课 -->
     <el-row :gutter="20" class="chart-section">
       <el-col :span="24">
         <el-card class="chart-card" shadow="hover" v-loading="loading">
@@ -490,7 +490,7 @@
           <div ref="scheduleTrendChart" class="chart-container"></div>
         </el-card>
       </el-col>
-      <!-- 新学员增长率 -->
+      <!-- 新学生增长率 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <el-card class="chart-card" shadow="hover" v-loading="chartLoading.studentGrowth">
           <template #header>
@@ -540,7 +540,7 @@
           <div ref="courseDistChart" class="chart-container"></div>
         </el-card>
       </el-col>
-      <!-- 长效学员榜TOPn榜 -->
+      <!-- 长效学生榜TOPn榜 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <el-card class="chart-card" shadow="hover">
           <template #header>
@@ -637,7 +637,7 @@
       </el-col>
     </el-row>
 
-    <!-- 导师周课时排行榜 -->
+    <!-- 教师周课时排行榜 -->
     <el-row :gutter="20" class="chart-section">
       <el-col :span="24">
         <el-card class="chart-card" shadow="hover" v-loading="chartLoading.weeklyWorkload">
@@ -659,7 +659,7 @@
       </el-col>
     </el-row>
 
-    <!-- 各导师完课率 -->
+    <!-- 各教师完课率 -->
     <el-row :gutter="20" class="chart-section">
       <el-col :span="24">
         <el-card class="chart-card" shadow="hover" v-loading="loading">
@@ -743,7 +743,7 @@
     </el-row>
 
     <el-row :gutter="20" class="chart-section">
-      <!-- 导师试听效能榜 -->
+      <!-- 教师试读效能榜 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <el-card class="chart-card" shadow="hover">
           <template #header>
@@ -761,7 +761,7 @@
           <div ref="trialEfficiencyChart" class="chart-container"></div>
         </el-card>
       </el-col>
-      <!-- 导师试听转化漏斗 -->
+      <!-- 教师试读转化漏斗 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <el-card class="chart-card" shadow="hover">
           <template #header>
@@ -779,7 +779,7 @@
           <div ref="trialFunnelChart" class="chart-container"></div>
         </el-card>
       </el-col>
-      <!-- 导师工作量 -->
+      <!-- 教师工作量 -->
       <el-col :xs="24" :sm="24" :md="12" :lg="8">
         <el-card class="chart-card" shadow="hover">
           <template #header>
@@ -1139,14 +1139,8 @@ const dbLabel = 'dashboardViewKpi.dbConnection'
 const detailLabels = [...revenueLabels, ...feeExtraLabels, conversionLabel]
 
 const kpiData = ref([
-  { label: 'dashboardViewKpi.monthlyRevenue', value: '¥0', icon: Money, color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', route: '/admin/feemanagement' },
-  { label: 'dashboardViewKpi.yearlyRevenue', value: '¥0', icon: Money, color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', route: '/admin/feemanagement' },
-  { label: 'dashboardViewKpi.monthlyConversion', value: '0%', icon: TrendCharts, color: 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)', route: '/admin/schedules', query: { schedule_type: 'trial' } },
   { label: 'dashboardViewKpi.todayTrial', value: 0, icon: Bell, color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', route: '/admin/schedules', query: { schedule_type: 'trial', date: 'today' } },
   { label: 'dashboardViewKpi.todayFormal', value: 0, icon: Bell, color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', route: '/admin/schedules', query: { schedule_type: 'formal', date: 'today' } },
-  { label: 'dashboardViewKpi.totalRefund', value: '¥0', icon: Money, color: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', route: '/admin/feemanagement' },
-  { label: 'dashboardViewKpi.totalDiscount', value: '¥0', icon: Money, color: 'linear-gradient(135deg, #ffa726 0%, #fb8c00 100%)', route: '/admin/feemanagement' },
-  { label: 'dashboardViewKpi.monthlyRenewal', value: '0%', icon: TrendCharts, color: 'linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%)', route: '/admin/students' },
   { label: 'dashboardViewKpi.pendingMakeup', value: 0, icon: Bell, color: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', route: '/admin/schedules', query: { execution_status: 'completed', has_absent_students: true } },
   { label: 'dashboardViewKpi.incompleteSchedules', value: 0, icon: Warning, color: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', route: '/admin/schedules', query: { execution_status: 'pending,postponed,cancelled' } },
   { label: 'dashboardViewKpi.completedSchedules', value: 0, icon: Warning, color: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', route: '/admin/schedules', query: { execution_status: 'completed' } },
@@ -1245,27 +1239,22 @@ const fetchKPIData = async () => {
       }
     }
     
+    // 费用相关 KPI：本部署已移除费用模块，直接不生成这些卡片。
+    // 注意不能返回「灰色 -- 占位卡」——模板里 !hasFeature 的分支会渲染成
+    // 带锁图标的「需要授权」卡片，对中小学场景是误导。
     const feeKpis = hasFeature('fee_management') ? [
       { label: 'dashboardViewKpi.monthlyRevenue', value: `¥${data.monthly_revenue.toFixed(2)}`, icon: Money, color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', route: '/admin/feemanagement' },
       { label: 'dashboardViewKpi.yearlyRevenue', value: `¥${yearlyRevenue.toFixed(2)}`, icon: Money, color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', route: '/admin/feemanagement' },
-    ] : [
-      { label: 'dashboardViewKpi.monthlyRevenue', value: '--', icon: Money, color: 'linear-gradient(135deg, #909399 0%, #b1b3b8 100%)', route: null },
-      { label: 'dashboardViewKpi.yearlyRevenue', value: '--', icon: Money, color: 'linear-gradient(135deg, #909399 0%, #b1b3b8 100%)', route: null },
-    ]
+    ] : []
     
     const feeExtraKpis = hasFeature('fee_management') ? [
       { label: 'dashboardViewKpi.totalRefund', value: `¥${(data.total_refund_amount || 0).toFixed(2)}`, icon: Money, color: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)', route: '/admin/feemanagement' },
       { label: 'dashboardViewKpi.totalDiscount', value: `¥${(data.total_owed_amount || 0).toFixed(2)}`, icon: Money, color: 'linear-gradient(135deg, #ffa726 0%, #fb8c00 100%)', route: '/admin/feemanagement' },
       { label: 'dashboardViewKpi.monthlyRenewal', value: `${data.renewal_rate || 0}%`, icon: TrendCharts, color: 'linear-gradient(135deg, #42a5f5 0%, #1e88e5 100%)', route: '/admin/students' },
-    ] : [
-      { label: 'dashboardViewKpi.totalRefund', value: '--', icon: Money, color: 'linear-gradient(135deg, #909399 0%, #b1b3b8 100%)', route: null },
-      { label: 'dashboardViewKpi.totalDiscount', value: '--', icon: Money, color: 'linear-gradient(135deg, #909399 0%, #b1b3b8 100%)', route: null },
-      { label: 'dashboardViewKpi.monthlyRenewal', value: '--', icon: TrendCharts, color: 'linear-gradient(135deg, #909399 0%, #b1b3b8 100%)', route: null },
-    ]
+    ] : []
     
     kpiData.value = [
       ...feeKpis,
-      { label: 'dashboardViewKpi.monthlyConversion', value: `${data.conversion_rate || 0}%`, icon: TrendCharts, color: 'linear-gradient(135deg, #66bb6a 0%, #43a047 100%)', route: '/admin/schedules', query: { schedule_type: 'trial' } },
       { label: 'dashboardViewKpi.todayTrial', value: data.today_trial_schedules, icon: Bell, color: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', route: '/admin/schedules', query: { schedule_type: 'trial', date: 'today' } },
       { label: 'dashboardViewKpi.todayFormal', value: data.today_schedules - data.today_trial_schedules, icon: Bell, color: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', route: '/admin/schedules', query: { schedule_type: 'formal', date: 'today' } },
       ...feeExtraKpis,
@@ -1496,14 +1485,14 @@ const handleFeeTrendMonthsChange = () => {
   fetchFeeTrend()
 }
 
-// 获取导师工作量排行
+// 获取教师工作量排行
 const fetchTeacherWorkload = async () => {
   try {
-    window.logger.log('[Dashboard] 开始获取导师工作量数据...');
+    window.logger.log('[Dashboard] 开始获取教师工作量数据...');
     const response = await api.get(`/statistics/teachers/workload?days=${teacherWorkloadDays.value}`)
     const data = response.data
     
-    window.logger.log('[Dashboard] 导师工作量数据:', data);
+    window.logger.log('[Dashboard] 教师工作量数据:', data);
     window.logger.log('[Dashboard] 数据长度:', data.length);
     window.logger.log('[Dashboard] teacherWorkloadChart ref值:', teacherWorkloadChart.value);
     
@@ -1513,7 +1502,7 @@ const fetchTeacherWorkload = async () => {
     }
     
     if (data.length === 0) {
-      window.logger.warn('[Dashboard] ⚠️ 导师工作量数据为空');
+      window.logger.warn('[Dashboard] ⚠️ 教师工作量数据为空');
       return;
     }
     
@@ -1554,9 +1543,9 @@ const fetchTeacherWorkload = async () => {
     
     window.logger.log('[Dashboard] 设置图表配置...');
     chart.setOption(option);
-    window.logger.log('[Dashboard] ✅ 导师工作量图表渲染成功');
+    window.logger.log('[Dashboard] ✅ 教师工作量图表渲染成功');
   } catch (error) {
-    window.logger.error('[Dashboard] ❌ 获取导师工作量失败:', error);
+    window.logger.error('[Dashboard] ❌ 获取教师工作量失败:', error);
     window.logger.error('[Dashboard] 错误详情:', error.message);
     window.logger.error('[Dashboard] 错误堆栈:', error.stack);
   }
@@ -1565,10 +1554,10 @@ const handleTeacherWorkloadDaysChange = () => {
   fetchTeacherWorkload()
 }
 
-// 获取导师试听效能榜
+// 获取教师试读效能榜
 const fetchTrialEfficiency = async () => {
   try {
-    window.logger.log('[Dashboard] 开始获取导师试听效能数据...');
+    window.logger.log('[Dashboard] 开始获取教师试读效能数据...');
     
     if (!trialEfficiencyChart.value) {
       window.logger.warn('[Dashboard] trialEfficiencyChart ref为null');
@@ -1578,11 +1567,11 @@ const fetchTrialEfficiency = async () => {
     const response = await api.get(`/statistics/teachers/trial-efficiency?days=${trialEfficiencyDays.value}`)
     const data = response.data
     
-    window.logger.log('[Dashboard] 导师试听效能数据:', data);
+    window.logger.log('[Dashboard] 教师试读效能数据:', data);
     window.logger.log('[Dashboard] 数据长度:', data.length);
     
     if (data.length === 0) {
-      window.logger.warn('[Dashboard] ⚠️ 导师试听效能数据为空');
+      window.logger.warn('[Dashboard] ⚠️ 教师试读效能数据为空');
       return;
     }
     
@@ -1674,9 +1663,9 @@ const fetchTrialEfficiency = async () => {
     
     window.logger.log('[Dashboard] 设置图表配置...');
     chart.setOption(option);
-    window.logger.log('[Dashboard] ✅ 导师试听效能图表渲染成功');
+    window.logger.log('[Dashboard] ✅ 教师试读效能图表渲染成功');
   } catch (error) {
-    window.logger.error('[Dashboard] ❌ 获取导师试听效能失败:', error);
+    window.logger.error('[Dashboard] ❌ 获取教师试读效能失败:', error);
     window.logger.error('[Dashboard] 错误详情:', error.message);
     window.logger.error('[Dashboard] 错误堆栈:', error.stack);
   }
@@ -1685,7 +1674,7 @@ const handleTrialEfficiencyDaysChange = () => {
   fetchTrialEfficiency()
 }
 
-// 获取试听转化漏斗
+// 获取试读转化漏斗
 const fetchTrialFunnel = async () => {
   try {
     const response = await api.get(`/statistics/funnel/trial-conversion?days=${trialFunnelDays.value}`)
@@ -1698,10 +1687,10 @@ const fetchTrialFunnel = async () => {
     
     window.logger.log('漏斗原始数据:', data)
     
-    // 固定三层数据的顺序：试听课总数 > 完训试听课 > 成功转化
+    // 固定三层数据的顺序：试读课总数 > 完课试读课 > 成功转化
     let funnelData = [
-      { value: data.find(item => item.name === '试听课总数')?.value || 0, name: t('dashboardView.chartTrialTotal') },
-      { value: data.find(item => item.name === '完训试听课')?.value || 0, name: t('dashboardView.chartCompletedTrial') },
+      { value: data.find(item => item.name === '试读课总数')?.value || 0, name: t('dashboardView.chartTrialTotal') },
+      { value: data.find(item => item.name === '完课试读课')?.value || 0, name: t('dashboardView.chartCompletedTrial') },
       { value: data.find(item => item.name === '成功转化(缴费)')?.value || 0, name: t('dashboardView.chartConvertedPaid') }
     ]
     
@@ -1947,7 +1936,7 @@ const fetchGradeDistribution = async () => {
   }
 }
 
-// 获取学员进步榜
+// 获取学生进步榜
 const fetchImprovementRanking = async () => {
   try {
     const response = await api.get(`/statistics/grades/improvement-ranking?limit=${improvementRankingLimit.value}`)
@@ -1960,13 +1949,13 @@ const handleImprovementRankingLimitChange = () => {
   fetchImprovementRanking()
 }
 
-// 获取长效学员榜
+// 获取长效学生榜
 const fetchLongTermStudents = async () => {
   try {
     const response = await api.get(`/statistics/students/long-term-ranking?limit=${longTermStudentsLimit.value}`)
     longTermStudents.value = response.data
   } catch (error) {
-    window.logger.error('获取长效学员榜失败:', error)
+    window.logger.error('获取长效学生榜失败:', error)
   }
 }
 const handleLongTermStudentsLimitChange = () => {
@@ -1978,7 +1967,7 @@ const fetchTeacherCompletionRates = async () => {
     const response = await api.get(`/statistics/teachers/completion-rate-ranking?period=${completionRatePeriod.value}`)
     teacherCompletionRates.value = response.data
   } catch (error) {
-    window.logger.error('获取各导师完课率失败:', error)
+    window.logger.error('获取各教师完课率失败:', error)
   }
 }
 
@@ -1996,26 +1985,26 @@ const fetchFeeAlerts = async () => {
   }
 }
 
-// 获取待缴费学员列表
+// 获取待缴费学生列表
 const fetchUnpaidStudents = async () => {
   try {
     const response = await api.get('/statistics/fees/unpaid-students?limit=100000')
     unpaidStudents.value = response.data
   } catch (error) {
-    window.logger.error('获取待缴费学员列表失败:', error)
+    window.logger.error('获取待缴费学生列表失败:', error)
     ElMessage.error(`${t('dashboardViewKpi.fetchUnpaidStudentsFailed')}: ${error.response?.data?.detail || error.message}`)
   }
 }
 
-// 获取导师课时排行榜
+// 获取教师课时排行榜
 const fetchWeeklyWorkload = async () => {
   chartLoading.value.weeklyWorkload = true
   try {
-    window.logger.log('[Dashboard] 开始获取导师课时数据...');
+    window.logger.log('[Dashboard] 开始获取教师课时数据...');
     const response = await api.get(`/statistics/teachers/weekly-workload?limit=${weeklyWorkloadDays.value}`)
     const data = response.data
     
-    window.logger.log('[Dashboard] 导师课时数据:', data);
+    window.logger.log('[Dashboard] 教师课时数据:', data);
     window.logger.log('[Dashboard] 数据长度:', data.length);
     window.logger.log('[Dashboard] weeklyWorkloadChart ref值:', weeklyWorkloadChart.value);
     
@@ -2025,7 +2014,7 @@ const fetchWeeklyWorkload = async () => {
     }
     
     if (data.length === 0) {
-      window.logger.warn('[Dashboard] ⚠️ 导师课时数据为空');
+      window.logger.warn('[Dashboard] ⚠️ 教师课时数据为空');
       return;
     }
     
@@ -2065,7 +2054,7 @@ const fetchWeeklyWorkload = async () => {
     
     chart.setOption(option)
   } catch (error) {
-    window.logger.error('[Dashboard] 获取导师课时失败:', error)
+    window.logger.error('[Dashboard] 获取教师课时失败:', error)
     ElMessage.error(`${t('dashboardViewKpi.fetchWeeklyWorkloadFailed')}: ${error.response?.data?.detail || error.message}`)
   } finally {
     chartLoading.value.weeklyWorkload = false
@@ -2075,13 +2064,13 @@ const handleWeeklyWorkloadDaysChange = () => {
   fetchWeeklyWorkload()
 }
 
-// 获取未完训排课列表
+// 获取未完课排课列表
 const fetchIncompleteSchedules = async () => {
   try {
     const response = await api.get('/statistics/schedules/incomplete-list?limit=100000')
     incompleteSchedules.value = response.data
   } catch (error) {
-    window.logger.error('获取未完训排课失败:', error)
+    window.logger.error('获取未完课排课失败:', error)
     ElMessage.error(`${t('dashboardViewKpi.fetchIncompleteSchedulesFailed')}: ${error.response?.data?.detail || error.message}`)
   }
 }
@@ -2136,7 +2125,7 @@ const handleRefundRateMonthsChange = () => {
   fetchRefundRate()
 }
 
-// 获取新学员增长率
+// 获取新学生增长率
 const fetchStudentGrowth = async () => {
   chartLoading.value.studentGrowth = true
   try {
@@ -2190,7 +2179,7 @@ const fetchStudentGrowth = async () => {
     
     chart.setOption(option)
   } catch (error) {
-    window.logger.error('获取学员增长率失败:', error)
+    window.logger.error('获取学生增长率失败:', error)
     ElMessage.error(`${t('dashboardViewKpi.fetchStudentGrowthFailed')}: ${error.response?.data?.detail || error.message}`)
   } finally {
     chartLoading.value.studentGrowth = false
@@ -2325,7 +2314,7 @@ const fetchClasses = async () => {
   }
 }
 
-// 学员详细信息辅助函数
+// 学生详细信息辅助函数
 const getStudentDetail = (studentId) => {
   return students.value.find(s => s.id === studentId)
 }
@@ -2807,7 +2796,7 @@ const showDBPoolDetail = () => {
   })
 }
 
-// 跳转到学员详情
+// 跳转到学生详情
 const goToStudentDetail = (studentId) => {
   router.push({
     path: '/admin/students',
@@ -3291,7 +3280,7 @@ onUnmounted(() => {
   margin: 0 auto 5px;
 }
 
-/* 学员信息 Tooltip 样式 */
+/* 学生信息 Tooltip 样式 */
 .student-info-tooltip {
   max-width: 400px !important;
 }

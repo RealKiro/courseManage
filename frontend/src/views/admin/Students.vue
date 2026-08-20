@@ -421,7 +421,7 @@
         <el-button type="primary" @click="handleSubmit">{{ t('common.confirm') }}</el-button>
       </template>
     </el-dialog>
-    <!-- 批量添加学员对话框 -->
+    <!-- 批量添加学生对话框 -->
     <el-dialog v-model="batchAddDialogVisible" :title="t('students.batchAddTitle')" width="800px" draggable>
       <div style="margin-bottom: 20px;">
         <el-alert
@@ -641,13 +641,17 @@ const canAccessFeeManagement = computed(() => {
         return true
       }
     } catch (e) {
-      window.logger.error('[权限检查] 解析费用管理导师列表失败:', e)
+      window.logger.error('[权限检查] 解析费用管理教师列表失败:', e)
     }
   }
   return false
 })
 
 const hasFeeManagementRole = computed(() => {
+  // 费用模块已移除：不再显示「需要授权」的置灰按钮
+  if (!hasFeature('fee_management')) {
+    return false
+  }
   const currentUser = JSON.parse(localStorage.getItem('user'))
   if (!currentUser) {
     return false
@@ -663,7 +667,7 @@ const hasFeeManagementRole = computed(() => {
         return true
       }
     } catch (e) {
-      window.logger.error('[权限检查] 解析费用管理导师列表失败:', e)
+      window.logger.error('[权限检查] 解析费用管理教师列表失败:', e)
     }
   }
   return false
@@ -688,11 +692,11 @@ const canAccessGradeManagement = computed(() => {
       const gradeManagers = JSON.parse(gradeManagersStr)
       window.logger.log('[权限检查] 解析后的grade_managers:', gradeManagers)
       if (Array.isArray(gradeManagers) && gradeManagers.includes(currentUser.teacher_id)) {
-        window.logger.log('[权限检查] 是成绩管理导师，允许访问')
+        window.logger.log('[权限检查] 是成绩管理教师，允许访问')
         return true
       }
     } catch (e) {
-      window.logger.error('[权限检查] 解析成绩管理导师列表失败:', e)
+      window.logger.error('[权限检查] 解析成绩管理教师列表失败:', e)
     }
   }
   window.logger.log('[权限检查] 不允许访问成绩管理')
@@ -990,7 +994,7 @@ const handleStudentStatusChange = (newValue) => {
 }
 
 const getActiveClassStudents = (classId) => {
-  // 获取某个班级的在读学员列表
+  // 获取某个班级的在读学生列表
   return allStudents.value.filter(s => {
     // 检查学生是否属于该班级
     const belongsToClass = s.class_ids && s.class_ids.includes(classId)
@@ -1001,7 +1005,7 @@ const getActiveClassStudents = (classId) => {
 }
 
 const getInactiveClassStudents = (classId) => {
-  // 获取某个班级的非在读学员列表
+  // 获取某个班级的非在读学生列表
   return allStudents.value.filter(s => {
     // 检查学生是否属于该班级
     const belongsToClass = s.class_ids && s.class_ids.includes(classId)
@@ -1032,7 +1036,7 @@ const fetchStudents = async () => {
     students.value = response.data.items
     pagination.value.total = response.data.total
     
-    // 获取最后一个学员代码（按代码排序后的最后一个）
+    // 获取最后一个学生代码（按代码排序后的最后一个）
     if (response.data.items && response.data.items.length > 0) {
       const sortedByCode = [...response.data.items].sort((a, b) => a.code.localeCompare(b.code))
       lastStudentCode.value = sortedByCode[sortedByCode.length - 1].code
@@ -1040,7 +1044,7 @@ const fetchStudents = async () => {
       lastStudentCode.value = ''
     }
   } catch (error) {
-    window.logger.error('获取学员列表失败:', error)
+    window.logger.error('获取学生列表失败:', error)
   } finally {
     loading.value = false
   }
@@ -1079,13 +1083,13 @@ const goToEvaluationManagement = () => {
 const showAddDialog = async () => {
   dialogTitle.value = t('students.addStudentTitle')
   
-  // 确保加载所有学员数据到allStudents，以便班级悬浮信息能正确显示
+  // 确保加载所有学生数据到allStudents，以便班级悬浮信息能正确显示
   if (allStudents.value.length === 0) {
     try {
       const response = await api.get('/students', { params: { skip: 0, limit: 100000 } })
       allStudents.value = response.data.items || response.data
     } catch (error) {
-      window.logger.error('获取学员列表失败:', error)
+      window.logger.error('获取学生列表失败:', error)
     }
   }
   
@@ -1212,10 +1216,10 @@ const handleBatchAddSubmit = async () => {
       const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
       allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
     } catch (error) {
-      window.logger.error('重新加载所有学员数据失败:', error)
+      window.logger.error('重新加载所有学生数据失败:', error)
     }
   } catch (error) {
-    window.logger.error('批量添加学员失败:', error)
+    window.logger.error('批量添加学生失败:', error)
     ElMessage.error(t('students.batchAddFailed'))
   } finally {
     batchAddLoading.value = false
@@ -1225,13 +1229,13 @@ const handleBatchAddSubmit = async () => {
 const showEditDialog = async (row) => {
   dialogTitle.value = t('students.editStudentTitle')
   
-  // 确保加载所有学员数据到allStudents，以便班级悬浮信息能正确显示
+  // 确保加载所有学生数据到allStudents，以便班级悬浮信息能正确显示
   if (allStudents.value.length === 0) {
     try {
       const response = await api.get('/students', { params: { skip: 0, limit: 100000 } })
       allStudents.value = response.data.items || response.data
     } catch (error) {
-      window.logger.error('获取学员列表失败:', error)
+      window.logger.error('获取学生列表失败:', error)
     }
   }
   // 格式化日期字段
@@ -1325,7 +1329,7 @@ const handleSubmit = async () => {
             return
           }
           
-          // 编辑学员
+          // 编辑学生
           try {
             await api.put(`/students/${form.value.id}`, form.value)
           } catch (error) {
@@ -1354,10 +1358,10 @@ const handleSubmit = async () => {
             const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
             allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
           } catch (error) {
-            window.logger.error('重新加载所有学员数据失败:', error)
+            window.logger.error('重新加载所有学生数据失败:', error)
           }
         } else {
-          // 新建学员
+          // 新建学生
           try {
             await api.post('/students', form.value)
           } catch (error) {
@@ -1386,7 +1390,7 @@ const handleSubmit = async () => {
             const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
             allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
           } catch (error) {
-            window.logger.error('重新加载所有学员数据失败:', error)
+            window.logger.error('重新加载所有学生数据失败:', error)
           }
         }
         dialogVisible.value = false
@@ -1413,12 +1417,12 @@ const forceCreateStudent = async () => {
       const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
       allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
     } catch (error) {
-      window.logger.error('重新加载所有学员数据失败:', error)
+      window.logger.error('重新加载所有学生数据失败:', error)
     }
     dialogVisible.value = false
     fetchStudents()
   } catch (error) {
-    window.logger.error('强制创建学员失败:', error)
+    window.logger.error('强制创建学生失败:', error)
     if (error.response) {
       ElMessage.error(t('students.operationFailedDetail', { status: error.response.status, detail: JSON.stringify(error.response.data) }))
     } else {
@@ -1442,7 +1446,7 @@ const handleDelete = (row) => {
         const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
         allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
       } catch (error) {
-        window.logger.error('重新加载所有学员数据失败:', error)
+        window.logger.error('重新加载所有学生数据失败:', error)
       }
     } catch (error) {
       window.logger.error('删除失败:', error)
@@ -1830,12 +1834,12 @@ onMounted(async () => {
     }
   }).catch(() => {})
 
-  // 确保加载所有学员数据到allStudents，以便班级悬浮信息能正确显示
+  // 确保加载所有学生数据到allStudents，以便班级悬浮信息能正确显示
   try {
     const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
     allStudents.value = allStudentsResponse.data.items || allStudentsResponse.data
   } catch (error) {
-    window.logger.error('获取所有学员数据失败:', error)
+    window.logger.error('获取所有学生数据失败:', error)
   }
   // 如果有搜索参数，执行相关操作
   if (searchQuery) {
@@ -1885,7 +1889,7 @@ onMounted(async () => {
           showEditDialog(response.data)
         }
       } catch (error) {
-        window.logger.error('获取学员信息失败:', error)
+        window.logger.error('获取学生信息失败:', error)
         ElMessage.error(t('students.loadStudentFailed'))
       }
     }
@@ -1912,7 +1916,7 @@ watch(() => route.query, (newQuery) => {
           showEditDialog(response.data)
         }
       }).catch(error => {
-        window.logger.error('获取学员信息失败:', error)
+        window.logger.error('获取学生信息失败:', error)
         ElMessage.error(t('students.loadStudentFailed'))
       })
     }

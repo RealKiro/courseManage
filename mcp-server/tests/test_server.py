@@ -32,8 +32,6 @@ READ_TOOLS = {
     "get_teacher_workload",
     "get_room_utilization",
     "get_incomplete_schedules",
-    "list_student_fees",
-    "get_fee_alerts",
     "list_grades",
     "get_student_grade_trend",
     "get_student_evaluation_profile",
@@ -161,7 +159,7 @@ async def test_notifications_downgraded_by_default() -> None:
     try:
         await mcp.call_tool(
             "cancel_schedule",
-            {"schedule_id": 5, "cancel_reason": "导师临时请假", "send_notification": True},
+            {"schedule_id": 5, "cancel_reason": "教师临时请假", "send_notification": True},
         )
     finally:
         await client.aclose()

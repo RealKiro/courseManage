@@ -100,12 +100,7 @@ const routes = [
     component: () => import('@/views/admin/Database.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, requiresLicense: true, licenseFeature: 'database_management' }
   },
-  {
-    path: '/admin/feemanagement',
-    name: 'FeeManagement',
-    component: () => import('@/views/admin/FeeManagement.vue'),
-    meta: { requiresAuth: true, requiresLicense: true, licenseFeature: 'fee_management' }
-  },
+  // 费用管理路由已移除（中小学教务场景不涉及课时费）
   {
     path: '/admin/grades',
     name: 'GradeManagement',
@@ -201,20 +196,6 @@ router.beforeEach((to, from, next) => {
       }
       window.logger.log('[Router] license检查通过')
       if (to.meta.requiresAdmin && (!user || !['super_admin', 'system_admin'].includes(user.role))) {
-        next('/admin/dashboard')
-      } else if (to.path === '/admin/feemanagement' && user && user.teacher_id && !['super_admin', 'system_admin'].includes(user.role)) {
-        const feeManagersStr = localStorage.getItem('fee_managers')
-        if (feeManagersStr) {
-          try {
-            const feeManagers = JSON.parse(feeManagersStr)
-            if (Array.isArray(feeManagers) && feeManagers.includes(user.teacher_id)) {
-              next()
-              return
-            }
-          } catch (e) {
-            window.logger.error('Failed to parse fee managers:', e)
-          }
-        }
         next('/admin/dashboard')
       } else if (to.path === '/admin/grades' && user && user.teacher_id && !['super_admin', 'system_admin'].includes(user.role)) {
         const gradeManagersStr = localStorage.getItem('grade_managers')

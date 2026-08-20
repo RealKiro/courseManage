@@ -1,6 +1,6 @@
 # courseManage MCP 服务器
 
-把 [courseManage](../README.md) 教育培训机构管理平台的能力，通过
+把 [courseManage](../README.md) 中小学管理平台的能力，通过
 [Model Context Protocol](https://modelcontextprotocol.io) 暴露给
 **AstrBot**、Claude Desktop、Cherry Studio、Dify、Cline 等任意 MCP 客户端。
 
@@ -80,7 +80,7 @@ coursemanage-mcp --transport http      # HTTP 模式，监听 0.0.0.0:8765/mcp
 `list_students` `get_student` `list_rooms` `list_schedules` `get_schedules_by_day`
 `get_schedule` `list_schedule_conflicts` `get_absent_students` `list_leaves`
 `list_holidays` `get_dashboard_kpi` `get_teacher_workload` `get_room_utilization`
-`get_incomplete_schedules` `list_student_fees` `get_fee_alerts` `list_grades`
+`get_incomplete_schedules` `list_grades`
 `get_student_grade_trend` `get_student_evaluation_profile` `parse_smart_command`
 
 **写入类（`READONLY=false` 才注册）**

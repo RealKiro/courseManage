@@ -550,7 +550,7 @@
         <el-button @click="executionStatusDialogVisible = false">{{ t('calendar.close') }}</el-button>
       </template>
     </el-dialog>
-    <!-- 班级学员弹窗 -->
+    <!-- 班级学生弹窗 -->
     <el-dialog v-model="classStudentsDialogVisible" :title="t('calendar.classStudentList')" width="600px" :style="{ marginTop: '10vh', marginLeft: '10vw' }" draggable>
       <el-table :data="classStudents" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
@@ -582,7 +582,7 @@
         <el-button @click="classStudentsDialogVisible = false">{{ t('calendar.close') }}</el-button>
       </template>
     </el-dialog>
-    <!-- 完训对话框 -->
+    <!-- 完课对话框 -->
     <el-dialog v-model="completeDialogVisible" :title="t('calendar.fillFeedback')" width="800px" draggable>
       <el-form :model="completeForm" :rules="completeRules" ref="completeFormRef" label-width="80px">
         <el-form-item :label="t('calendar.content')" prop="content">
@@ -1102,7 +1102,7 @@
         <el-button type="primary" @click="handleAddExtraStudents" :loading="extraStudentLoading" :disabled="selectedExtraStudentIds.length === 0">{{ t('calendar.confirmAddExtra') }}</el-button>
       </template>
     </el-dialog>
-    <!-- 编辑已完训课程反馈弹窗 -->
+    <!-- 编辑已完课课程反馈弹窗 -->
     <el-dialog v-model="editFeedbackDialogVisible" :title="t('calendar.editFeedback')" width="600px" draggable>
       <el-form :model="editFeedbackForm" label-width="120px">
         <el-form-item :label="t('calendar.content')">
@@ -1205,7 +1205,7 @@ const makeupFormRef = ref(null)
 const copyLoading = ref(false)
 const editLoading = ref(false)
 
-// 完训对话框
+// 完课对话框
 const completeDialogVisible = ref(false)
 const completeFormRef = ref(null) 
 const completeForm = ref({
@@ -1231,9 +1231,9 @@ const cancelForm = ref({
 })
 // 添加验证规则
 const completeRules = computed(() => {
-  // 获取导师信息
+  // 获取教师信息
   const teacher = teachers.value.find(t => t.id === currentSchedule.value?.teacher_id)
-  // 如果导师开启了"无需反馈"，则不需要验证
+  // 如果教师开启了"无需反馈"，则不需要验证
   if (teacher && teacher.no_feedback_required) {
     return {}
   }
@@ -1271,7 +1271,7 @@ const cancelRules = {
   cancelReason: [{ required: true, message: t('calendar.validation.inputCancelReason'), trigger: 'blur' }]
 }
 
-// 判断谁可以编辑已完训状态的排课
+// 判断谁可以编辑已完课状态的排课
 const canEditCompletedSchedule = computed(() => {
   if (!currentSchedule.value || !currentUser.value) return false
   if (currentSchedule.value.execution_status !== 'completed' && 
@@ -1281,10 +1281,10 @@ const canEditCompletedSchedule = computed(() => {
   // 超级管理员可以编辑
   if (currentUser.value.role === 'super_admin') return true
   
-  // 完训内容管理导师可以编辑
+  // 完课内容管理教师可以编辑
   if (isCompletedTrainingManager()) return true
   
-  // 超级导师可以编辑
+  // 超级教师可以编辑
   if (currentUser.value.is_subject_teacher) {
     const scheduleEditRestricted = localStorage.getItem('schedule_edit_restricted')
     if (scheduleEditRestricted === null || scheduleEditRestricted === 'true') {
@@ -1296,11 +1296,11 @@ const canEditCompletedSchedule = computed(() => {
   // 系统管理员和系统审计员不能编辑
   if (currentUser.value.role === 'system_admin' || currentUser.value.role === 'system_audit') return false
   
-  // 普通导师（course_admin，非超级导师）不能编辑
+  // 普通教师（course_admin，非超级教师）不能编辑
   return false
 })
 
-// 检查当前用户是否为完训内容管理导师
+// 检查当前用户是否为完课内容管理教师
 const isCompletedTrainingManager = () => {
   if (!currentUser.value || !currentUser.value.teacher_id) return false
   const managersStr = localStorage.getItem('completed_training_managers')
@@ -1659,7 +1659,7 @@ const getScheduleStyle = (schedule) => {
   let backgroundColor
   window.logger.log('[CalendarView] 课程ID:', schedule.id, '执行状态:', schedule.execution_status)
   if (schedule.execution_status === 'completed') {
-    backgroundColor = '#67C23A' // 绿色 - 完训
+    backgroundColor = '#67C23A' // 绿色 - 完课
   } else if (schedule.execution_status === 'postponed') {
     backgroundColor = '#E6A23C' // 橙色 - 延期
   } else if (schedule.execution_status === 'cancelled') {
@@ -1730,7 +1730,7 @@ const showClassStudents = async (classId) => {
     classStudents.value = response.data.items || response.data
     classStudentsDialogVisible.value = true
   } catch (error) {
-    window.logger.error('获取班级学员失败:', error)
+    window.logger.error('获取班级学生失败:', error)
     ElMessage.error(t('calendar.getClassStudentsFailed'))
   }
 }
@@ -1780,7 +1780,7 @@ const getInactiveClassStudents = (classId) => {
   })
 }
 
-// 学员详细信息辅助函数
+// 学生详细信息辅助函数
 const getStudentDetail = (studentId) => {
   return students.value.find(s => s.id === studentId)
 }
@@ -2005,7 +2005,7 @@ const showScheduleDetail = async (schedule) => {
     currentSchedule.value = response.data
     detailDialogVisible.value = true
     
-    // 自动加载班级学员
+    // 自动加载班级学生
     //if (schedule.class_id) {
     //  await showClassStudents(schedule.class_id)
     //}
@@ -2033,7 +2033,7 @@ const showExecutionStatusDetails = (type) => {
   executionStatusDialogVisible.value = true
 }
 
-// 显示编辑已完训课程反馈弹窗
+// 显示编辑已完课课程反馈弹窗
 const showEditFeedbackDialog = () => {
   if (!currentSchedule.value) return
   const feedbackParts = parseContentFeedback(currentSchedule.value.content_feedback || '')
@@ -2113,7 +2113,7 @@ const fetchScheduleDetail = async (scheduleId) => {
   }
 }
 
-// 完训处理
+// 完课处理
 const handleCompleteSchedule = async () => {
   if (!currentSchedule.value) return
   
@@ -2124,11 +2124,11 @@ const handleCompleteSchedule = async () => {
     studentAttendance: []
   }
   
-  // 加载该课程安排的学员列表
+  // 加载该课程安排的学生列表
   try {
     const response = await api.get(`/schedules/${currentSchedule.value.id}`)
     if (response.data && response.data.scheduled_students) {
-      // 如果已有学员记录，使用现有数据
+      // 如果已有学生记录，使用现有数据
       completeForm.value.studentAttendance = response.data.scheduled_students.map(s => ({
         id: s.id,
         name: s.name,
@@ -2137,7 +2137,7 @@ const handleCompleteSchedule = async () => {
         isLocked: false  // 添加锁定标记
       }))
     } else {
-      // 否则从班级获取学员列表
+      // 否则从班级获取学生列表
       const classStudents = getActiveClassStudents(currentSchedule.value.class_id)
       completeForm.value.studentAttendance = classStudents.map(student => ({
         id: student.id,
@@ -2148,7 +2148,7 @@ const handleCompleteSchedule = async () => {
       }))
     }
     
-    // 检测学员是否有对应日期的请假记录
+    // 检测学生是否有对应日期的请假记录
     const scheduleDate = currentSchedule.value.start_date
     const scheduleStartTime = currentSchedule.value.start_time
     const scheduleEndTime = currentSchedule.value.end_time
@@ -2177,7 +2177,7 @@ const handleCompleteSchedule = async () => {
         })
         
         const leaves = leaveResponse.data.items || []
-        window.logger.log(`学员 ${item.name} (ID: ${item.id}) 的请假记录数量: ${leaves.length}`)
+        window.logger.log(`学生 ${item.name} (ID: ${item.id}) 的请假记录数量: ${leaves.length}`)
         
         const matchedLeave = leaves.find(leave => {
           const leaveStart = new Date(leave.start_date)
@@ -2192,21 +2192,21 @@ const handleCompleteSchedule = async () => {
         })
         
         if (matchedLeave) {
-          window.logger.log(`✓ 学员 ${item.name} 匹配到请假记录，状态设置为leave，原因: ${matchedLeave.reason}`)
+          window.logger.log(`✓ 学生 ${item.name} 匹配到请假记录，状态设置为leave，原因: ${matchedLeave.reason}`)
           item.status = 'leave'
           // 使用请假记录中的实际原因，如果没有则使用默认文本
           item.absenceReason = matchedLeave.reason || t('calendar.leaveRecordExists')
-          item.isLocked = true  // 锁定该学员的出勤状态
+          item.isLocked = true  // 锁定该学生的出勤状态
         } else {
-          window.logger.log(`✗ 学员 ${item.name} 未匹配到请假记录`)
+          window.logger.log(`✗ 学生 ${item.name} 未匹配到请假记录`)
         }
       } catch (error) {
-        window.logger.error(`检查学员 ${item.name} 请假记录失败:`, error)
+        window.logger.error(`检查学生 ${item.name} 请假记录失败:`, error)
       }
     }
   } catch (error) {
-    window.logger.error('加载学员列表失败:', error)
-    // 降级方案：从班级获取学员
+    window.logger.error('加载学生列表失败:', error)
+    // 降级方案：从班级获取学生
     const classStudents = getActiveClassStudents(currentSchedule.value.class_id)
     completeForm.value.studentAttendance = classStudents.map(student => ({
       id: student.id,
@@ -2238,7 +2238,7 @@ const handleCancelSchedule = () => {
     cancelReason: ''
   }
 }
-// 执行完训
+// 执行完课
 const executeComplete = async (sendNotification = false) => {
   if (!currentSchedule.value) return
   if (!completeFormRef.value) return
@@ -2248,7 +2248,7 @@ const executeComplete = async (sendNotification = false) => {
       try {
         const contentFeedback = `${t('calendar.contentLabel')}：${completeForm.value.content}|${t('calendar.homeworkLabel')}：${completeForm.value.homework}|${t('calendar.noteLabel')}：${completeForm.value.note}`
         
-        // 构建学员出勤状态字典
+        // 构建学生出勤状态字典
         const studentAttendance = {}
         const absenceReasons = {}
         completeForm.value.studentAttendance.forEach(item => {
@@ -2269,7 +2269,7 @@ const executeComplete = async (sendNotification = false) => {
         fetchSchedules()
         detailDialogVisible.value = false
       } catch (error) {
-        window.logger.error('完训失败:', error)
+        window.logger.error('完课失败:', error)
         ElMessage.error(t('calendar.completeFailed'))
       }
     }
@@ -2654,7 +2654,7 @@ const executeCopy = async (sendNotification = true) => {
 const handleScheduleError = (error) => {
   const errorMsg = error.response?.data?.detail || t('calendar.operationFailed')
   
-  if (errorMsg.includes('以下学员在该时间段不可用')) {
+  if (errorMsg.includes('以下学生在该时间段不可用')) {
     ElMessageBox.alert(
       `<div style="line-height: 1.6;">
         <strong>⚠️ ${t('calendar.scheduleConflictWarning')}</strong><br/>
@@ -2803,7 +2803,7 @@ const showMakeupDialog = async () => {
   }
   
   try {
-    // 只获取需要补课的学员（缺席或请假且未补课）
+    // 只获取需要补课的学生（缺席或请假且未补课）
     const response = await api.get(`/schedules/${currentSchedule.value.id}/absent-students`)
     classStudents.value = response.data
     
@@ -2813,7 +2813,7 @@ const showMakeupDialog = async () => {
       return
     }
   } catch (error) {
-    window.logger.error('获取需要补课的学员失败:', error)
+    window.logger.error('获取需要补课的学生失败:', error)
     ElMessage.error(t('calendar.getMakeupStudentsFailed'))
     return
   }
@@ -2938,12 +2938,12 @@ const handleCopyNotification = async () => {
   const timeStr = `${schedule.start_time}-${schedule.end_time}`
   const roomName = getRoomName(schedule.room_id)
   
-  // 获取学员列表
+  // 获取学生列表
   let studentNames = []
   if (schedule.scheduled_students && schedule.scheduled_students.length > 0) {
     studentNames = schedule.scheduled_students.map(s => s.name)
   } else if (schedule.class_id) {
-    // 如果没有scheduled_students，尝试从班级获取学员
+    // 如果没有scheduled_students，尝试从班级获取学生
     const classStudents = getActiveClassStudents(schedule.class_id)
     if (classStudents && classStudents.length > 0) {
       studentNames = classStudents.map(s => s.name)
@@ -2961,7 +2961,7 @@ const handleCopyNotification = async () => {
   const teacherName = getTeacherName(schedule.teacher_id)
   
   if (studentNames.length > 0) {
-    notificationContent += `学员【${studentNames.join('】【')}】\n`
+    notificationContent += `学生【${studentNames.join('】【')}】\n`
   }
   notificationContent += `请带好学习资料，路上注意安全，车辆要摆放整齐。`
   
@@ -3050,7 +3050,7 @@ const showExtraStudentDialog = async () => {
       !classStudentIds.has(s.id) && !scheduledStudentIds.has(s.id)
     )
   } catch (error) {
-    window.logger.error('获取学员列表失败:', error)
+    window.logger.error('获取学生列表失败:', error)
     ElMessage.error(t('calendar.operationFailed'))
   }
 }
@@ -3103,7 +3103,7 @@ const removeExtraStudent = async (studentId) => {
     currentExtraStudents.value = currentExtraStudents.value.filter(s => s.id !== studentId)
     fetchSchedules()
   } catch (error) {
-    window.logger.error('移除临时增员学员失败:', error)
+    window.logger.error('移除临时增员学生失败:', error)
     ElMessage.error(t('calendar.operationFailed'))
   }
 }
@@ -3525,7 +3525,7 @@ const handleScreenshot = async () => {
   font-size: 12px;
 }
 
-/* 学员信息 Tooltip 样式 */
+/* 学生信息 Tooltip 样式 */
 .student-info-tooltip {
   max-width: 400px !important;
 }

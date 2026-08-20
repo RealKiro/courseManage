@@ -61,11 +61,11 @@ def add_smart_command_examples():
         # 第三步：定义所有示例数据（包含完整的 expected_fields）
         examples = [
             # ========== 基础列表查询示例 ==========
-            # 学员搜索
+            # 学生搜索
             {
                 "category": "data_search",
                 "action_name": "search_students",
-                "example_text": "查询所有学员",
+                "example_text": "查询所有学生",
                 "expected_intent": "search_students",
                 "expected_fields": {
                     "action": "navigate",
@@ -76,14 +76,14 @@ def add_smart_command_examples():
                         "entity_type": "students"
                     }
                 },
-                "description": "查看所有学员列表",
+                "description": "查看所有学生列表",
                 "is_active": True,
                 "sort_order": 1
             },
             {
                 "category": "data_search",
                 "action_name": "search_students",
-                "example_text": "查看学员列表",
+                "example_text": "查看学生列表",
                 "expected_intent": "search_students",
                 "expected_fields": {
                     "action": "navigate",
@@ -94,16 +94,16 @@ def add_smart_command_examples():
                         "entity_type": "students"
                     }
                 },
-                "description": "查看学员列表",
+                "description": "查看学生列表",
                 "is_active": True,
                 "sort_order": 2
             },
             
-            # 导师搜索
+            # 教师搜索
             {
                 "category": "data_search",
                 "action_name": "search_teachers",
-                "example_text": "查询所有导师",
+                "example_text": "查询所有教师",
                 "expected_intent": "search_teachers",
                 "expected_fields": {
                     "action": "navigate",
@@ -114,7 +114,7 @@ def add_smart_command_examples():
                         "entity_type": "teachers"
                     }
                 },
-                "description": "查看所有导师列表",
+                "description": "查看所有教师列表",
                 "is_active": True,
                 "sort_order": 5
             },
@@ -243,7 +243,7 @@ def add_smart_command_examples():
             {
                 "category": "data_search",
                 "action_name": "advanced_search",
-                "example_text": "查询学员张三的班级",
+                "example_text": "查询学生张三的班级",
                 "expected_intent": "advanced_search",
                 "expected_fields": {
                     "action": "navigate",
@@ -261,14 +261,14 @@ def add_smart_command_examples():
                         "target_label": "班级列表"
                     }
                 },
-                "description": "查询指定学员所属的班级",
+                "description": "查询指定学生所属的班级",
                 "is_active": True,
                 "sort_order": 100
             },
             {
                 "category": "data_search",
                 "action_name": "advanced_search",
-                "example_text": "查询学员张三在明天的排课",
+                "example_text": "查询学生张三在明天的排课",
                 "expected_intent": "advanced_search",
                 "expected_fields": {
                     "action": "navigate",
@@ -286,7 +286,7 @@ def add_smart_command_examples():
                         "target_entity": "schedules"
                     }
                 },
-                "description": "查询指定学员在特定日期的课程安排",
+                "description": "查询指定学生在特定日期的课程安排",
                 "is_active": True,
                 "sort_order": 140
             },
@@ -335,11 +335,11 @@ def add_smart_command_examples():
                 "sort_order": 201
             },
             
-            # 添加导师
+            # 添加教师
             {
                 "category": "teacher_management",
                 "action_name": "add_teacher",
-                "example_text": "添加导师张老师，电话13800138000",
+                "example_text": "添加教师张老师，电话13800138000",
                 "expected_intent": "add_teacher",
                 "expected_fields": {
                     "action": "navigate",
@@ -353,16 +353,16 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "添加新导师并设置联系电话",
+                "description": "添加新教师并设置联系电话",
                 "is_active": True,
                 "sort_order": 210
             },
             
-            # 添加学员
+            # 添加学生
             {
                 "category": "student_management",
                 "action_name": "add_student",
-                "example_text": "添加学员李四，手机号13900139000",
+                "example_text": "添加学生李四，手机号13900139000",
                 "expected_intent": "add_student",
                 "expected_fields": {
                     "action": "navigate",
@@ -376,7 +376,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "添加新学员并设置手机号",
+                "description": "添加新学生并设置手机号",
                 "is_active": True,
                 "sort_order": 220
             },
@@ -452,7 +452,7 @@ def add_smart_command_examples():
                 "sort_order": 300
             },
             
-            # 更新导师
+            # 更新教师
             {
                 "category": "teacher_management",
                 "action_name": "update_teacher",
@@ -472,7 +472,7 @@ def add_smart_command_examples():
                         "search_keyword": "张老师"
                     }
                 },
-                "description": "更新指定导师的联系电话",
+                "description": "更新指定教师的联系电话",
                 "is_active": True,
                 "sort_order": 310
             },
@@ -497,7 +497,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "为指定学员创建排课",
+                "description": "为指定学生创建排课",
                 "is_active": True,
                 "sort_order": 400
             },
@@ -519,7 +519,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "为指定学员创建排课（使用相对日期）",
+                "description": "为指定学生创建排课（使用相对日期）",
                 "is_active": True,
                 "sort_order": 401
             },
@@ -604,7 +604,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "为学员添加请假记录",
+                "description": "为学生添加请假记录",
                 "is_active": True,
                 "sort_order": 500
             },
@@ -652,7 +652,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "收取学员学费",
+                "description": "收取学生学费",
                 "is_active": True,
                 "sort_order": 520
             },
@@ -674,7 +674,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "退还学员学费",
+                "description": "退还学生学费",
                 "is_active": True,
                 "sort_order": 521
             },
@@ -699,7 +699,7 @@ def add_smart_command_examples():
                         "mode": "create"
                     }
                 },
-                "description": "录入学员考试成绩",
+                "description": "录入学生考试成绩",
                 "is_active": True,
                 "sort_order": 530
             }

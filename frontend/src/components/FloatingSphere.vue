@@ -188,17 +188,8 @@ const menuItems = [
     path: '/admin/leaves',
     color: 'color-cyan',
     requiresRole: ['super_admin', 'course_admin']
-  },
-  { 
-    key: 'fees', 
-    label: t('fee.title'), 
-    icon: Money, 
-    path: '/admin/feemanagement',
-    color: 'color-pink',
-    requiresRole: ['super_admin', 'system_admin', 'fee_manager_placeholder'],
-    requiresLicense: true,
-    licenseFeature: 'fee_management'
   }
+  // 费用管理入口已移除（中小学教务场景不涉及课时费）
 ]
 
 // 获取当前用户信息
@@ -228,7 +219,7 @@ const visibleMenuItems = computed(() => {
         console.log('[FloatingSphere] 运营大屏按钮: 可见 (管理员)')
         return true
       }
-      // 2. 检查是否是运营管理导师
+      // 2. 检查是否是运营管理教师
       const operationManagersStr = localStorage.getItem('operation_managers')
       if (operationManagersStr && user.teacher_id) {
         try {
@@ -237,7 +228,7 @@ const visibleMenuItems = computed(() => {
             return true
           }
         } catch (e) {
-          window.logger.error('解析运营管理导师列表失败:', e)
+          window.logger.error('解析运营管理教师列表失败:', e)
         }
       }
       return false
@@ -248,7 +239,7 @@ const visibleMenuItems = computed(() => {
       if (['super_admin'].includes(user.role)) {
         return true
       }
-      // 2. 检查是否是费用管理导师
+      // 2. 检查是否是费用管理教师
       const feeManagersStr = localStorage.getItem('fee_managers')
       if (feeManagersStr && user.teacher_id) {
         try {
@@ -257,7 +248,7 @@ const visibleMenuItems = computed(() => {
             return true
           }
         } catch (e) {
-          window.logger.error('解析费用管理导师列表失败:', e)
+          window.logger.error('解析费用管理教师列表失败:', e)
         }
       }
       return false
@@ -272,7 +263,7 @@ const visibleMenuItems = computed(() => {
       if (['super_admin'].includes(user.role)) {
         return true
       }
-      // 2. 检查是否是成绩管理导师
+      // 2. 检查是否是成绩管理教师
       const gradeManagersStr = localStorage.getItem('grade_managers')
       if (gradeManagersStr && user.teacher_id) {
         try {
@@ -281,7 +272,7 @@ const visibleMenuItems = computed(() => {
             return true
           }
         } catch (e) {
-          window.logger.error('解析成绩管理导师列表失败:', e)
+          window.logger.error('解析成绩管理教师列表失败:', e)
         }
       }
       return false
@@ -536,7 +527,7 @@ onMounted(() => {
   window.addEventListener('user-logged-out', handleUserLogout)
 })
 
-// 处理 localStorage 变化（当管理员修改了费用管理导师配置后）
+// 处理 localStorage 变化（当管理员修改了费用管理教师配置后）
 const handleStorageChange = (e) => {
   if (e.key === 'fee_managers') {
     // 强制重新计算 visibleMenuItems

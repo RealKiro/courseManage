@@ -34,7 +34,7 @@ class ScheduleOptimizer:
 
     def _generate_time_slots(self, resources: Dict = None) -> List[Dict]:
         """
-        根据导师和学生的可用时间段动态生成时间槽
+        根据教师和学生的可用时间段动态生成时间槽
         """
         if resources is None:
             resources = self._get_available_resources(datetime.now(), datetime.now() + timedelta(days=7))
@@ -42,7 +42,7 @@ class ScheduleOptimizer:
         teachers = resources.get('teachers', [])
         students = resources.get('students', [])
         
-        # 收集所有导师的可用时间段
+        # 收集所有教师的可用时间段
         teacher_time_slots = set()
         for teacher in teachers:
             if teacher.available_time_slots:
@@ -62,7 +62,7 @@ class ScheduleOptimizer:
                     if slot:
                         student_time_slots.add(slot)
         
-        # 如果导师没有设置可用时间段，使用默认时间段
+        # 如果教师没有设置可用时间段，使用默认时间段
         if not teacher_time_slots:
             teacher_time_slots = {
                 '08:00-10:00', '10:00-12:00',
@@ -79,10 +79,10 @@ class ScheduleOptimizer:
                 '14:30-16:30', '16:30-18:30', '18:30-20:30', '20:30-22:30'
             }
         
-        # 计算导师和学生可用时间段的交集
+        # 计算教师和学生可用时间段的交集
         common_time_slots = teacher_time_slots & student_time_slots
         
-        # 如果交集为空，使用导师的可用时间段
+        # 如果交集为空，使用教师的可用时间段
         if not common_time_slots:
             common_time_slots = teacher_time_slots
         
@@ -108,7 +108,7 @@ class ScheduleOptimizer:
         return slots
 
     def _get_available_resources(self, start_date: datetime, end_date: datetime, class_ids: List[int] = None) -> Dict:
-        # 获取在职导师
+        # 获取在职教师
         teachers = self.db.query(Teacher).filter(Teacher.is_active == True).all()
         
         # 获取包含有效学生的班级
@@ -185,9 +185,9 @@ class ScheduleOptimizer:
                 )
                 
                 if time_overlap:
-                    # 硬性约束：导师时间冲突（HC_TEACHER_TIME）
+                    # 硬性约束：教师时间冲突（HC_TEACHER_TIME）
                     if schedule.teacher_id == existing.teacher_id:
-                        conflicts.append(f"导师时间冲突: {schedule.teacher_id}")
+                        conflicts.append(f"教师时间冲突: {schedule.teacher_id}")
                     
                     # 硬性约束：班级时间冲突（HC_CLASS_TIME）
                     if schedule.class_id == existing.class_id:
@@ -197,7 +197,7 @@ class ScheduleOptimizer:
                     if schedule.room_id == existing.room_id:
                         conflicts.append(f"教室时间冲突: {schedule.room_id}")
                     
-                    # 硬性约束：学员时间冲突（HC_STUDENT_TIME）
+                    # 硬性约束：学生时间冲突（HC_STUDENT_TIME）
                     # 检查两个班级是否有共同的学生
                     if class_students_cache is None:
                         # 如果没有缓存，查询数据库（使用多对多关系）
@@ -216,7 +216,7 @@ class ScheduleOptimizer:
                     
                     common_students = class1_student_ids & class2_student_ids
                     if common_students:
-                        conflicts.append(f"学员时间冲突: 班级 {schedule.class_id} 和班级 {existing.class_id} 有共同学生")
+                        conflicts.append(f"学生时间冲突: 班级 {schedule.class_id} 和班级 {existing.class_id} 有共同学生")
         
         return conflicts
 
@@ -226,7 +226,7 @@ class ScheduleOptimizer:
         for leave in leaves:
             if leave.start_date <= schedule.end_date and leave.end_date >= schedule.start_date:
                 if leave.leave_type == "teacher" and leave.teacher_id == schedule.teacher_id:
-                    conflicts.append(f"导师请假: {leave.reason}")
+                    conflicts.append(f"教师请假: {leave.reason}")
         
         return conflicts
 
@@ -241,27 +241,27 @@ class ScheduleOptimizer:
                         students = [s for s in class_.students if s.is_active]
                         for student in students:
                             if student.id == leave.student_id:
-                                warnings.append(f"学员请假: {leave.reason}")
+                                warnings.append(f"学生请假: {leave.reason}")
                                 break
         
         return warnings
 
     def _check_teacher_availability(self, teacher: Teacher, day_of_week: int, start_time: str = None, end_time: str = None) -> bool:
         try:
-            log_operation(self.db, "排课算法", "DEBUG", f"检查导师可用性: teacher={teacher}, teacher.name={teacher.name}, teacher.available_days={teacher.available_days}, teacher.available_time_slots={teacher.available_time_slots}")
+            log_operation(self.db, "排课算法", "DEBUG", f"检查教师可用性: teacher={teacher}, teacher.name={teacher.name}, teacher.available_days={teacher.available_days}, teacher.available_time_slots={teacher.available_time_slots}")
             
             if not teacher.available_days:
-                log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 没有设置可安排日期")
+                log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 没有设置可安排日期")
                 return False
             
             available_days = [int(d.strip()) for d in teacher.available_days.split(",")]
             if day_of_week not in available_days:
-                log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 星期 {day_of_week} 不可用")
+                log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 星期 {day_of_week} 不可用")
                 return False
             
             if start_time and end_time:
                 if not teacher.available_time_slots:
-                    log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 没有设置可安排课时段")
+                    log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 没有设置可安排课时段")
                     return False
                 
                 available_time_slots = [t.strip() for t in teacher.available_time_slots.split(",")]
@@ -272,35 +272,35 @@ class ScheduleOptimizer:
                     available_start, available_end = available_slot.split('-')
                     
                     if time_slot == available_slot:
-                        log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 时间段 {time_slot} 完全匹配")
+                        log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 时间段 {time_slot} 完全匹配")
                         found = True
                         break
                     
                     if (self._compare_time(start_time, available_start) >= 0 and 
                         self._compare_time(end_time, available_end) <= 0):
-                        log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 时间段 {time_slot} 在可用时间段 {available_slot} 内")
+                        log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 时间段 {time_slot} 在可用时间段 {available_slot} 内")
                         found = True
                         break
                 
                 if not found:
-                    log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 没有可用时间段 {time_slot}")
+                    log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 没有可用时间段 {time_slot}")
                     return False
             
-            log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 可用")
+            log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 可用")
             return True
         except Exception as e:
-            log_operation(self.db, "排课算法", "ERROR", f"检查导师可用性时出错: {e}")
+            log_operation(self.db, "排课算法", "ERROR", f"检查教师可用性时出错: {e}")
             return False
 
     def _check_class_availability(self, class_: Class, day_of_week: int, start_time: str = None, end_time: str = None) -> bool:
         try:
-            # 获取班级的所有学员（使用多对多关系）
+            # 获取班级的所有学生（使用多对多关系）
             students = class_.students
             
             if not students:
                 return False
             
-            # 检查所有学员是否都可用
+            # 检查所有学生是否都可用
             for student in students:
                 # 检查日期
                 if not student.available_days:
@@ -353,7 +353,7 @@ class ScheduleOptimizer:
             if not students:
                 return False
             
-            # 检查所有学员是否都可用
+            # 检查所有学生是否都可用
             for student in students:
                 # 检查日期
                 if not student.available_days:
@@ -435,7 +435,7 @@ class ScheduleOptimizer:
         
         try:
             log_operation(self.db, "排课算法", "INFO", "开始生成初始个体")
-            log_operation(self.db, "排课算法", "DEBUG", f"可用资源: {len(resources['courses'])} 课程, {len(resources['teachers'])} 导师, {len(resources['classes'])} 班级, {len(resources['rooms'])} 教室")
+            log_operation(self.db, "排课算法", "DEBUG", f"可用资源: {len(resources['courses'])} 课程, {len(resources['teachers'])} 教师, {len(resources['classes'])} 班级, {len(resources['rooms'])} 教室")
             
             # 计算日期范围内的所有日期
             dates = []
@@ -448,7 +448,7 @@ class ScheduleOptimizer:
             
             # 为每个班级生成排课
             for class_ in resources['classes']:
-                # 获取班级的所有学员（使用多对多关系）
+                # 获取班级的所有学生（使用多对多关系）
                 students = [s for s in class_.students if s.is_active]
                 
                 if not students:
@@ -471,11 +471,11 @@ class ScheduleOptimizer:
                         if not all_students_allow:
                             continue
                     
-                    # 检查班级的所有学员是否在该日期可用
+                    # 检查班级的所有学生是否在该日期可用
                     if not self._check_class_availability_optimized(class_, day_of_week, None, None, class_students):
                         continue
                     
-                    # 获取学员的可用时间段（只匹配当前日期的星期几）
+                    # 获取学生的可用时间段（只匹配当前日期的星期几）
                     available_slots = []
                     for slot in self.time_slots:
                         if slot['day_of_week'] == day_of_week:
@@ -488,22 +488,22 @@ class ScheduleOptimizer:
                     if available_slots:
                         slot = random.choice(available_slots)
                         
-                        # 对于每个科目，获取可以教授该科目的导师
+                        # 对于每个科目，获取可以教授该科目的教师
                         available_course_teacher_pairs = []
                         for course in resources['courses']:
-                            # 获取可以教授该科目的导师
+                            # 获取可以教授该科目的教师
                             course_teachers = []
                             for teacher in resources['teachers']:
-                                # 如果是节假日，检查导师是否允许节假日排课
+                                # 如果是节假日，检查教师是否允许节假日排课
                                 if is_date_holiday:
                                     if not teacher.allow_holiday_scheduling:
-                                        log_operation(self.db, "排课算法", "DEBUG", f"导师 {teacher.name} 不允许节假日排课，跳过")
+                                        log_operation(self.db, "排课算法", "DEBUG", f"教师 {teacher.name} 不允许节假日排课，跳过")
                                         continue
-                                # 检查导师是否可以教授该科目
+                                # 检查教师是否可以教授该科目
                                 if teacher.courses:
                                     teacher_course_ids = [c.id for c in teacher.courses]
                                     if course.id in teacher_course_ids:
-                                        # 检查导师的可安排日期和可安排课时段
+                                        # 检查教师的可安排日期和可安排课时段
                                         if self._check_teacher_availability(teacher, day_of_week, slot['start_time'], slot['end_time']):
                                             course_teachers.append(teacher)
                             
@@ -514,10 +514,10 @@ class ScheduleOptimizer:
                                 })
                         
                         if not available_course_teacher_pairs:
-                            log_operation(self.db, "排课算法", "DEBUG", f"班级 {class_.name} 在 {date.date()} 星期{day_of_week} 没有可用的科目-导师组合")
+                            log_operation(self.db, "排课算法", "DEBUG", f"班级 {class_.name} 在 {date.date()} 星期{day_of_week} 没有可用的科目-教师组合")
                             continue
                         
-                        # 随机选择一个科目-导师组合
+                        # 随机选择一个科目-教师组合
                         selected_pair = random.choice(available_course_teacher_pairs)
                         selected_course = selected_pair['course']
                         selected_teacher = random.choice(selected_pair['teachers'])
@@ -547,7 +547,7 @@ class ScheduleOptimizer:
                             schedule_type='formal'  # 自动排课默认为正式课
                         )
                         individual.append(schedule)
-                        log_operation(self.db, "排课算法", "INFO", f"创建排课成功: 班级 {class_.name} - 科目 {selected_course.name} - 导师 {selected_teacher.name} - 教室 {selected_room.name} - {date.date()} 星期{day_of_week} {slot['start_time']}")
+                        log_operation(self.db, "排课算法", "INFO", f"创建排课成功: 班级 {class_.name} - 科目 {selected_course.name} - 教师 {selected_teacher.name} - 教室 {selected_room.name} - {date.date()} 星期{day_of_week} {slot['start_time']}")
                     else:
                         log_operation(self.db, "排课算法", "DEBUG", f"班级 {class_.name} 在 {date.date()} 星期{day_of_week} 没有可用时间段")
         except Exception as e:
@@ -600,17 +600,17 @@ class ScheduleOptimizer:
                 if available_slots:
                     new_slot = random.choice(available_slots)
                     
-                    # 对于每个科目，获取可以教授该科目的导师
+                    # 对于每个科目，获取可以教授该科目的教师
                     available_course_teacher_pairs = []
                     for course in resources['courses']:
-                        # 获取可以教授该科目的导师
+                        # 获取可以教授该科目的教师
                         course_teachers = []
                         for teacher in resources['teachers']:
-                            # 检查导师是否可以教授该科目
+                            # 检查教师是否可以教授该科目
                             if teacher.courses:
                                 teacher_course_ids = [c.id for c in teacher.courses]
                                 if course.id in teacher_course_ids:
-                                    # 检查导师的可安排日期和可安排课时段
+                                    # 检查教师的可安排日期和可安排课时段
                                     if self._check_teacher_availability(teacher, day_of_week, new_slot['start_time'], new_slot['end_time']):
                                         course_teachers.append(teacher)
                         
@@ -621,7 +621,7 @@ class ScheduleOptimizer:
                             })
                     
                     if available_course_teacher_pairs:
-                        # 随机选择一个科目-导师组合
+                        # 随机选择一个科目-教师组合
                         selected_pair = random.choice(available_course_teacher_pairs)
                         selected_course = selected_pair['course']
                         selected_teacher = random.choice(selected_pair['teachers'])
@@ -734,7 +734,7 @@ class ScheduleOptimizer:
             for class_ in resources['classes']:
                 log_operation(self.db, "排课算法", "DEBUG", f"正在为班级 '{class_.name}' (ID:{class_.id}) 生成排课")
                 
-                # 获取班级的所有学员（使用多对多关系）
+                # 获取班级的所有学生（使用多对多关系）
                 students = [s for s in class_.students if s.is_active]
                 
                 if not students:
@@ -758,11 +758,11 @@ class ScheduleOptimizer:
                         if not all_students_allow:
                             continue
                     
-                    # 检查班级的所有学员是否在该日期可用
+                    # 检查班级的所有学生是否在该日期可用
                     if not self._check_class_availability_optimized(class_, day_of_week, None, None, class_students):
                         continue
                     
-                    # 获取学员的可用时间段（只匹配当前日期的星期几）
+                    # 获取学生的可用时间段（只匹配当前日期的星期几）
                     available_slots = []
                     for slot in self.time_slots:
                         if slot['day_of_week'] == day_of_week:
@@ -775,21 +775,21 @@ class ScheduleOptimizer:
                     if available_slots:
                         slot = random.choice(available_slots)
                         
-                        # 对于每个科目，获取可以教授该科目的导师
+                        # 对于每个科目，获取可以教授该科目的教师
                         available_course_teacher_pairs = []
                         for course in resources['courses']:
-                            # 获取可以教授该科目的导师
+                            # 获取可以教授该科目的教师
                             course_teachers = []
                             for teacher in resources['teachers']:
-                                # 如果是节假日，检查导师是否允许节假日排课
+                                # 如果是节假日，检查教师是否允许节假日排课
                                 if is_date_holiday:
                                     if not teacher.allow_holiday_scheduling:
                                         continue
-                                # 检查导师是否可以教授该科目
+                                # 检查教师是否可以教授该科目
                                 if teacher.courses:
                                     teacher_course_ids = [c.id for c in teacher.courses]
                                     if course.id in teacher_course_ids:
-                                        # 检查导师的可安排日期和可安排课时段
+                                        # 检查教师的可安排日期和可安排课时段
                                         if self._check_teacher_availability(teacher, day_of_week, slot['start_time'], slot['end_time']):
                                             course_teachers.append(teacher)
                             
@@ -802,7 +802,7 @@ class ScheduleOptimizer:
                         if not available_course_teacher_pairs:
                             continue
                         
-                        # 随机选择一个科目-导师组合
+                        # 随机选择一个科目-教师组合
                         selected_pair = random.choice(available_course_teacher_pairs)
                         selected_course = selected_pair['course']
                         selected_teacher = random.choice(selected_pair['teachers'])

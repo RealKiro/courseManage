@@ -87,14 +87,14 @@ def init_db():
             teacher = Teacher(
                 code="T001",
                 name="张老师",
-                title="高级导师",
+                title="高级教师",
                 department="数学部",
                 max_weekly_hours=40,
                 is_active=True
             )
             db.add(teacher)
             db.commit()
-            print("✓ 示例导师创建成功")
+            print("✓ 示例教师创建成功")
         
         sample_class = db.query(Class).filter(Class.code == "C001").first()
         if not sample_class:
@@ -120,7 +120,7 @@ def init_db():
             )
             db.add(student)
             db.commit()
-            print("✓ 示例学员创建成功")
+            print("✓ 示例学生创建成功")
         
         sample_room = db.query(Room).filter(Room.code == "R001").first()
         if not sample_room:

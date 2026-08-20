@@ -128,7 +128,7 @@
                 <div v-if="getActiveClassStudents(row.id).length === 0 && getInactiveClassStudents(row.id).length === 0">
                   {{ t('classes.noStudents') }}
                 </div>
-                <!-- 添加班级对应的导师信息 -->
+                <!-- 添加班级对应的教师信息 -->
                 <div v-if="getClassTeachers(row.id).length > 0" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
                   <div style="font-weight: bold; margin-bottom: 8px; color: #409EFF;">{{ t('classes.classTeachers') }}</div>
                   <div v-for="teacher in getClassTeachers(row.id)" :key="teacher.id" style="margin-bottom: 4px;">
@@ -257,7 +257,7 @@
             <el-button type="primary" @click="handleSubmit">{{ t('common.confirm') }}</el-button>
         </template>
     </el-dialog>
-    <!-- 学员列表对话框 -->
+    <!-- 学生列表对话框 -->
     <el-dialog v-model="studentsDialogVisible" :title="t('classes.studentListTitle')" width="800px" draggable>
         <div style="margin-bottom: 15px;">
             <el-button type="primary" size="small" @click="showAddStudentDialog">
@@ -447,20 +447,20 @@ const showStudentsDialog = async (class_) => {
     classStudents.value = response.data.items || response.data
     studentsDialogVisible.value = true
   } catch (error) {
-    window.logger.error('获取班级学员失败:', error)
+    window.logger.error('获取班级学生失败:', error)
     ElMessage.error(t('classes.fetchClassStudentsFailed'))
   }
 }
 
 const showAddStudentDialog = async () => {
   try {
-    // 获取不属于任何班级或属于其他班级的学员
+    // 获取不属于任何班级或属于其他班级的学生
     const response = await api.get('/students', { params: { is_active: true, skip: 0, limit: 100000 } })
     availableStudents.value = (response.data.items || response.data).filter(s => !s.class_id || s.class_id !== currentClass.value.id)
     selectedStudentIds.value = []
     addStudentDialogVisible.value = true
   } catch (error) {
-    window.logger.error('获取可用学员失败:', error)
+    window.logger.error('获取可用学生失败:', error)
     ElMessage.error(t('classes.fetchAvailableStudentsFailed'))
   }
 }
@@ -482,9 +482,9 @@ const handleAddStudents = async () => {
       }
     )
 
-    // 批量更新学员的班级
+    // 批量更新学生的班级
     for (const student of selectedStudents.value) {
-      // 获取学员当前的班级ID列表
+      // 获取学生当前的班级ID列表
       const currentClassIds = student.class_ids || []
       // 将新班级ID添加到列表中
       const newClassIds = [...currentClassIds, currentClass.value.id]
@@ -493,10 +493,10 @@ const handleAddStudents = async () => {
 
     ElMessage.success(t('classes.addSuccess'))
     addStudentDialogVisible.value = false
-    showStudentsDialog(currentClass.value) // 刷新学员列表
+    showStudentsDialog(currentClass.value) // 刷新学生列表
   } catch (error) {
     if (error !== 'cancel') {
-      window.logger.error('添加学员失败:', error)
+      window.logger.error('添加学生失败:', error)
       ElMessage.error(t('classes.addStudentFailed'))
     }
   }
@@ -523,9 +523,9 @@ const handleRemoveStudents = async () => {
       }
     )
 
-    // 批量更新学员的班级为 null
+    // 批量更新学生的班级为 null
     for (const student of selectedStudents.value) {
-      // 获取学员当前的班级ID列表
+      // 获取学生当前的班级ID列表
       const currentClassIds = student.class_ids || []
       // 从列表中移除当前班级ID
       const newClassIds = currentClassIds.filter(id => id !== currentClass.value.id)
@@ -533,10 +533,10 @@ const handleRemoveStudents = async () => {
     }
 
     ElMessage.success(t('classes.removeSuccess'))
-    showStudentsDialog(currentClass.value) // 刷新学员列表
+    showStudentsDialog(currentClass.value) // 刷新学生列表
   } catch (error) {
     if (error !== 'cancel') {
-      window.logger.error('移除学员失败:', error)
+      window.logger.error('移除学生失败:', error)
       if (error.response) {
         window.logger.error('错误状态:', error.response.status)
         window.logger.error('错误详情:', error.response.data)
@@ -645,7 +645,7 @@ const fetchStudents = async () => {
     const response = await api.get('/students', { params: { skip: 0, limit: 100000 } })
     students.value = response.data.items || response.data
   } catch (error) {
-    window.logger.error('获取学员列表失败:', error)
+    window.logger.error('获取学生列表失败:', error)
   }
 }
 
@@ -659,7 +659,7 @@ const fetchSchedules = async () => {
 }
 
 const getStudentCount = (classId) => {
-  // 计算非在读学员数量
+  // 计算非在读学生数量
   return students.value.filter(s => {
     // 检查学生是否属于该班级
     const belongsToClass = s.class_ids && s.class_ids.includes(classId)
@@ -670,7 +670,7 @@ const getStudentCount = (classId) => {
 }
 
 const getActiveStudentCount = (classId) => {
-  // 计算在读学员数量
+  // 计算在读学生数量
   return students.value.filter(s => {
     // 检查学生是否属于该班级
     const belongsToClass = s.class_ids && s.class_ids.includes(classId)
@@ -681,7 +681,7 @@ const getActiveStudentCount = (classId) => {
 }
 
 const getActiveClassStudents = (classId) => {
-  // 获取某个班级的在读学员列表
+  // 获取某个班级的在读学生列表
   return students.value.filter(s => {
     // 检查学生是否属于该班级
     const belongsToClass = s.class_ids && s.class_ids.includes(classId)
@@ -691,7 +691,7 @@ const getActiveClassStudents = (classId) => {
   })
 }
 const getInactiveClassStudents = (classId) => {
-  // 获取某个班级的非在读学员列表
+  // 获取某个班级的非在读学生列表
   return students.value.filter(s => {
     // 检查学生是否属于该班级
     const belongsToClass = s.class_ids && s.class_ids.includes(classId)
@@ -704,10 +704,10 @@ const getInactiveClassStudents = (classId) => {
 const fetchAvailableStudents = async () => {
   try {
     const response = await api.get('/students', { params: { is_active: true, skip: 0, limit: 100000 } })
-    // 获取所有可用学员（包括已分配班级的学员）
+    // 获取所有可用学生（包括已分配班级的学生）
     availableStudents.value = response.data.items || response.data
   } catch (error) {
-    window.logger.error('获取可用学员失败:', error)
+    window.logger.error('获取可用学生失败:', error)
   }
 }
 
@@ -833,24 +833,24 @@ const showEditDialog = async (row) => {
     description: row.description,
     is_active: row.is_active
   }
-  // 加载当前班级的学员 - 使用更可靠的查询方式
+  // 加载当前班级的学生 - 使用更可靠的查询方式
   try {
     const response = await api.get('/students', { params: { skip: 0, limit: 100000 } })
     const allStudents = response.data.items || response.data
-    // 过滤出属于当前班级的学员
+    // 过滤出属于当前班级的学生
     selectedStudentIds.value = allStudents
       .filter(s => s.class_ids && s.class_ids.includes(row.id))
       .map(s => s.id)
     selectedStudents.value = allStudents.filter(s => s.class_ids && s.class_ids.includes(row.id))
     originalStudentIds.value = [...selectedStudentIds.value]
   } catch (error) {
-    window.logger.error('获取班级学员失败:', error)
+    window.logger.error('获取班级学生失败:', error)
     selectedStudentIds.value = []
     selectedStudents.value = []
     originalStudentIds.value = []
   }
   
-  // 加载可用学员（所有学员）
+  // 加载可用学生（所有学生）
   await fetchAvailableStudents()
   
   // 如果有预填充的更新数据，应用到表单
@@ -899,17 +899,17 @@ const handleSubmit = async () => {
           // 编辑班级 - 先保存班级基本信息
           await api.put(`/classes/${form.value.id}`, form.value)
           
-          // 获取所有学员，然后过滤出属于当前班级的学员
+          // 获取所有学生，然后过滤出属于当前班级的学生
           const allStudentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
           const allStudents = allStudentsResponse.data.items || allStudentsResponse.data
           const currentStudents = allStudents.filter(s => s.class_ids && s.class_ids.includes(form.value.id))
           const currentStudentIds = currentStudents.map(s => s.id)
           
-          // 计算需要添加和移除的学员
+          // 计算需要添加和移除的学生
           const toAdd = selectedStudentIds.value.filter(id => !currentStudentIds.includes(id))
           const toRemove = currentStudentIds.filter(id => !selectedStudentIds.value.includes(id))
           
-          // 添加新学员
+          // 添加新学生
           for (const studentId of toAdd) {
             try {
               const student = availableStudents.value.find(s => s.id === studentId)
@@ -921,11 +921,11 @@ const handleSubmit = async () => {
                 }
               }
             } catch (studentError) {
-              window.logger.error(`添加学员 ${studentId} 到班级失败:`, studentError)
+              window.logger.error(`添加学生 ${studentId} 到班级失败:`, studentError)
             }
           }
           
-          // 移除学员
+          // 移除学生
           for (const studentId of toRemove) {
             try {
               const student = availableStudents.value.find(s => s.id === studentId)
@@ -935,7 +935,7 @@ const handleSubmit = async () => {
                 await api.put(`/students/${studentId}`, { class_ids: newClassIds })
               }
             } catch (studentError) {
-              window.logger.error(`从班级移除学员 ${studentId} 失败:`, studentError)
+              window.logger.error(`从班级移除学生 ${studentId} 失败:`, studentError)
             }
           }
           
@@ -945,7 +945,7 @@ const handleSubmit = async () => {
           const response = await api.post('/classes', form.value)
           const newClassId = response.data.id
           
-          // 将选中的学员添加到班级
+          // 将选中的学生添加到班级
           if (selectedStudentIds.value.length > 0) {
             for (const studentId of selectedStudentIds.value) {
               try {
@@ -958,7 +958,7 @@ const handleSubmit = async () => {
                   }
                 }
               } catch (studentError) {
-                window.logger.error(`添加学员 ${studentId} 到新班级失败:`, studentError)
+                window.logger.error(`添加学生 ${studentId} 到新班级失败:`, studentError)
               }
             }
           }

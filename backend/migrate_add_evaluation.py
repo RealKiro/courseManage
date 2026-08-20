@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (C) 2024-2026 courseManage Contributors
 """
-数据库迁移：添加学员评价管理相关表
+数据库迁移：添加学生评价管理相关表
 - course_evaluation_templates: 科目评价模板表
-- student_comprehensive_evaluations: 学员综合能力评价表
-- student_subject_evaluations: 学员单科能力评价表
+- student_comprehensive_evaluations: 学生综合能力评价表
+- student_subject_evaluations: 学生单科能力评价表
 """
 from sqlalchemy import inspect, text
 from database import engine, SessionLocal
@@ -25,7 +25,7 @@ def _add_evaluation_managers_column():
 
 
 def migrate_evaluation_managers():
-    print("开始迁移：添加学员评价管理相关表...")
+    print("开始迁移：添加学生评价管理相关表...")
     _add_evaluation_managers_column()
     Base.metadata.create_all(bind=engine)
     print("表结构创建完成")
@@ -134,7 +134,7 @@ def migrate_evaluation_managers():
     finally:
         db.close()
 
-    print("学员评价管理迁移完成")
+    print("学生评价管理迁移完成")
 
 
 if __name__ == "__main__":

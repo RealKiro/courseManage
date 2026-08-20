@@ -28,7 +28,7 @@ def send_wechat_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_teaching_assistant_user)
 ):
-    """发送微信消息到指定的Webhook地址（同时发送到班级webhook和导师信息群）"""
+    """发送微信消息到指定的Webhook地址（同时发送到班级webhook和教师信息群）"""
     if not _check_premium_feature('wechat_notify', db):
         raise HTTPException(status_code=403, detail="微信通知功能需要购买授权后才能使用")
     url = request.webhook_url
@@ -91,16 +91,16 @@ def send_wechat_message(
             urls.append(url)
             log_operation(db, "微信通知", "发送消息", f"添加班级webhook", current_user.username, "DEBUG")
         
-        # 2. 添加导师信息群（default）
+        # 2. 添加教师信息群（default）
         if settings and settings.wechat_webhook_config:
             try:
                 wechat_notifier.load_config(settings.wechat_webhook_config or "{}")
                 config_item = wechat_notifier.webhook_config.get('schedule_arrange', {})
                 if isinstance(config_item, dict) and "default" in config_item:
                     urls.extend(config_item["default"])
-                    log_operation(db, "微信通知", "发送消息", f"添加导师信息群Webhook URL: {config_item['default']}", current_user.username, "DEBUG")
+                    log_operation(db, "微信通知", "发送消息", f"添加教师信息群Webhook URL: {config_item['default']}", current_user.username, "DEBUG")
             except Exception as e:
-                log_operation(db, "微信通知", "发送消息失败", f"加载导师信息群失败: {e}", current_user.username, "ERROR")
+                log_operation(db, "微信通知", "发送消息失败", f"加载教师信息群失败: {e}", current_user.username, "ERROR")
         
         if not urls:
             log_operation(db, "微信通知", "发送消息失败", "未配置任何微信通知地址", current_user.username, "ERROR")

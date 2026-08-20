@@ -106,7 +106,7 @@ async def preview_smart_command(
                        'dayOfWeek', 'startTime', 'endTime', 'startDate', 'endDate']:
                 processed_parsed_result[key] = value
     
-    # 生成预览数据（包含自动推断的班级和导师）
+    # 生成预览数据（包含自动推断的班级和教师）
     from .smart_command_helpers import generate_preview_data
     preview_data = generate_preview_data(processed_parsed_result, db)
     
@@ -115,12 +115,12 @@ async def preview_smart_command(
     if 'storage_data' not in processed_parsed_result:
         processed_parsed_result['storage_data'] = {}
     
-    # 从 preview_data.fields 中提取推断的班级和导师信息
+    # 从 preview_data.fields 中提取推断的班级和教师信息
     for field in preview_data.get('fields', []):
         if field['label'] == '班级' and field['value'] != '未提供':
             processed_parsed_result['storage_data']['className'] = field['value']
             processed_parsed_result['storage_data']['class_name'] = field['value']
-        elif field['label'] == '导师' and field['value'] != '未提供':
+        elif field['label'] == '教师' and field['value'] != '未提供':
             processed_parsed_result['storage_data']['teacherName'] = field['value']
             processed_parsed_result['storage_data']['teacher_name'] = field['value']
     
@@ -348,8 +348,8 @@ async def get_command_help():
             # 设置分类名称（可以根据category_key映射为中文）
             category_names = {
                 "course_management": "科目管理",
-                "teacher_management": "导师管理",
-                "student_management": "学员管理",
+                "teacher_management": "教师管理",
+                "student_management": "学生管理",
                 "class_management": "班级管理",
                 "room_management": "教室管理",
                 "schedule_management": "排课管理",

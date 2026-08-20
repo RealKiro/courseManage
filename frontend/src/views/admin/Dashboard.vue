@@ -2802,10 +2802,10 @@ const fetchSiteSettings = async () => {
         siteSettingsForm.value.classroom_facility_config.facility_types = []
       }
 
-      // ✅ 获取导师列表用于超级导师选择
+      // ✅ 获取教师列表用于超级教师选择
       const teachersResponse = await api.get('/teachers', { params: { skip: 0, limit: 100000 } })
       teachers.value = teachersResponse.data.items || teachersResponse.data
-      // ✅ 获取学员列表用于班级悬浮信息
+      // ✅ 获取学生列表用于班级悬浮信息
       const studentsResponse = await api.get('/students', { params: { skip: 0, limit: 100000 } })
       students.value = studentsResponse.data.items || studentsResponse.data
       

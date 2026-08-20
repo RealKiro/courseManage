@@ -122,7 +122,7 @@ def check_and_send_morning_reminder():
                 "start_time": s.start_time,
                 "end_time": s.end_time,
                 "course_name": s.course.name if s.course else "未知科目",
-                "teacher_name": s.teacher.name if s.teacher else "未知导师",
+                "teacher_name": s.teacher.name if s.teacher else "未知教师",
                 "class_name": s.class_.name if s.class_ else "未知班级",
                 "room_name": s.room.name if s.room else "未知教室",
                 "teacher_id": s.teacher_id,
@@ -169,33 +169,33 @@ def check_and_send_morning_reminder():
                     for schedule in schedules:
                         log_operation(db, "系统配置", "发送邮件提醒", f"处理课程: class_id={schedule.class_id}, teacher_id={schedule.teacher_id}", "system", "DEBUG")
                         
-                        # 1. 获取导师邮箱
+                        # 1. 获取教师邮箱
                         if schedule.teacher_id:
                             teacher = db.query(Teacher).filter(Teacher.id == schedule.teacher_id).first()
                             if teacher:
-                                log_operation(db, "系统配置", "发送邮件提醒", f"找到导师: {teacher.name}, email={teacher.email}", "system", "DEBUG")
+                                log_operation(db, "系统配置", "发送邮件提醒", f"找到教师: {teacher.name}, email={teacher.email}", "system", "DEBUG")
                                 if teacher and teacher.email:
                                     all_recipients.add(teacher.email)
-                                    log_operation(db, "系统配置", "发送邮件提醒", f"已添加导师邮箱: {teacher.name} - {teacher.email}", "system", "DEBUG")
+                                    log_operation(db, "系统配置", "发送邮件提醒", f"已添加教师邮箱: {teacher.name} - {teacher.email}", "system", "DEBUG")
                             else:
-                                log_operation(db, "系统配置", "发送邮件提醒", f"未找到导师 ID={schedule.teacher_id}", "system", "WARNING")
+                                log_operation(db, "系统配置", "发送邮件提醒", f"未找到教师 ID={schedule.teacher_id}", "system", "WARNING")
                         
-                        # 2. 获取班级中学员的邮箱
+                        # 2. 获取班级中学生的邮箱
                         if schedule.class_id:
                             class_ = db.query(Class).filter(Class.id == schedule.class_id).first()
                             if class_:
                                 log_operation(db, "系统配置", "发送邮件提醒", f"找到班级: {class_.name}, 学生数量={len(class_.students)}", "system", "DEBUG")
-                                # 通过班级的 students 关系获取学员
+                                # 通过班级的 students 关系获取学生
                                 for student in class_.students:
                                     log_operation(db, "系统配置", "发送邮件提醒", f"检查学生: {student.name}, is_active={student.is_active}, email={student.email}", "system", "DEBUG")
                                     if student.is_active:
                                         if student.email:
                                             all_recipients.add(student.email)
-                                            log_operation(db, "系统配置", "发送邮件提醒", f"已添加学员邮箱: {student.name} - {student.email}", "system", "DEBUG")
+                                            log_operation(db, "系统配置", "发送邮件提醒", f"已添加学生邮箱: {student.name} - {student.email}", "system", "DEBUG")
                                         else:
                                             log_operation(db, "系统配置", "发送邮件提醒", f"未找到学生 {student.name} 的邮箱", "system", "WARNING")
                                         
-                                        # 如果学员有家长邮箱，也添加
+                                        # 如果学生有家长邮箱，也添加
                                         if hasattr(student, 'parent_email') and student.parent_email:
                                             all_recipients.add(student.parent_email)
                                             log_operation(db, "系统配置", "发送邮件提醒", f"已添加家长邮箱: {student.name}家长 - {student.parent_email}", "system", "DEBUG")
@@ -296,7 +296,7 @@ def check_and_send_evening_reminder():
                 "start_time": s.start_time,
                 "end_time": s.end_time,
                 "course_name": s.course.name if s.course else "未知科目",
-                "teacher_name": s.teacher.name if s.teacher else "未知导师",
+                "teacher_name": s.teacher.name if s.teacher else "未知教师",
                 "class_name": s.class_.name if s.class_ else "未知班级",
                 "room_name": s.room.name if s.room else "未知教室",
                 "teacher_id": s.teacher_id,
@@ -339,25 +339,25 @@ def check_and_send_evening_reminder():
                     all_recipients = set()
                     
                     for schedule in schedules:
-                        # 1. 获取导师邮箱
+                        # 1. 获取教师邮箱
                         if schedule.teacher_id:
                             teacher = db.query(Teacher).filter(Teacher.id == schedule.teacher_id).first()
                             if teacher and teacher.email:
                                 all_recipients.add(teacher.email)
-                                log_operation(db, "系统配置", "发送邮件提醒", f"添加导师邮箱: {teacher.name} - {teacher.email}", "system", "DEBUG")
+                                log_operation(db, "系统配置", "发送邮件提醒", f"添加教师邮箱: {teacher.name} - {teacher.email}", "system", "DEBUG")
                         
-                        # 2. 获取班级中学员的邮箱（修复：使用正确的关联查询）
+                        # 2. 获取班级中学生的邮箱（修复：使用正确的关联查询）
                         if schedule.class_id:
                             class_ = db.query(Class).filter(Class.id == schedule.class_id).first()
                             if class_:
-                                # 通过班级的 students 关系获取学员
+                                # 通过班级的 students 关系获取学生
                                 for student in class_.students:
                                     if student.is_active:
                                         if student.email:
                                             all_recipients.add(student.email)
-                                            log_operation(db, "系统配置", "发送邮件提醒", f"添加学员邮箱: {student.name} - {student.email}", "system", "DEBUG")
+                                            log_operation(db, "系统配置", "发送邮件提醒", f"添加学生邮箱: {student.name} - {student.email}", "system", "DEBUG")
                                         
-                                        # 如果学员有家长邮箱，也添加
+                                        # 如果学生有家长邮箱，也添加
                                         if hasattr(student, 'parent_email') and student.parent_email:
                                             all_recipients.add(student.parent_email)
                                             log_operation(db, "系统配置", "发送邮件提醒", f"添加家长邮箱: {student.name}家长 - {student.parent_email}", "system", "DEBUG")
@@ -426,15 +426,15 @@ def check_and_send_fee_alert():
                 
                 try:
                     content = f"""## 💰 课时费预警通知
-> **学员：** {student.name}
+> **学生：** {student.name}
 > **科目：** {course.name if course else '未知'}
 > **剩余课时：** <font color="warning">{fee.remaining_hours:.2f} 小时</font>
 > **剩余金额：** <font color="warning">¥{remaining_amount:.2f}</font>
 
-请及时联系学员续费！"""
+请及时联系学生续费！"""
                     wechat_notifier.send_message_by_type("fee_alert", content, is_markdown=True)
                 except Exception as e:
-                    log_operation(db, "费用管理", "定时发送微信缴费预警失败", f"学员ID: {fee.student_id}, 科目ID: {fee.course_id}, 错误: {str(e)}", "system", "ERROR")
+                    log_operation(db, "费用管理", "定时发送微信缴费预警失败", f"学生ID: {fee.student_id}, 科目ID: {fee.course_id}, 错误: {str(e)}", "system", "ERROR")
                 
                 if fee_alert_email_enabled and student.email:
                     try:
@@ -469,7 +469,7 @@ def check_and_send_fee_alert():
                                     </div>
                                     <div class="content">
                                         <div class="info-item">
-                                            <strong>学员姓名：</strong>{student.name}
+                                            <strong>学生姓名：</strong>{student.name}
                                         </div>
                                         <div class="info-item">
                                             <strong>科目名称：</strong>{course.name if course else '未知'}
@@ -484,7 +484,7 @@ def check_and_send_fee_alert():
                                             <strong>预警阈值：</strong>{fee.alert_threshold} 小时
                                         </div>
                                         <p style="margin-top: 20px; color: #909399;">
-                                            温馨提示：您的课时即将用完，请及时联系机构续费，以免影响正常上课。
+                                            温馨提示：您的课时即将用完，请及时联系学校续费，以免影响正常上课。
                                         </p>
                                     </div>
                                 </div>
@@ -492,9 +492,9 @@ def check_and_send_fee_alert():
                             </html>
                             """
                             email_notifier_instance.send_email([student.email], subject, html_content)
-                            log_operation(db, "费用管理", "定时发送邮件缴费预警", f"已发送邮件给学员 {student.name} ({student.email})", "system", "INFO")
+                            log_operation(db, "费用管理", "定时发送邮件缴费预警", f"已发送邮件给学生 {student.name} ({student.email})", "system", "INFO")
                     except Exception as e:
-                        log_operation(db, "费用管理", "定时发送邮件缴费预警失败", f"学员ID: {fee.student_id}, 错误: {str(e)}", "system", "ERROR")
+                        log_operation(db, "费用管理", "定时发送邮件缴费预警失败", f"学生ID: {fee.student_id}, 错误: {str(e)}", "system", "ERROR")
         
         if alert_count > 0:
             log_operation(db, "费用管理", "定时课时费预警", f"共发送 {alert_count} 条课时费预警通知", "system", "INFO")

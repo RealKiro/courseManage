@@ -36,7 +36,7 @@ def run_migration():
                 ADD COLUMN schedule_edit_restricted BOOLEAN DEFAULT TRUE
             """))
             conn.execute(text("""
-                COMMENT ON COLUMN settings.schedule_edit_restricted IS '课程安排编辑限制：True-仅超级管理员可编辑已完训/延期/取消的课程，False-课程管理导师也可编辑'
+                COMMENT ON COLUMN settings.schedule_edit_restricted IS '课程安排编辑限制：True-仅超级管理员可编辑已完课/延期/取消的课程，False-课程管理教师也可编辑'
             """))
             print("✓ 添加 settings.schedule_edit_restricted 字段")
         else:
@@ -56,7 +56,7 @@ def run_migration():
                 ADD COLUMN schedule_delete_restricted BOOLEAN DEFAULT TRUE
             """))
             conn.execute(text("""
-                COMMENT ON COLUMN settings.schedule_delete_restricted IS '课程安排删除限制：True-仅超级管理员可删除已完训/延期/取消的课程，False-课程管理导师也可删除'
+                COMMENT ON COLUMN settings.schedule_delete_restricted IS '课程安排删除限制：True-仅超级管理员可删除已完课/延期/取消的课程，False-课程管理教师也可删除'
             """))
             print("✓ 添加 settings.schedule_delete_restricted 字段")
         else:

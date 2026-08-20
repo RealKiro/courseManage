@@ -487,7 +487,7 @@
         style="margin-top: 20px; justify-content: center; display: flex;"
       />
     </el-card>
-    <!-- 班级学员弹窗 -->
+    <!-- 班级学生弹窗 -->
     <el-dialog v-model="classStudentsDialogVisible" :title="t('scheduleView.classStudentList')" width="600px">
       <el-table :data="classStudents" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="80" />
@@ -667,7 +667,7 @@ const fetchTeachers = async () => {
     const response = await api.get('/teachers', { params: { skip: 0, limit: 100000 } })
     teachers.value = Array.isArray(response.data.items) ? response.data.items : (Array.isArray(response.data) ? response.data : [])
   } catch (error) {
-    window.logger.error('获取导师列表失败:', error)
+    window.logger.error('获取教师列表失败:', error)
     teachers.value = []
   }
 }
@@ -687,7 +687,7 @@ const fetchStudents = async () => {
     const response = await api.get('/students', { params: { skip: 0, limit: 100000 } })
     students.value = Array.isArray(response.data.items) ? response.data.items : (Array.isArray(response.data) ? response.data : [])
   } catch (error) {
-    window.logger.error('获取学员列表失败:', error)
+    window.logger.error('获取学生列表失败:', error)
     students.value = []
   }
 }
@@ -700,13 +700,13 @@ const showClassStudents = async (classId) => {
     classStudents.value = Array.isArray(response.data.items) ? response.data.items : (Array.isArray(response.data) ? response.data : [])
     classStudentsDialogVisible.value = true
   } catch (error) {
-    window.logger.error('获取班级学员失败:', error)
+    window.logger.error('获取班级学生失败:', error)
     ElMessage.error(t('scheduleView.getClassStudentsFailed'))
     classStudents.value = []
   }
 }
 
-// 获取导师联系方式
+// 获取教师联系方式
 const getTeacherContact = (teacherId) => {
   const teacher = teachers.value.find(t => t.id === teacherId)
   return teacher ? teacher.contact_phone +" | "+ teacher.email : null

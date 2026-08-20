@@ -14,14 +14,13 @@
 
 | 功能标识 | 名称 | 相关 API |
 | --- | --- | --- |
-| `grade_trend` | 学员成绩管理 | `/api/grades` |
-| `fee_management` | 费用管理 | `/api/fees` |
+| `grade_trend` | 学生成绩管理 | `/api/grades` |
 | `smart_scheduling` | 智能算法排课 | `/api/schedules/auto-schedule` |
 | `wechat_notify` | 微信通知管理 | `/api/wechat` |
 | `smart_command` | 智能指令管理 | `/api/smart-command` |
 | `dashboard_view` | 运营大屏 | `/api/statistics/*` |
 | `database_management` | 数据库管理 | `/api/database` |
-| `student_evaluation` | 学员评价管理 | `/api/evaluations` |
+| `student_evaluation` | 学生评价管理 | `/api/evaluations` |
 | `floating_sphere` | 全站快捷按钮 | 仅前端 |
 
 界面上「系统管理 → 系统授权管理」页面仍然存在，会显示为已激活状态，
@@ -46,7 +45,7 @@
   让前端「系统授权管理」页面仍能正常渲染
 - **删除全部向供应商回传数据的接口实现**：`/apply`、`/feedback`、
   `/notify-supplier-view`、`/request-replace`、`/preview-addon`
-  改为空实现，不再发送任何信息（原先会把机构名称、联系人、电话、邮箱、
+  改为空实现，不再发送任何信息（原先会把学校名称、联系人、电话、邮箱、
   机器码推送到上游的企业微信 webhook）
 
 > **为什么保留这个文件而不是一并删掉？**
@@ -68,13 +67,13 @@
 
 - `licenseState` 初始即为 `activated: true` + 9 项功能全 `true`
 - `hasFeature()` 恒返回 `true`
-- `loadLicenseStatus()` 仍拉取 `/license/status` 以同步机构/联系人信息，
+- `loadLicenseStatus()` 仍拉取 `/license/status` 以同步学校/联系人信息，
   但不再让后端返回值影响 `activated` 与 `features`
 
 > 这里必须同时改两处：模板里十余处用的是 `hasFeature()`，
 > 而 `router/index.js` 的路由守卫（第 186–192 行）是**直接读**
 > `licenseState.activated` 与 `licenseState.features[...]`。
-> 只改 `hasFeature()` 的话，导航到费用管理/成绩管理等页面仍会被拦回首页。
+> 只改 `hasFeature()` 的话，导航到成绩管理/学生评价等页面仍会被拦回首页。
 
 **`backend/setup_cython.py`** 与 **`backend/Dockerfile`**：
 从 `CRITICAL_MODULES` 中移除两个 license 模块（不再需要源码保护），

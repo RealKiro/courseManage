@@ -321,7 +321,7 @@ const fetchTeachers = async () => {
     const response = await api.get('/teachers', { params: { is_active: true, skip: 0, limit: 100000 } })
     teachers.value = response.data.items || response.data
   } catch (error) {
-    window.logger.error('获取导师列表失败:', error)
+    window.logger.error('获取教师列表失败:', error)
   }
 }
 
@@ -330,7 +330,7 @@ const fetchStudents = async () => {
     const response = await api.get('/students', { params: { is_active: true, skip: 0, limit: 100000 } })
     students.value = response.data.items || response.data
   } catch (error) {
-    window.logger.error('获取学员列表失败:', error)
+    window.logger.error('获取学生列表失败:', error)
   }
 }
 

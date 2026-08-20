@@ -28,15 +28,15 @@ HARD_CONSTRAINTS = [
     },
     {
         "id": "HC_TEACHER_TIME",
-        "name": "导师时间约束",
-        "description": "一个导师在同一个时间（课节）内只能安排一门课程",
+        "name": "教师时间约束",
+        "description": "一个教师在同一个时间（课节）内只能安排一门课程",
         "is_hard_constraint": True,
         "is_active": True
     },
     {
         "id": "HC_STUDENT_TIME",
-        "name": "学员时间约束",
-        "description": "一个学员在同一个时间（课节）内只能被安排一门课程",
+        "name": "学生时间约束",
+        "description": "一个学生在同一个时间（课节）内只能被安排一门课程",
         "is_hard_constraint": True,
         "is_active": True
     }

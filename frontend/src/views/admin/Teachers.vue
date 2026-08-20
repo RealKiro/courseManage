@@ -307,7 +307,7 @@
           />
         </el-form-item>
     </el-dialog>
-    <!-- 批量添加导师对话框 -->
+    <!-- 批量添加教师对话框 -->
     <el-dialog v-model="batchAddDialogVisible" :title="t('teachers.batchAddTitle')" width="800px" draggable>
       <div style="margin-bottom: 20px;">
         <el-alert
@@ -682,7 +682,7 @@ const fetchTeachers = async () => {
     teachers.value = response.data.items
     pagination.value.total = response.data.total
     
-    // 获取最后一个导师代码（按代码排序后的最后一个）
+    // 获取最后一个教师代码（按代码排序后的最后一个）
     if (response.data.items && response.data.items.length > 0) {
       const sortedByCode = [...response.data.items].sort((a, b) => a.code.localeCompare(b.code))
       lastTeacherCode.value = sortedByCode[sortedByCode.length - 1].code
@@ -690,7 +690,7 @@ const fetchTeachers = async () => {
       lastTeacherCode.value = ''
     }
   } catch (error) {
-    window.logger.error('获取导师列表失败:', error)
+    window.logger.error('获取教师列表失败:', error)
   } finally {
     loading.value = false
   }
@@ -823,7 +823,7 @@ const handleBatchAddSubmit = async () => {
     batchAddDialogVisible.value = false
     await fetchTeachers()
   } catch (error) {
-    window.logger.error('批量添加导师失败:', error)
+    window.logger.error('批量添加教师失败:', error)
     ElMessage.error(t('teachers.batchAddFailed'))
   } finally {
     batchAddLoading.value = false
@@ -1001,7 +1001,7 @@ const forceCreateTeacher = async (formData) => {
     dialogVisible.value = false
     fetchTeachers()
   } catch (error) {
-    window.logger.error('强制创建导师失败:', error)
+    window.logger.error('强制创建教师失败:', error)
     if (error.response && error.response.data && error.response.data.detail) {
       ElMessage.error(t('common.operationFailed') + ': ' + error.response.data.detail)
     } else {
@@ -1248,7 +1248,7 @@ onMounted(async () => {
           showEditDialog(response.data)
         }
       } catch (error) {
-        window.logger.error('获取导师信息失败:', error)
+        window.logger.error('获取教师信息失败:', error)
         ElMessage.error(t('teachers.loadTeacherFailed'))
       }
     }
@@ -1278,7 +1278,7 @@ watch(() => route.query, (newQuery, oldQuery) => {
           showEditDialog(response.data)
         }
       }).catch(error => {
-        window.logger.error('获取导师信息失败:', error)
+        window.logger.error('获取教师信息失败:', error)
         ElMessage.error(t('teachers.loadTeacherFailed'))
       })
     }

@@ -5,7 +5,7 @@
 背景
 ----
 上游版本通过 RSA 签名的 License Key 对 9 项高级功能做门禁，并会向供应商的
-企业微信 webhook / 心跳服务回传机构名称、联系人、机器码等信息。
+企业微信 webhook / 心跳服务回传学校名称、联系人、机器码等信息。
 
 本仓库为 AGPL-3.0 下的自用分支，已：
   * 删除 ``utils/license.py``（RSA 验签、机器码、心跳、供应商发现）
@@ -47,7 +47,7 @@ PREMIUM_FEATURES = [
 ]
 
 FEATURE_NAMES = {
-    "grade_trend": "学员成绩管理",
+    "grade_trend": "学生成绩管理",
     "fee_management": "费用管理",
     "smart_scheduling": "智能算法排课",
     "wechat_notify": "微信通知管理",
@@ -55,7 +55,7 @@ FEATURE_NAMES = {
     "dashboard_view": "运营大屏",
     "floating_sphere": "全站快捷按钮",
     "database_management": "数据库管理",
-    "student_evaluation": "学员评价管理",
+    "student_evaluation": "学生评价管理",
 }
 
 _OPEN_NOTICE = "本部署已放开全部高级功能，无需授权。"
@@ -110,7 +110,7 @@ class LicenseStatusResponse(BaseModel):
 def get_license_status(db: Session = Depends(get_db)):
     """返回「已激活、全部功能可用」的固定状态。
 
-    仍从 settings 读取机构与联系人信息，让前端页面展示保持正常。
+    仍从 settings 读取学校与联系人信息，让前端页面展示保持正常。
     """
     settings = db.query(Settings).first()
 
@@ -181,7 +181,7 @@ def deactivate_feature(feature_name: str, current_user: User = Depends(get_curre
 
 
 # ---------------------------------------------------------------- 已禁用的对外回传
-# 上游这几个接口会把机构名称、联系人、电话、邮箱、机器码等发送到供应商的
+# 上游这几个接口会把学校名称、联系人、电话、邮箱、机器码等发送到供应商的
 # 企业微信 webhook 与邮箱。自用部署没有这个需要，故只保留空实现，
 # 既不发送任何数据，也不会让前端按钮变成 404。
 _NO_UPSTREAM = "本部署已移除向供应商回传数据的通道，未发送任何信息。"
@@ -189,7 +189,7 @@ _NO_UPSTREAM = "本部署已移除向供应商回传数据的通道，未发送�
 
 @router.post("/apply", response_model=LicenseActionResponse)
 def apply_license(payload: Optional[dict] = None, current_user: User = Depends(get_current_user)):
-    """原「申请授权」：不再向供应商发送机构与联系人信息。"""
+    """原「申请授权」：不再向供应商发送学校与联系人信息。"""
     return LicenseActionResponse(success=False, message=_NO_UPSTREAM)
 
 
@@ -215,6 +215,6 @@ def request_replace_license(payload: Optional[dict] = None):
 def submit_feedback(payload: Optional[dict] = None):
     """原「功能/系统反馈」：不再回传到供应商 webhook。
 
-    如需保留反馈功能，可在此改为只发送到本机构自己配置的 SMTP 邮箱。
+    如需保留反馈功能，可在此改为只发送到本校自己配置的 SMTP 邮箱。
     """
     return LicenseActionResponse(success=False, message=_NO_UPSTREAM)

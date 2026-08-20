@@ -27,7 +27,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 REFRESH_GRACE_MINUTES = 60 * 24
 
 def check_teacher_visibility(db: Session, current_user: User) -> bool:
-    """检查导师可见性限制是否开启"""
+    """检查教师可见性限制是否开启"""
     settings = db.query(Settings).first()
     
     if not settings or not settings.teacher_visibility_restricted:
@@ -37,7 +37,7 @@ def check_teacher_visibility(db: Session, current_user: User) -> bool:
     return True
 
 def is_subject_teacher(db: Session, current_user: User) -> bool:
-    """检查当前用户是否为超级导师"""
+    """检查当前用户是否为超级教师"""
     import json
     settings = db.query(Settings).first()
     if not settings or not settings.subject_teachers:
@@ -62,7 +62,7 @@ def is_subject_teacher(db: Session, current_user: User) -> bool:
     return current_user.teacher_id in super_teacher_ids
 
 def is_completed_training_manager(db: Session, current_user: User) -> bool:
-    """检查当前用户是否为完训内容管理导师"""
+    """检查当前用户是否为完课内容管理教师"""
     import json
     if not current_user.teacher_id:
         return False
@@ -90,7 +90,7 @@ def can_edit_completed_schedule(db: Session, current_user: User, schedule_execut
     if current_user.role == 'super_admin':
         return True
     
-    # 完训内容管理导师可以编辑已完训的课程安排
+    # 完课内容管理教师可以编辑已完课的课程安排
     if is_completed_training_manager(db, current_user):
         return True
     
@@ -114,7 +114,7 @@ def can_delete_completed_schedule(db: Session, current_user: User, schedule_exec
     if current_user.role == 'super_admin':
         return True
     
-    # 完训内容管理导师可以删除已完训的课程安排
+    # 完课内容管理教师可以删除已完课的课程安排
     if is_completed_training_manager(db, current_user):
         return True
     
@@ -131,7 +131,7 @@ def can_delete_completed_schedule(db: Session, current_user: User, schedule_exec
     return True
 
 def get_teacher_visibility_filter(db: Session, current_user: User):
-    """获取导师可见性过滤条件"""
+    """获取教师可见性过滤条件"""
     if not check_teacher_visibility(db, current_user):
         return None 
     
@@ -139,7 +139,7 @@ def get_teacher_visibility_filter(db: Session, current_user: User):
         return None 
     
     if not current_user.teacher_id:
-        log_operation(db, "用户认证", "获取导师可见性过滤条件", f"警告：开启了限制但用户未绑定导师，将隐藏所有数据", current_user.username, "WARNING")
+        log_operation(db, "用户认证", "获取教师可见性过滤条件", f"警告：开启了限制但用户未绑定教师，将隐藏所有数据", current_user.username, "WARNING")
         return false() 
     
     return current_user.teacher_id
@@ -514,12 +514,12 @@ def get_current_course_admin_or_completed_training_manager(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """课程管理员或完训内容管理导师权限检查"""
+    """课程管理员或完课内容管理教师权限检查"""
     if current_user.role in ['super_admin', 'course_admin']:
         return current_user
     if is_completed_training_manager(db, current_user):
         return current_user
-    log_operation(None, "用户认证", "检查课程管理员/完训内容管理导师权限", f"权限不足，当前角色: {current_user.role}", current_user.username, "WARNING")
+    log_operation(None, "用户认证", "检查课程管理员/完课内容管理教师权限", f"权限不足，当前角色: {current_user.role}", current_user.username, "WARNING")
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="权限不足"
@@ -617,10 +617,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     user.last_active = datetime.now()
     db.commit()
     
-    # 检查是否为超级导师
+    # 检查是否为超级教师
     is_subject_teacher_flag = is_subject_teacher(db, user)
     
-    log_operation(db, "用户", "登录", f"用户登录成功: {user.username}, 超级导师: {is_subject_teacher_flag}", user.username)
+    log_operation(db, "用户", "登录", f"用户登录成功: {user.username}, 超级教师: {is_subject_teacher_flag}", user.username)
     return {
         "access_token": access_token, 
         "token_type": "bearer",

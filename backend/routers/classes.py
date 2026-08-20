@@ -26,7 +26,7 @@ def get_classes(
     log_operation(db, "班级管理", "查询班级列表", f"参数: skip={skip}, limit={limit}, search={search}, is_active={is_active}, sort_field={sort_field}, sort_order={sort_order}", current_user.username, "DEBUG")
     query = db.query(Class)
     
-    # 应用导师可见性过滤
+    # 应用教师可见性过滤
     teacher_filter = get_teacher_visibility_filter(db, current_user)
     
     if teacher_filter is not None:
@@ -34,17 +34,17 @@ def get_classes(
             # 如果是 false() 对象，则查询结果为空
             query = query.filter(teacher_filter)
         else:
-            # 逻辑：只查询该导师（teacher_filter）亲自排过课的班级
-            log_operation(db, "班级管理", "应用导师过滤", f"导师ID: {teacher_filter}", current_user.username, "DEBUG")
+            # 逻辑：只查询该教师（teacher_filter）亲自排过课的班级
+            log_operation(db, "班级管理", "应用教师过滤", f"教师ID: {teacher_filter}", current_user.username, "DEBUG")
             
-            # 子查询：找出该导师所有排课记录中的 class_id
+            # 子查询：找出该教师所有排课记录中的 class_id
             related_class_ids_subquery = db.query(Schedule.class_id).filter(
                 Schedule.teacher_id == teacher_filter
             ).distinct().subquery()
             
             query = query.filter(Class.id.in_(related_class_ids_subquery))
     else:
-        log_operation(db, "班级管理", "导师可见性限制未启用", f"教师ID: {current_user.id} - {current_user.username}", current_user.username, "DEBUG")
+        log_operation(db, "班级管理", "教师可见性限制未启用", f"教师ID: {current_user.id} - {current_user.username}", current_user.username, "DEBUG")
 
     if search:
         query = query.filter(

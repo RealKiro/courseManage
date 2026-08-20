@@ -181,7 +181,7 @@ def get_settings(db: Session = Depends(get_db)):
     settings = db.query(Settings).first()
     if not settings:
         settings = Settings(
-            site_name="默认机构",
+            site_name="默认学校",
             site_logo="",
             site_url="",
             organization_website="",
@@ -323,7 +323,7 @@ def update_settings(
     
     if settings_data.site_name is not None:
         if not settings_data.site_name or not settings_data.site_name.strip():
-            raise HTTPException(status_code=400, detail="机构名称不能为空")
+            raise HTTPException(status_code=400, detail="学校名称不能为空")
         settings.site_name = settings_data.site_name
     
     if settings_data.site_url is not None:
@@ -688,13 +688,13 @@ def test_specific_webhook(
         raise HTTPException(status_code=400, detail="Webhook URL 不能为空")
     
     settings = db.query(Settings).first()
-    site_name = settings.site_name if settings else "未知机构"
+    site_name = settings.site_name if settings else "未知学校"
     
     try:
         data = {
             "msgtype": "text",
             "text": {
-                "content": f"🎉 **系统通知测试**\n\n机构：{site_name}\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n如果您收到此消息，说明该 Webhook 配置有效！"
+                "content": f"🎉 **系统通知测试**\n\n学校：{site_name}\n时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n如果您收到此消息，说明该 Webhook 配置有效！"
             }
         }
         resp = requests.post(url, json=data, timeout=5)

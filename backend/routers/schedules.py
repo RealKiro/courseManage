@@ -65,7 +65,7 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
     existing_schedules = query.all()
     
     for existing in existing_schedules:
-        # 检查该课程安排的学员是否全部请假，如果是则资源已释放
+        # 检查该课程安排的学生是否全部请假，如果是则资源已释放
         all_on_leave = False
         stmt_check = select(schedule_student.c.attendance_status).where(
             schedule_student.c.schedule_id == existing.id
@@ -76,12 +76,12 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
             if all(s == 'leave' for s in all_statuses):
                 all_on_leave = True
         
-        # 硬性约束：导师时间冲突（HC_TEACHER_TIME）
+        # 硬性约束：教师时间冲突（HC_TEACHER_TIME）
         if existing.teacher_id == schedule.teacher_id and not all_on_leave:
             conflicts.append(ConflictInfo(
                 schedule_id=existing.id,
-                conflict_type="导师时间冲突",
-                conflict_description=f"导师 {schedule.teacher_id} 在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 已有课程安排",
+                conflict_type="教师时间冲突",
+                conflict_description=f"教师 {schedule.teacher_id} 在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 已有课程安排",
                 related_schedules=[existing.id]
             ))
         
@@ -94,7 +94,7 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
                 related_schedules=[existing.id]
             ))
         elif not all_on_leave:
-            # 硬性约束：学员时间冲突（HC_STUDENT_TIME）
+            # 硬性约束：学生时间冲突（HC_STUDENT_TIME）
             # 检查两个班级是否有共同的学生
             if class_students_cache is None:
                 # 如果没有缓存，查询数据库
@@ -112,12 +112,12 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
             
             # 如果存在共同学生，检查是否有实际冲突
             if common_students:
-                # 如果已完成的课程中的学员已有出勤记录，则不算冲突
-                # 因为这些学员在该课程中已经有确定的出勤状态记录
+                # 如果已完成的课程中的学生已有出勤记录，则不算冲突
+                # 因为这些学生在该课程中已经有确定的出勤状态记录
                 # 这种情况可能是：
-                # - 'leave'/'absent': 学员在该课程已请假/缺勤，可以在其他课程补课
-                # - 'present': 学员在该课程已出勤，可以在其他课程补假期的课
-                # 已完训课程的学员状态已经确定，不应影响其他课程的完训
+                # - 'leave'/'absent': 学生在该课程已请假/缺勤，可以在其他课程补课
+                # - 'present': 学生在该课程已出勤，可以在其他课程补假期的课
+                # 已完课课程的学生状态已经确定，不应影响其他课程的完课
                 if existing.execution_status == 'completed':
                     stmt = select(schedule_student.c.student_id, schedule_student.c.attendance_status).where(
                         (schedule_student.c.schedule_id == existing.id) &
@@ -130,7 +130,7 @@ def check_conflicts(db: Session, schedule: Schedule, exclude_id: int = None, cla
                     if attendance_records:
                         pass  # 不报冲突
                     else:
-                        # 没有出勤记录的情况，视为没有冲突（可能是试听课等特殊情况）
+                        # 没有出勤记录的情况，视为没有冲突（可能是试读课等特殊情况）
                         pass
                 else:
                     # 未完成的课程，任何共同学生都算冲突
@@ -168,12 +168,12 @@ async def get_absent_students(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """获取需要补课的学员列表（缺席或请假且未补课）"""
+    """获取需要补课的学生列表（缺席或请假且未补课）"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
-    # 查询缺席或请假且未补课的学员
+    # 查询缺席或请假且未补课的学生
     stmt = select(schedule_student).where(
         (schedule_student.c.schedule_id == schedule_id) &
         (schedule_student.c.attendance_status.in_(['absent', 'leave'])) &
@@ -183,7 +183,7 @@ async def get_absent_students(
     result = db.execute(stmt)
     student_records = result.fetchall()
     
-    # 获取学员详细信息
+    # 获取学生详细信息
     absent_students = []
     for record in student_records:
         student = db.query(Student).filter(Student.id == record.student_id).first()
@@ -248,7 +248,7 @@ def check_leave_conflicts(db: Session, schedule: Schedule) -> List[str]:
     ).all()
     
     for leave in teacher_leaves:
-        conflicts.append(f"导师请假冲突: {leave.start_date} 至 {leave.end_date} - {leave.reason}")
+        conflicts.append(f"教师请假冲突: {leave.start_date} 至 {leave.end_date} - {leave.reason}")
     
     return conflicts
 
@@ -269,7 +269,7 @@ def check_leave_warnings(db: Session, schedule: Schedule) -> List[str]:
         ).all()
         
         for leave in student_leaves:
-            warnings.append(f"学员请假提醒: {student.name} {leave.start_date} 至 {leave.end_date} - {leave.reason}")
+            warnings.append(f"学生请假提醒: {student.name} {leave.start_date} 至 {leave.end_date} - {leave.reason}")
     
     return warnings
 
@@ -356,7 +356,7 @@ def check_class_availability_with_details(db: Session, class_id: int, day_of_wee
         return {
             'available': False,
             'unavailable_students': [],
-            'message': '班级没有活跃学员'
+            'message': '班级没有活跃学生'
         }
     
     unavailable_students = []
@@ -420,7 +420,7 @@ def check_class_availability_with_details(db: Session, class_id: int, day_of_wee
     return {
         'available': len(unavailable_students) == 0,
         'unavailable_students': unavailable_students,
-        'message': '所有学员都可用' if len(unavailable_students) == 0 else f'{len(unavailable_students)}个学员不可用'
+        'message': '所有学生都可用' if len(unavailable_students) == 0 else f'{len(unavailable_students)}个学生不可用'
     }
 
 def check_teacher_course_availability(db: Session, teacher_id: int, course_id: int) -> bool:
@@ -466,7 +466,7 @@ def get_schedules(
         joinedload(Schedule.room)
     )
     
-    # 应用导师可见性过滤
+    # 应用教师可见性过滤
     teacher_filter = get_teacher_visibility_filter(db, current_user)
     
     if teacher_filter is not None:
@@ -475,28 +475,28 @@ def get_schedules(
             query = query.filter(teacher_filter)
         else:
             # 现在 teacher_filter 直接就是 ID (int)
-            log_operation(db, "课程安排", "应用导师过滤", f"教师ID: {current_user.id} - {current_user.username}, 导师过滤ID: {teacher_filter}", current_user.username, "DEBUG")
+            log_operation(db, "课程安排", "应用教师过滤", f"教师ID: {current_user.id} - {current_user.username}, 教师过滤ID: {teacher_filter}", current_user.username, "DEBUG")
             query = query.filter(Schedule.teacher_id == teacher_filter)
     else:
-        log_operation(db, "课程安排", "导师可见性限制未启用", f"教师ID: {current_user.id} - {current_user.username}, 导师过滤: None", current_user.username, "DEBUG")
+        log_operation(db, "课程安排", "教师可见性限制未启用", f"教师ID: {current_user.id} - {current_user.username}, 教师过滤: None", current_user.username, "DEBUG")
 
     # 如果指定了ID，直接按ID过滤（最高优先级）
     if id:
         query = query.filter(Schedule.id == id)
 
-    # 学员查询逻辑：直接查询 schedule_student 表中该学员参与的课程安排
+    # 学生查询逻辑：直接查询 schedule_student 表中该学生参与的课程安排
     if student_ids:
         try:
             student_id_list = [int(id.strip()) for id in student_ids.split(',')]
             
-            # 直接查询该学员在 schedule_student 表中关联的所有课程安排ID
+            # 直接查询该学生在 schedule_student 表中关联的所有课程安排ID
             stmt = select(schedule_student.c.schedule_id).where(
                 schedule_student.c.student_id.in_(student_id_list)
             )
             result = db.execute(stmt)
             schedule_ids = [row[0] for row in result.fetchall()]
             
-            # 如果学员没有参与任何课程安排，返回空结果
+            # 如果学生没有参与任何课程安排，返回空结果
             if not schedule_ids:
                 return {
                     "items": [],
@@ -588,7 +588,7 @@ def get_schedules(
     
     if has_absent_students is not None:
         if has_absent_students:
-            # 过滤出有缺席或请假学员的课程（未全员出席）
+            # 过滤出有缺席或请假学生的课程（未全员出席）
             subquery = db.query(schedule_student.c.schedule_id).filter(
                 schedule_student.c.attendance_status.in_(['leave', 'absent'])
             ).distinct()
@@ -614,7 +614,7 @@ def get_schedules(
             else:
                 order_by_clauses.append(asc(Course.name))
         elif sort_field == 'teacher':
-            # 按导师名称排序
+            # 按教师名称排序
             query = query.join(Teacher)
             if sort_order == "desc":
                 order_by_clauses.append(desc(Teacher.name))
@@ -660,7 +660,7 @@ def get_schedules(
     
     result = []
     for schedule in schedules:
-        # 1. 获取学员列表
+        # 1. 获取学生列表
         stmt = select(
             schedule_student.c.student_id, 
             schedule_student.c.attendance_status,
@@ -786,7 +786,7 @@ def get_all_conflicts(db: Session = Depends(get_db)):
             for lc in leave_conflicts:
                 all_conflicts.append(ConflictInfo(
                     schedule_id=schedule.id,
-                    conflict_type="导师请假冲突",
+                    conflict_type="教师请假冲突",
                     conflict_description=lc,
                     related_schedules=[schedule.id]
                 ))
@@ -894,7 +894,7 @@ def auto_schedule(
             class_ = db.query(Class).filter(Class.id == schedule.class_id).first()
             room = db.query(Room).filter(Room.id == schedule.room_id).first() if room_type == "offline_physical" else None
             
-            # 获取班级学员列表
+            # 获取班级学生列表
             class_students = []
             if class_:
                 class_students = get_students_by_class(db, class_.id, is_active=True)
@@ -1122,11 +1122,11 @@ def create_schedule(
     # 检查节假日
     is_date_holiday = is_holiday(schedule.start_date)
     if is_date_holiday:
-        # 检查导师是否允许节假日排课
+        # 检查教师是否允许节假日排课
         if not teacher.allow_holiday_scheduling:
             raise HTTPException(
                 status_code=400,
-                detail=f"该日期为节假日，导师{teacher.name}不允许节假日排课"
+                detail=f"该日期为节假日，教师{teacher.name}不允许节假日排课"
             )
         
         # 检查班级的所有学生是否允许节假日排课
@@ -1136,7 +1136,7 @@ def create_schedule(
             if not student.allow_holiday_scheduling:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"该日期为节假日，学员{student.name}不允许节假日排课"
+                    detail=f"该日期为节假日，学生{student.name}不允许节假日排课"
                 )
 
     # 检查班级是否有学生
@@ -1146,7 +1146,7 @@ def create_schedule(
         raise HTTPException(status_code=400, detail="该班级没有学生，无法排课")
     
     # 检查班级的学生是否在该时间段可用
-    # 传入 is_date_holiday 参数，如果是节假日且学员允许，则跳过星期几检查
+    # 传入 is_date_holiday 参数，如果是节假日且学生允许，则跳过星期几检查
     availability_result = check_class_availability_with_details(db, schedule.class_id, schedule.day_of_week, schedule.start_time, schedule.end_time, is_holiday=is_date_holiday)
     if not availability_result['available']:
         unavailable_students = availability_result['unavailable_students']
@@ -1158,7 +1158,7 @@ def create_schedule(
             elif not s['time_available']:
                 reasons.append(f"{s['name']}（时间段{schedule.start_time}-{schedule.end_time}不可用）")
         
-        error_detail = f"以下学员在该时间段不可用：{'、'.join(reasons)}"
+        error_detail = f"以下学生在该时间段不可用：{'、'.join(reasons)}"
         log_operation(db, "课程安排", "错误", f"创建排课失败: {error_detail}", current_user.username,"Error")
         raise HTTPException(status_code=400, detail=error_detail)
     
@@ -1177,14 +1177,14 @@ def create_schedule(
         log_operation(db, "课程安排", "添加", "失败", "已经存在完全相同的排课")
         raise HTTPException(status_code=400, detail="已经存在完全相同的排课")
     
-    # 检查导师是否在该时间段可用
+    # 检查教师是否在该时间段可用
     if not check_teacher_availability(db, schedule.teacher_id, schedule.day_of_week, schedule.start_time, schedule.end_time):
-        log_operation(db, "课程安排", "错误", f"创建排课失败: 导师 {teacher.name} 在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 时间段不可用", current_user.username,"Error")
-        raise HTTPException(status_code=400, detail="该导师在该时间段不可用")
+        log_operation(db, "课程安排", "错误", f"创建排课失败: 教师 {teacher.name} 在 {schedule.day_of_week} {schedule.start_time}-{schedule.end_time} 时间段不可用", current_user.username,"Error")
+        raise HTTPException(status_code=400, detail="该教师在该时间段不可用")
 
     if not check_teacher_course_availability(db, teacher.id, course.id):
-        log_operation(db, "课程安排", "错误", f"创建排课失败: 导师 {teacher.name} 不教授科目 {course.name}", current_user.username,"Error")
-        raise HTTPException(status_code=400, detail="该导师不能教授此科目")
+        log_operation(db, "课程安排", "错误", f"创建排课失败: 教师 {teacher.name} 不教授科目 {course.name}", current_user.username,"Error")
+        raise HTTPException(status_code=400, detail="该教师不能教授此科目")
     
     db_schedule = Schedule(
         course_id=schedule.course_id,
@@ -1204,7 +1204,7 @@ def create_schedule(
     db.add(db_schedule)
     db.flush()
     
-    # 创建课程-学员关联记录：将当前班级的所有活跃学员添加到课程安排中
+    # 创建课程-学生关联记录：将当前班级的所有活跃学生添加到课程安排中
     active_students = get_students_by_class(db, class_.id, is_active=True)
     for student in active_students:
         association = schedule_student.insert().values(
@@ -1217,7 +1217,7 @@ def create_schedule(
     db.commit()
     db.refresh(db_schedule)
 
-    # 手动获取学员列表，确保序列化为字典（与 get_schedule 保持一致）
+    # 手动获取学生列表，确保序列化为字典（与 get_schedule 保持一致）
     stmt = select(
         schedule_student.c.student_id, 
         schedule_student.c.attendance_status,
@@ -1294,10 +1294,10 @@ def create_schedule(
     if hasattr(schedule, 'send_notification') and schedule.send_notification:
         try:
             # 这里我们可以复用之前的通知函数，或者使用原有的微信通知逻辑
-            # 为了保持“新建”通知的特殊性（包含学员名单），我们保留原有的微信通知逻辑
+            # 为了保持“新建”通知的特殊性（包含学生名单），我们保留原有的微信通知逻辑
             # 但如果需要邮件通知，建议也在这里调用 email_notifier
             settings = db.query(Settings).first()
-            # 1. 发送到导师微信群和班级微信群（如果配置了微信通知且已授权）
+            # 1. 发送到教师微信群和班级微信群（如果配置了微信通知且已授权）
             if teacher and class_ and course:
                 from routers.license import _check_premium_feature
                 wechat_authorized = _check_premium_feature('wechat_notify', db)
@@ -1337,18 +1337,18 @@ def create_schedule(
                     else:
                         room_info = f"**会议链接：** {schedule.meeting_link}" if schedule.meeting_link else ""
                     
-                    schedule_type_text = '【试听课】' if schedule.schedule_type == 'trial' else '【正式课】'
+                    schedule_type_text = '【试读课】' if schedule.schedule_type == 'trial' else '【正式课】'
 
                     content = f"""## 📅 {schedule_type_text}新课程安排提醒
 > **日期：** {schedule.start_date}
 > **时间：** {schedule.start_time} - {schedule.end_time}
 > **科目：** {course.name}
-> **学员：** {", ".join([student.name for student in students])}
-> **导师：** {teacher.name}
+> **学生：** {", ".join([student.name for student in students])}
+> **教师：** {teacher.name}
 > **班级：** {class_.name}
 > {room_info}
 
-敬请相关导师和学员知悉！"""
+敬请相关教师和学生知悉！"""
                     log_operation(db, "课程安排", "通知", f"准备发送微信通知，内容长度: {len(content)}", current_user.username, "DEBUG")
                     wechat_result = wechat_notifier.send_message_by_type("schedule_arrange", content, class_id=schedule.class_id, class_webhook=class_.wechat_webhook, is_markdown=True, enabled_classes=enabled_classes)
                     log_operation(db, "课程安排", "通知", f"微信发送结果: {wechat_result}", current_user.username, "DEBUG")
@@ -1374,7 +1374,7 @@ def create_schedule(
                 )
                 log_operation(db, "课程安排", "通知", "已加载邮件配置和推广信息", current_user.username, "DEBUG")
                 
-                schedule_type_text = '【试听课】' if schedule.schedule_type == 'trial' else '【正式课】'
+                schedule_type_text = '【试读课】' if schedule.schedule_type == 'trial' else '【正式课】'
 
                 recipient_emails = []
                 if teacher.email:
@@ -1397,8 +1397,8 @@ def create_schedule(
                                     <div class="info-item"><div class="label">日期</div><div class="value">{schedule.start_date}</div></div>
                                     <div class="info-item"><div class="label">时间</div><div class="value">{schedule.start_time} - {schedule.end_time}</div></div>
                                     <div class="info-item"><div class="label">班级</div><div class="value">{class_.name}</div></div>
-                                    <div class="info-item"><div class="label">学员</div><div class="value">{", ".join([student.name for student in students])}</div></div>
-                                    <div class="info-item"><div class="label">导师</div><div class="value">{teacher.name}</div></div>
+                                    <div class="info-item"><div class="label">学生</div><div class="value">{", ".join([student.name for student in students])}</div></div>
+                                    <div class="info-item"><div class="label">教师</div><div class="value">{teacher.name}</div></div>
                                     <div class="info-item"><div class="label">教室</div><div class="value">{room.name}</div></div>
                                     <div class="info-item"><div class="label">科目</div><div class="value">{course.name}</div></div>
                                 </div>
@@ -1418,8 +1418,8 @@ def create_schedule(
                                     <div class="info-item"><div class="label">日期</div><div class="value">{schedule.start_date}</div></div>
                                     <div class="info-item"><div class="label">时间</div><div class="value">{schedule.start_time} - {schedule.end_time}</div></div>
                                     <div class="info-item"><div class="label">科目</div><div class="value">{course.name}</div></div>
-                                    <div class="info-item"><div class="label">学员</div><div class="value">{", ".join([student.name for student in students])}</div></div>
-                                    <div class="info-item"><div class="label">导师</div><div class="value">{teacher.name}</div></div>
+                                    <div class="info-item"><div class="label">学生</div><div class="value">{", ".join([student.name for student in students])}</div></div>
+                                    <div class="info-item"><div class="label">教师</div><div class="value">{teacher.name}</div></div>
                                     <div class="info-item"><div class="label">班级</div><div class="value">{class_.name}</div></div>
                                     <div class="info-item"><div class="label">会议室链接</div><div class="value">{schedule.meeting_link}</div></div>
                                 </div>
@@ -1455,7 +1455,7 @@ def get_schedule(schedule_id: int, db: Session = Depends(get_db), current_user: 
         log_operation(db, "课程安排", "查询", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
-    # 手动获取学员列表，确保序列化为字典
+    # 手动获取学生列表，确保序列化为字典
     stmt = select(
         schedule_student.c.student_id, 
         schedule_student.c.attendance_status,
@@ -1543,13 +1543,13 @@ def update_schedule(
         log_operation(db, "课程安排", "更新", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
-    # 检查权限：完训内容管理导师（非课程管理员）只能编辑已完训/延期/取消的课程
+    # 检查权限：完课内容管理教师（非课程管理员）只能编辑已完课/延期/取消的课程
     from routers.auth import can_edit_completed_schedule, is_completed_training_manager
     if current_user.role not in ['super_admin', 'course_admin']:
         if is_completed_training_manager(db, current_user):
             if db_schedule.execution_status not in ['completed', 'postponed', 'cancelled']:
-                log_operation(db, "课程安排", "更新", f"权限不足: 完训内容管理导师{current_user.username}尝试编辑{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
-                raise HTTPException(status_code=403, detail="完训内容管理导师只能编辑已完训的课程安排")
+                log_operation(db, "课程安排", "更新", f"权限不足: 完课内容管理教师{current_user.username}尝试编辑{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
+                raise HTTPException(status_code=403, detail="完课内容管理教师只能编辑已完课的课程安排")
         else:
             log_operation(db, "课程安排", "更新", f"权限不足: 用户{current_user.username}尝试编辑课程ID{schedule_id}", current_user.username, "WARNING")
             raise HTTPException(status_code=403, detail="权限不足")
@@ -1598,13 +1598,13 @@ def update_schedule(
             if not students:
                 raise HTTPException(status_code=400, detail="该班级没有学生，无法排课")
         
-        # 如果班级ID发生变化，需要更新学员关联记录
+        # 如果班级ID发生变化，需要更新学生关联记录
         old_class_id = db_schedule.class_id
         db_schedule.class_id = schedule.class_id
         
-        # 只有当班级ID真正改变时才更新学员关联
+        # 只有当班级ID真正改变时才更新学生关联
         if old_class_id != schedule.class_id:
-            # 只删除非临时增员的学员关联记录（保留临时增员学员）
+            # 只删除非临时增员的学生关联记录（保留临时增员学生）
             from sqlalchemy import delete as sql_delete
             delete_stmt = sql_delete(schedule_student).where(
                 (schedule_student.c.schedule_id == schedule_id) &
@@ -1612,7 +1612,7 @@ def update_schedule(
             )
             db.execute(delete_stmt)
             
-            # 添加新班级的活跃学员记录
+            # 添加新班级的活跃学生记录
             new_class = db.query(Class).filter(Class.id == schedule.class_id).first()
             if new_class:
                 active_students = get_students_by_class(db, new_class.id, is_active=True)
@@ -1624,7 +1624,7 @@ def update_schedule(
                     )
                     db.execute(association)
                 
-                log_operation(db, "课程安排", "更新", f"课程安排ID{schedule_id}的班级从{old_class_id}变更为{schedule.class_id}，已同步更新学员关联记录（保留临时增员学员）", current_user.username, "INFO")
+                log_operation(db, "课程安排", "更新", f"课程安排ID{schedule_id}的班级从{old_class_id}变更为{schedule.class_id}，已同步更新学生关联记录（保留临时增员学生）", current_user.username, "INFO")
     if schedule.room_id is not None:
         db_schedule.room_id = schedule.room_id
     if schedule.room_id is not None:
@@ -1658,7 +1658,7 @@ def update_schedule(
     if schedule.schedule_type is not None:
         db_schedule.schedule_type = schedule.schedule_type
     
-    # 检查执行状态是否变为完训
+    # 检查执行状态是否变为完课
     old_execution_status = db_schedule.execution_status
     if schedule.execution_status is not None:
         db_schedule.execution_status = schedule.execution_status
@@ -1675,13 +1675,13 @@ def update_schedule(
         while current_date <= check_end_date:
             is_date_holiday = is_holiday(current_date)
             if is_date_holiday:
-                # 获取导师信息
+                # 获取教师信息
                 teacher = db.query(Teacher).filter(Teacher.id == db_schedule.teacher_id).first()
                 if teacher and not teacher.allow_holiday_scheduling:
-                    log_operation(db, "课程安排", "更新", f"更新失败: 日期 {current_date} 为节假日，导师不允许节假日排课", current_user.username, "Error")
+                    log_operation(db, "课程安排", "更新", f"更新失败: 日期 {current_date} 为节假日，教师不允许节假日排课", current_user.username, "Error")
                     raise HTTPException(
                         status_code=400,
-                        detail=f"日期 {current_date} 为节假日，导师不允许节假日排课"
+                        detail=f"日期 {current_date} 为节假日，教师不允许节假日排课"
                     )
                 
                 # 检查班级的所有学生是否允许节假日排课
@@ -1690,10 +1690,10 @@ def update_schedule(
                     students = get_students_by_class(db, class_.id, is_active=True)
                     for student in students:
                         if not student.allow_holiday_scheduling:
-                            log_operation(db, "课程安排", "更新", f"更新失败: 日期 {current_date} 为节假日，学员 {student.name} 不允许节假日排课", current_user.username, "Error")
+                            log_operation(db, "课程安排", "更新", f"更新失败: 日期 {current_date} 为节假日，学生 {student.name} 不允许节假日排课", current_user.username, "Error")
                             raise HTTPException(
                                 status_code=400,
-                                detail=f"日期 {current_date} 为节假日，学员 {student.name} 不允许节假日排课"
+                                detail=f"日期 {current_date} 为节假日，学生 {student.name} 不允许节假日排课"
                             )
             
             current_date += timedelta(days=1)
@@ -1721,24 +1721,24 @@ def update_schedule(
                 elif not s['time_available']:
                     reasons.append(f"{s['name']}（时间段{check_start_time}-{check_end_time}不可用）")
             
-            error_detail = f"以下学员在该时间段不可用：{'、'.join(reasons)}"
+            error_detail = f"以下学生在该时间段不可用：{'、'.join(reasons)}"
             log_operation(db, "课程安排", "更新", f"更新失败: {error_detail}", current_user.username, "Error")
             raise HTTPException(status_code=400, detail=error_detail)
     
     db.commit()
-    # 如果执行状态从非完训变为完训，消耗课时
+    # 如果执行状态从非完课变为完课，消耗课时
     if old_execution_status != "completed" and db_schedule.execution_status == "completed":
         try:
             from routers.fees import consume_hours_with_attendance
             
-            # 如果没有学员记录，先创建默认的学员记录（全部出席）
+            # 如果没有学生记录，先创建默认的学生记录（全部出席）
             query = select(schedule_student.c.id).where(
                 schedule_student.c.schedule_id == schedule_id
             )
             result = db.execute(query).fetchone()
             
             if not result:
-                # 获取班级的活跃学员并创建记录
+                # 获取班级的活跃学生并创建记录
                 class_ = db.query(Class).filter(Class.id == db_schedule.class_id).first()
                 if class_:
                     active_students = get_students_by_class(db, class_.id, is_active=True)
@@ -1785,7 +1785,7 @@ def update_schedule(
 
     db.refresh(db_schedule)
     
-    # 手动获取学员列表，确保序列化为字典（与get_schedule保持一致）
+    # 手动获取学生列表，确保序列化为字典（与get_schedule保持一致）
     stmt = select(
         schedule_student.c.student_id, 
         schedule_student.c.attendance_status,
@@ -1878,20 +1878,20 @@ def update_schedule(
                     else:
                         room_info = f"**会议链接：** {db_schedule.meeting_link}" if db_schedule.meeting_link else ""
                     
-                    schedule_type_text = '【试听课】' if db_schedule.schedule_type == 'trial' else '【正式课】'
+                    schedule_type_text = '【试读课】' if db_schedule.schedule_type == 'trial' else '【正式课】'
 
                     content = f"""## 📝 {schedule_type_text}课程安排变更提醒
     > **日期：** {db_schedule.start_date}
     > **时间：** {db_schedule.start_time} - {db_schedule.end_time}
     > **科目：** {course.name}
-    > **学员：** {", ".join([student.name for student in students])}
-    > **导师：** {teacher.name}
+    > **学生：** {", ".join([student.name for student in students])}
+    > **教师：** {teacher.name}
     > **班级：** {class_.name}
     > {room_info}
 
-    敬请相关导师和学员知悉！"""
+    敬请相关教师和学生知悉！"""
                     
-                    # 1. 发送微信通知(同时支持发送到导师微信群和班级微信群)（如果配置了微信通知且已授权）
+                    # 1. 发送微信通知(同时支持发送到教师微信群和班级微信群)（如果配置了微信通知且已授权）
                     from routers.license import _check_premium_feature
                     wechat_authorized = _check_premium_feature('wechat_notify', db)
                     if wechat_authorized:
@@ -1952,8 +1952,8 @@ def update_schedule(
                                         <div class="info-item"><div class="label">日期</div><div class="value">{db_schedule.start_date}</div></div>
                                         <div class="info-item"><div class="label">时间</div><div class="value">{db_schedule.start_time} - {db_schedule.end_time}</div></div>
                                         <div class="info-item"><div class="label">班级</div><div class="value">{class_.name}</div></div>
-                                        <div class="info-item"><div class="label">学员</div><div class="value">{", ".join([student.name for student in students])}</div></div>
-                                        <div class="info-item"><div class="label">导师</div><div class="value">{teacher.name}</div></div>
+                                        <div class="info-item"><div class="label">学生</div><div class="value">{", ".join([student.name for student in students])}</div></div>
+                                        <div class="info-item"><div class="label">教师</div><div class="value">{teacher.name}</div></div>
                                         <div class="info-item"><div class="label">教室</div><div class="value">{room.name}</div></div>
                                         <div class="info-item"><div class="label">科目</div><div class="value">{course.name}</div></div>
                                     </div>
@@ -1973,8 +1973,8 @@ def update_schedule(
                                         <div class="info-item"><div class="label">日期</div><div class="value">{db_schedule.start_date}</div></div>
                                         <div class="info-item"><div class="label">时间</div><div class="value">{db_schedule.start_time} - {db_schedule.end_time}</div></div>
                                         <div class="info-item"><div class="label">科目</div><div class="value">{course.name}</div></div>
-                                        <div class="info-item"><div class="label">学员</div><div class="value">{", ".join([student.name for student in students])}</div></div>
-                                        <div class="info-item"><div class="label">导师</div><div class="value">{teacher.name}</div></div>
+                                        <div class="info-item"><div class="label">学生</div><div class="value">{", ".join([student.name for student in students])}</div></div>
+                                        <div class="info-item"><div class="label">教师</div><div class="value">{teacher.name}</div></div>
                                         <div class="info-item"><div class="label">会议室链接</div><div class="value">{schedule.meeting_link}</div></div>
                                     </div>
                                 </div>
@@ -1999,13 +1999,13 @@ def delete_schedule(
         log_operation(db, "课程安排", "删除", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
-    # 检查权限：完训内容管理导师（非课程管理员）只能删除已完训/延期/取消的课程
+    # 检查权限：完课内容管理教师（非课程管理员）只能删除已完课/延期/取消的课程
     from routers.auth import can_delete_completed_schedule, is_completed_training_manager
     if current_user.role not in ['super_admin', 'course_admin']:
         if is_completed_training_manager(db, current_user):
             if db_schedule.execution_status not in ['completed', 'postponed', 'cancelled']:
-                log_operation(db, "课程安排", "删除", f"权限不足: 完训内容管理导师{current_user.username}尝试删除{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
-                raise HTTPException(status_code=403, detail="完训内容管理导师只能删除已完训的课程安排")
+                log_operation(db, "课程安排", "删除", f"权限不足: 完课内容管理教师{current_user.username}尝试删除{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
+                raise HTTPException(status_code=403, detail="完课内容管理教师只能删除已完课的课程安排")
         else:
             log_operation(db, "课程安排", "删除", f"权限不足: 用户{current_user.username}尝试删除课程ID{schedule_id}", current_user.username, "WARNING")
             raise HTTPException(status_code=403, detail="权限不足")
@@ -2014,7 +2014,7 @@ def delete_schedule(
         log_operation(db, "课程安排", "删除", f"权限不足: 用户{current_user.username}尝试删除{db_schedule.execution_status}状态的课程ID{schedule_id}", current_user.username, "WARNING")
         raise HTTPException(status_code=403, detail="您没有权限删除该状态的课程安排")
     
-    # 删除关联的学员记录
+    # 删除关联的学生记录
     from sqlalchemy import delete as sql_delete
     stmt = sql_delete(schedule_student).where(schedule_student.c.schedule_id == schedule_id)
     db.execute(stmt)
@@ -2067,18 +2067,18 @@ def delete_schedule(
                     else:
                         room_info = f"**会议链接：** {schedule_info['meeting_link']}" if schedule_info['meeting_link'] else ""
                     
-                    schedule_type_text = '【试听课】' if schedule_info['schedule_type'] == 'trial' else '【正式课】'
+                    schedule_type_text = '【试读课】' if schedule_info['schedule_type'] == 'trial' else '【正式课】'
                     
                     content = f"""## 🗑️ {schedule_type_text}课程删除提醒
 > **日期：** {schedule_info['start_date']}
 > **时间：** {schedule_info['start_time']} - {schedule_info['end_time']}
 > **科目：** {course.name}
-> **学员：** {", ".join([student.name for student in students])}
-> **导师：** {teacher.name}
+> **学生：** {", ".join([student.name for student in students])}
+> **教师：** {teacher.name}
 > **班级：** {class_.name}
 > {room_info}
  
-敬请相关导师和学员知悉！"""
+敬请相关教师和学生知悉！"""
                     
                     wechat_result = wechat_notifier.send_message_by_type("schedule_arrange", content, class_id=class_.id, class_webhook=class_.wechat_webhook, is_markdown=True, enabled_classes=enabled_classes)
                     if not wechat_result.get("success"):
@@ -2131,19 +2131,19 @@ def complete_schedule(
 ):
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
-        log_operation(db, "课程安排", "完训", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
+        log_operation(db, "课程安排", "完课", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
     # 检查冲突
     conflicts = check_conflicts(db, db_schedule, exclude_id=schedule_id)
     if conflicts:
-        log_operation(db, "课程安排", "完训", f"课程安排存在冲突，无法完训: ID{schedule_id}", current_user.username,"Error")
-        raise HTTPException(status_code=400, detail="课程安排存在冲突，无法完训")
+        log_operation(db, "课程安排", "完课", f"课程安排存在冲突，无法完课: ID{schedule_id}", current_user.username,"Error")
+        raise HTTPException(status_code=400, detail="课程安排存在冲突，无法完课")
     
-    # 试听课不需要强制反馈
+    # 试读课不需要强制反馈
     is_trial = db_schedule.schedule_type == "trial"
     if not is_trial and not feedback.content_feedback:
-        log_operation(db, "课程安排", "完训", f"正式课必须填写反馈: ID{schedule_id}", current_user.username,"Error")
+        log_operation(db, "课程安排", "完课", f"正式课必须填写反馈: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=400, detail="正式课必须填写课程反馈")
     
     db_schedule.execution_status = "completed"
@@ -2153,18 +2153,18 @@ def complete_schedule(
     if feedback.renewal_intention:
         db_schedule.renewal_intention = feedback.renewal_intention
     
-    # 获取班级的活跃学员
+    # 获取班级的活跃学生
     class_ = db.query(Class).filter(Class.id == db_schedule.class_id).first()
     if not class_:
         raise HTTPException(status_code=404, detail="班级不存在")
     
     active_students = get_students_by_class(db, class_.id, is_active=True)
     
-    # 更新学员出勤状态
+    # 更新学生出勤状态
     if feedback.student_attendance:
         for student_id, status in feedback.student_attendance.items():
             if status not in ['present', 'absent', 'leave', 'pending']:
-                log_operation(db, "课程安排", "完训", f"无效的出勤状态: {status}", current_user.username,"Error")
+                log_operation(db, "课程安排", "完课", f"无效的出勤状态: {status}", current_user.username,"Error")
                 raise HTTPException(status_code=400, detail=f"无效的出勤状态: {status}")
             
             # 获取缺勤原因
@@ -2172,7 +2172,7 @@ def complete_schedule(
             if feedback.absence_reasons and student_id in feedback.absence_reasons:
                 absence_reason = feedback.absence_reasons[student_id]
             
-            # 如果学员状态为请假，自动在假日管理中创建请假记录
+            # 如果学生状态为请假，自动在假日管理中创建请假记录
             if status == 'leave':
                 student = db.query(Student).filter(Student.id == student_id).first()
                 if student:
@@ -2187,7 +2187,7 @@ def complete_schedule(
                     end_datetime = dt_datetime.combine(db_schedule.end_date, 
                                                         dt_time(end_h, end_m))
                     
-                    # 检查是否已存在该学员在此日期范围的请假记录
+                    # 检查是否已存在该学生在此日期范围的请假记录
                     existing_leave = db.query(Leave).filter(
                         Leave.leave_type == "student",
                         Leave.student_id == student_id,
@@ -2205,9 +2205,9 @@ def complete_schedule(
                             reason=f"课程请假 - {db_schedule.start_date} {db_schedule.start_time}-{db_schedule.end_time}"
                         )
                         db.add(new_leave)
-                        log_operation(db, "假日管理", "自动创建请假", f"为学员 {student.name} 创建请假记录: {db_schedule.start_date} 至 {db_schedule.end_date}", current_user.username, "INFO")
+                        log_operation(db, "假日管理", "自动创建请假", f"为学生 {student.name} 创建请假记录: {db_schedule.start_date} 至 {db_schedule.end_date}", current_user.username, "INFO")
             
-            # 更新或创建学员出勤记录
+            # 更新或创建学生出勤记录
             from sqlalchemy import update as sql_update
             stmt = sql_update(schedule_student).where(
                 (schedule_student.c.schedule_id == schedule_id) & 
@@ -2228,7 +2228,7 @@ def complete_schedule(
                 )
                 db.execute(association)
     else:
-        # 如果没有提供出勤状态，先检测学员是否有请假记录，然后设置默认状态
+        # 如果没有提供出勤状态，先检测学生是否有请假记录，然后设置默认状态
         for student in active_students:
             # 将Date类型转换为DateTime类型用于查询
             from datetime import datetime as dt_datetime, time as dt_time
@@ -2241,7 +2241,7 @@ def complete_schedule(
             end_datetime = dt_datetime.combine(db_schedule.end_date, 
                                                 dt_time(end_h, end_m))
             
-            # 检查学员是否有对应日期的请假记录
+            # 检查学生是否有对应日期的请假记录
             student_leave = db.query(Leave).filter(
                 Leave.leave_type == "student",
                 Leave.student_id == student.id,
@@ -2252,7 +2252,7 @@ def complete_schedule(
             # 根据是否有请假记录设置默认状态
             default_status = 'leave' if student_leave else 'present'
             
-            # 更新或创建学员出勤记录
+            # 更新或创建学生出勤记录
             from sqlalchemy import update as sql_update
             stmt = sql_update(schedule_student).where(
                 (schedule_student.c.schedule_id == schedule_id) & 
@@ -2273,7 +2273,7 @@ def complete_schedule(
                 )
                 db.execute(association)
         
-        # 处理临时增员学员：设置默认出勤状态为出席
+        # 处理临时增员学生：设置默认出勤状态为出席
         from sqlalchemy import exists as sql_exists
         from sqlalchemy import update as sql_update
         extra_students_stmt = select(
@@ -2324,14 +2324,14 @@ def complete_schedule(
             from routers.fees import consume_hours_with_attendance
             consume_hours_with_attendance(schedule_id, db, current_user)
         except Exception as e:
-            log_operation(db, "课程安排", "完训", f"消耗课时失败: {str(e)}", current_user.username,"Error")
+            log_operation(db, "课程安排", "完课", f"消耗课时失败: {str(e)}", current_user.username,"Error")
     
     db.refresh(db_schedule)
     if hasattr(feedback, 'send_notification') and feedback.send_notification:
         try:
             send_schedule_status_notification(db, db_schedule, "completed")
         except Exception as e:
-            log_operation(db, "课程安排", "完训", f"发送通知失败: {str(e)}", current_user.username,"Error")
+            log_operation(db, "课程安排", "完课", f"发送通知失败: {str(e)}", current_user.username,"Error")
     else:
         # 定时通知：根据设置中的时间安排延迟通知
         try:
@@ -2358,9 +2358,9 @@ def complete_schedule(
                     id=job_id,
                     replace_existing=True
                 )
-                log_operation(db, "课程安排", "完训", f"已安排定时通知，将在{reminder_time}发送", current_user.username,"INFO")
+                log_operation(db, "课程安排", "完课", f"已安排定时通知，将在{reminder_time}发送", current_user.username,"INFO")
         except Exception as e:
-            log_operation(db, "课程安排", "完训", f"安排定时通知失败: {str(e)}", current_user.username,"Error")
+            log_operation(db, "课程安排", "完课", f"安排定时通知失败: {str(e)}", current_user.username,"Error")
     return db_schedule
 
 @router.post("/{schedule_id}/postpone")
@@ -2564,17 +2564,17 @@ def update_schedule_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
-    """更新课程安排的学员出勤状态"""
+    """更新课程安排的学生出勤状态"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         log_operation(db, "课程安排", "更新出勤状态", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
     if db_schedule.execution_status != "completed":
-        log_operation(db, "课程安排", "更新出勤状态", f"只有完训的课程才能更新出勤状态: ID{schedule_id}", current_user.username,"Error")
-        raise HTTPException(status_code=400, detail="只有完训的课程才能更新出勤状态")
+        log_operation(db, "课程安排", "更新出勤状态", f"只有完课的课程才能更新出勤状态: ID{schedule_id}", current_user.username,"Error")
+        raise HTTPException(status_code=400, detail="只有完课的课程才能更新出勤状态")
     
-    # 更新学员出勤状态
+    # 更新学生出勤状态
     for student_id, status in attendance_data.student_attendance.items():
         if status not in ['present', 'absent', 'leave', 'pending']:
             log_operation(db, "课程安排", "更新出勤状态", f"无效的出勤状态: {status}", current_user.username,"Error")
@@ -2595,11 +2595,11 @@ def update_schedule_attendance(
         result = db.execute(stmt)
         
         if result.rowcount == 0:
-            log_operation(db, "课程安排", "更新出勤状态", f"学员ID {student_id} 不在该课程安排中", current_user.username,"Error")
-            raise HTTPException(status_code=404, detail=f"学员ID {student_id} 不在该课程安排中")
+            log_operation(db, "课程安排", "更新出勤状态", f"学生ID {student_id} 不在该课程安排中", current_user.username,"Error")
+            raise HTTPException(status_code=404, detail=f"学生ID {student_id} 不在该课程安排中")
     
     db.commit()
-    log_operation(db, "课程安排", "更新出勤状态", f"课程安排ID {schedule_id} 的学员出勤状态已更新", current_user.username,"INFO")
+    log_operation(db, "课程安排", "更新出勤状态", f"课程安排ID {schedule_id} 的学生出勤状态已更新", current_user.username,"INFO")
     
     # 重新计算课时消耗
     try:
@@ -2617,17 +2617,17 @@ async def makeup_schedule(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
-    """学员补课：为选定的学员创建新的课程安排"""
+    """学生补课：为选定的学生创建新的课程安排"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         log_operation(db, "课程安排", "补课", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
     if db_schedule.execution_status != "completed":
-        log_operation(db, "课程安排", "补课", f"课程安排未完训，无法补课: ID{schedule_id}", current_user.username,"Error")
-        raise HTTPException(status_code=400, detail="只有完训的课程才能安排补课")
+        log_operation(db, "课程安排", "补课", f"课程安排未完课，无法补课: ID{schedule_id}", current_user.username,"Error")
+        raise HTTPException(status_code=400, detail="只有完课的课程才能安排补课")
     
-    # 检查学员是否属于原课程的班级
+    # 检查学生是否属于原课程的班级
     original_class = db.query(Class).filter(Class.id == db_schedule.class_id).first()
     if not original_class:
         log_operation(db, "课程安排", "补课", f"原课程的班级不存在: ID{db_schedule.class_id}", current_user.username,"Error")
@@ -2638,8 +2638,8 @@ async def makeup_schedule(
     
     for student_id in makeup_data.student_ids:
         if student_id not in original_class_student_ids:
-            log_operation(db, "课程安排", "补课", f"学员ID {student_id} 不属于原课程的班级: ID{db_schedule.class_id}", current_user.username,"Error")
-            raise HTTPException(status_code=400, detail=f"学员ID {student_id} 不属于原课程的班级")
+            log_operation(db, "课程安排", "补课", f"学生ID {student_id} 不属于原课程的班级: ID{db_schedule.class_id}", current_user.username,"Error")
+            raise HTTPException(status_code=400, detail=f"学生ID {student_id} 不属于原课程的班级")
     
     # 创建补课课程安排
     new_schedule = Schedule(
@@ -2659,7 +2659,7 @@ async def makeup_schedule(
     db.commit()
     db.refresh(new_schedule)
     
-    # 为补课课程添加学员
+    # 为补课课程添加学生
     for student_id in makeup_data.student_ids:
         association = schedule_student.insert().values(
             schedule_id=new_schedule.id,
@@ -2668,7 +2668,7 @@ async def makeup_schedule(
         )
         db.execute(association)
     
-    # 更新原课程安排中学员的补课状态
+    # 更新原课程安排中学生的补课状态
     for student_id in makeup_data.student_ids:
         db.execute(
             schedule_student.update()
@@ -2696,7 +2696,7 @@ async def makeup_schedule(
         new_schedule.has_conflict = False
     
     db.commit()
-    log_operation(db, "课程安排", "补课", f"课程安排产生学员补课: ID{db_schedule.id} - {len(makeup_data.student_ids)}人", current_user.username,"INFO")
+    log_operation(db, "课程安排", "补课", f"课程安排产生学生补课: ID{db_schedule.id} - {len(makeup_data.student_ids)}人", current_user.username,"INFO")
     
     return new_schedule
 
@@ -2707,17 +2707,17 @@ async def decline_makeup(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_course_admin_or_completed_training_manager)
 ):
-    """学员不补课：记录不补课原因并更新状态"""
+    """学生不补课：记录不补课原因并更新状态"""
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
         log_operation(db, "课程安排", "不补课", f"课程安排不存在: ID{schedule_id}", current_user.username,"Error")
         raise HTTPException(status_code=404, detail="课程安排不存在")
     
     if db_schedule.execution_status != "completed":
-        log_operation(db, "课程安排", "不补课", f"课程安排未完训，无法操作: ID{schedule_id}", current_user.username,"Error")
-        raise HTTPException(status_code=400, detail="只有完训的课程才能操作")
+        log_operation(db, "课程安排", "不补课", f"课程安排未完课，无法操作: ID{schedule_id}", current_user.username,"Error")
+        raise HTTPException(status_code=400, detail="只有完课的课程才能操作")
     
-    # 更新学员的不补课状态
+    # 更新学生的不补课状态
     for student_id in decline_data.student_ids:
         db.execute(
             schedule_student.update()
@@ -2726,7 +2726,7 @@ async def decline_makeup(
         )
     
     db.commit()
-    log_operation(db, "课程安排", "不补课", f"课程安排学员不补课: ID{db_schedule.id} - {len(decline_data.student_ids)}人", current_user.username,"INFO")
+    log_operation(db, "课程安排", "不补课", f"课程安排学生不补课: ID{db_schedule.id} - {len(decline_data.student_ids)}人", current_user.username,"INFO")
     
     return {"message": "不补课记录成功"}
 
@@ -2756,7 +2756,7 @@ async def get_schedule_conflicts(schedule_id: int, db: Session = Depends(get_db)
     current_class_student_ids = {s.id for s in current_class_students}
     
     for s in all_schedules:
-        # 检查该课程安排的学员是否全部请假，如果是则资源已释放
+        # 检查该课程安排的学生是否全部请假，如果是则资源已释放
         all_on_leave = False
         stmt_check = select(schedule_student.c.attendance_status).where(
             schedule_student.c.schedule_id == s.id
@@ -2779,11 +2779,11 @@ async def get_schedule_conflicts(schedule_id: int, db: Session = Depends(get_db)
             room = db.query(Room).filter(Room.id == schedule.room_id).first()
             conflict_details.append(f"教室: {room.name if room else '未知'}")
         
-        # 检查导师冲突
+        # 检查教师冲突
         if s.teacher_id == schedule.teacher_id:
             conflict_types.append("teacher")
             teacher = db.query(Teacher).filter(Teacher.id == schedule.teacher_id).first()
-            conflict_details.append(f"导师: {teacher.name if teacher else '未知'}")
+            conflict_details.append(f"教师: {teacher.name if teacher else '未知'}")
         
         # 检查班级冲突
         if s.class_id == schedule.class_id:
@@ -2805,7 +2805,7 @@ async def get_schedule_conflicts(schedule_id: int, db: Session = Depends(get_db)
                     if stu:
                         student_names.append(stu.name)
                 suffix = f"等{len(common_students)}人" if len(common_students) > 3 else ""
-                conflict_details.append(f"学员: {cls1.name if cls1 else '未知'}与{cls2.name if cls2 else '未知'}共有学员{'、'.join(student_names)}{suffix}")
+                conflict_details.append(f"学生: {cls1.name if cls1 else '未知'}与{cls2.name if cls2 else '未知'}共有学生{'、'.join(student_names)}{suffix}")
         
         if conflict_types:
             s_dict = {
@@ -2874,7 +2874,7 @@ async def export_schedules(
     if id:
         query = query.filter(Schedule.id == id)
     
-    # 学员查询逻辑：直接查询 schedule_student 表中该学员参与的课程安排
+    # 学生查询逻辑：直接查询 schedule_student 表中该学生参与的课程安排
     if student_ids:
         try:
             student_id_list = [int(id.strip()) for id in student_ids.split(',')]
@@ -2970,7 +2970,7 @@ async def export_schedules(
     
     if has_absent_students is not None:
         if has_absent_students:
-            # 过滤出有缺席或请假学员的课程（未全员出席）
+            # 过滤出有缺席或请假学生的课程（未全员出席）
             subquery = db.query(schedule_student.c.schedule_id).filter(
                 schedule_student.c.attendance_status.in_(['leave', 'absent'])
             ).distinct()
@@ -3002,11 +3002,11 @@ def export_to_excel(schedules: List[Schedule], db: Session, lang: str = "zh-CN")
     _t_map = {
         "zh-CN": {
             "sheet": "课程安排",
-            "headers": ['ID', '科目', '导师', '班级', '课程类型', '教室类型', '教室', '会议室链接', '星期', '开始时间', '结束时间', '开始日期', '结束日期', '冲突状态', '执行状态', '课程反馈', '延期原因', '取消原因', '学员考勤'],
-            "trial": "试听课", "formal": "正式课",
+            "headers": ['ID', '科目', '教师', '班级', '课程类型', '教室类型', '教室', '会议室链接', '星期', '开始时间', '结束时间', '开始日期', '结束日期', '冲突状态', '执行状态', '课程反馈', '延期原因', '取消原因', '学生考勤'],
+            "trial": "试读课", "formal": "正式课",
             "offline": "线下物理", "online": "线上虚拟",
             "conflict": "冲突", "no_conflict": "无冲突",
-            "completed": "完训", "postponed": "延期", "cancelled": "取消", "pending": "待执行",
+            "completed": "完课", "postponed": "延期", "cancelled": "取消", "pending": "待执行",
             "present": "出席", "absent": "缺席", "leave": "请假",
             "no_attendance": "未记录",
         },
@@ -3101,11 +3101,11 @@ def export_to_csv(schedules: List[Schedule], db: Session, lang: str = "zh-CN"):
     
     _t_map = {
         "zh-CN": {
-            "headers": ['ID', '科目', '导师', '班级', '课程类型', '教室类型', '教室', '会议室链接', '星期', '开始时间', '结束时间', '开始日期', '结束日期', '冲突状态', '执行状态', '课程反馈', '延期原因', '取消原因', '学员考勤'],
-            "trial": "试听课", "formal": "正式课",
+            "headers": ['ID', '科目', '教师', '班级', '课程类型', '教室类型', '教室', '会议室链接', '星期', '开始时间', '结束时间', '开始日期', '结束日期', '冲突状态', '执行状态', '课程反馈', '延期原因', '取消原因', '学生考勤'],
+            "trial": "试读课", "formal": "正式课",
             "offline": "线下物理", "online": "线上虚拟",
             "conflict": "冲突", "no_conflict": "无冲突",
-            "completed": "完训", "postponed": "延期", "cancelled": "取消", "pending": "待执行",
+            "completed": "完课", "postponed": "延期", "cancelled": "取消", "pending": "待执行",
             "present": "出席", "absent": "缺席", "leave": "请假",
             "no_attendance": "未记录",
         },
@@ -3208,11 +3208,11 @@ def export_to_pdf(schedules: List[Schedule], db: Session, lang: str = "zh-CN"):
     _t_map = {
         "zh-CN": {
             "title": "课程安排表",
-            "headers": ['ID', '科目', '导师', '班级', '教室类型', '教室', '会议室链接', '星期', '开始时间', '结束时间', '开始日期', '结束日期', '冲突状态', '执行状态', '课程类型', '课程反馈', '延期原因', '取消原因', '学员考勤'],
-            "trial": "试听课", "formal": "正式课",
+            "headers": ['ID', '科目', '教师', '班级', '教室类型', '教室', '会议室链接', '星期', '开始时间', '结束时间', '开始日期', '结束日期', '冲突状态', '执行状态', '课程类型', '课程反馈', '延期原因', '取消原因', '学生考勤'],
+            "trial": "试读课", "formal": "正式课",
             "offline": "线下物理", "online": "线上虚拟",
             "conflict": "冲突", "no_conflict": "无",
-            "completed": "完训", "postponed": "延期", "cancelled": "取消", "pending": "待执行",
+            "completed": "完课", "postponed": "延期", "cancelled": "取消", "pending": "待执行",
             "present": "出席", "absent": "缺席", "leave": "请假",
             "no_attendance": "未记录",
         },
@@ -3304,7 +3304,7 @@ def export_to_pdf(schedules: List[Schedule], db: Session, lang: str = "zh-CN"):
     col_widths = [
         0.22,  # ID
         0.55,  # 科目
-        0.40,  # 导师
+        0.40,  # 教师
         0.52,  # 班级
         0.44,  # 教室类型
         0.55,  # 教室
@@ -3320,7 +3320,7 @@ def export_to_pdf(schedules: List[Schedule], db: Session, lang: str = "zh-CN"):
         0.72,  # 课程反馈
         0.72,  # 延期原因
         0.72,  # 取消原因
-        0.96,  # 学员考勤
+        0.96,  # 学生考勤
     ]
     
     # 计算每列的起始 X 坐标（转换为点）
@@ -3404,7 +3404,7 @@ def export_to_pdf(schedules: List[Schedule], db: Session, lang: str = "zh-CN"):
         paragraph_objects = []
         
         for i, cell_content in enumerate(row_data):
-            # 对于需要换行的列 (3=班级, 6=教室, 15=课程反馈, 16=延期原因, 17=取消原因, 18=学员考勤)
+            # 对于需要换行的列 (3=班级, 6=教室, 15=课程反馈, 16=延期原因, 17=取消原因, 18=学生考勤)
             if i in [3, 6, 15, 16, 17, 18] and cell_content:
                 available_width = (x_positions[i + 1] - x_positions[i]) - 4
                 
@@ -3488,7 +3488,7 @@ async def import_schedules(
         failed_rows = []
         
         # 检查必需的列是否存在
-        required_columns = ['科目', '导师', '班级', '教室类型', '时间', '日期']
+        required_columns = ['科目', '教师', '班级', '教室类型', '时间', '日期']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             raise HTTPException(
@@ -3499,7 +3499,7 @@ async def import_schedules(
         for idx, row in df.iterrows():
             try:
                 course = db.query(Course).filter(Course.name == row['科目']).first()
-                teacher = db.query(Teacher).filter(Teacher.name == row['导师']).first()
+                teacher = db.query(Teacher).filter(Teacher.name == row['教师']).first()
                 class_ = db.query(Class).filter(Class.name == row['班级']).first()
                 room_type_value = str(row.get('教室类型', '线下物理')).strip()
                 room_type = 'offline_physical' if room_type_value in ['线下物理', 'offline_physical'] else 'online_virtual'
@@ -3539,7 +3539,7 @@ async def import_schedules(
                     skipped_count += 1
                     failed_rows.append({
                         'row': idx + 2,
-                        'reason': f"找不到对应的资源: 科目={row['科目']}, 导师={row['导师']}, 班级={row['班级']}"
+                        'reason': f"找不到对应的资源: 科目={row['科目']}, 教师={row['教师']}, 班级={row['班级']}"
                     })
                     continue
                 
@@ -3671,7 +3671,7 @@ def send_schedule_status_notification(db: Session, schedule: Schedule, status: s
         
         # 根据状态类型获取对应的文本和图标
         status_text = {
-            "completed": "完训",
+            "completed": "完课",
             "postponed": "延期",
             "cancelled": "取消排课",
             "pending": "待执行"
@@ -3706,7 +3706,7 @@ def send_schedule_status_notification(db: Session, schedule: Schedule, status: s
             reason_text = f"\n> **取消原因：** {schedule.cancel_reason or '无'}"
         
         # 根据状态类型构建不同的课程类型schedule_type_text
-        schedule_type_text = '【试听课】' if schedule.schedule_type == 'trial' else '【正式课】'
+        schedule_type_text = '【试读课】' if schedule.schedule_type == 'trial' else '【正式课】'
         
         # 构建微信通知内容，使用Markdown格式
         wechat_content = f"""## {status_icon} {schedule_type_text}·课程·{status_text}提醒
@@ -3715,8 +3715,8 @@ def send_schedule_status_notification(db: Session, schedule: Schedule, status: s
 > **时间：** {schedule.start_time} - {schedule.end_time}
 > **班级：** {class_.name}
 > **科目：** {course.name}
-> **学员：** {student_display_text}
-> **导师：** {teacher.name}
+> **学生：** {student_display_text}
+> **教师：** {teacher.name}
 {reason_text}
 """ 
         # 加载微信配置
@@ -3767,7 +3767,7 @@ def send_schedule_status_notification(db: Session, schedule: Schedule, status: s
         <body>
             <div class="container">
                 <div class="header">
-                    <h2>{status_icon} {"【试听课】" if schedule.schedule_type == "trial" else "【正式课】"}课程{status_text}提醒</h2>
+                    <h2>{status_icon} {"【试读课】" if schedule.schedule_type == "trial" else "【正式课】"}课程{status_text}提醒</h2>
                 </div>
                 <div class="content">
                     <div class="info-item">
@@ -3787,11 +3787,11 @@ def send_schedule_status_notification(db: Session, schedule: Schedule, status: s
                         <div class="value">{course.name}</div>
                     </div>
                     <div class="info-item">
-                        <div class="label">学员</div>
+                        <div class="label">学生</div>
                         <div class="value">{student_display_text}</div>
                     </div>
                     <div class="info-item">
-                        <div class="label">导师</div>
+                        <div class="label">教师</div>
                         <div class="value">{teacher.name}</div>
                     </div>
                     
@@ -3927,7 +3927,7 @@ def notify_schedule_status(
     status = db_schedule.execution_status
     status_map = {
         "pending": "待执行",
-        "completed": "完训",
+        "completed": "完课",
         "postponed": "延期",
         "cancelled": "取消排课"
     }
@@ -3950,9 +3950,9 @@ def add_extra_students(
     current_user: User = Depends(get_current_course_admin_user)
 ):
     """
-    为课程安排临时增加学员（临时增员）
-    这些学员不属于该课程安排的班级，仅临时参与本次课程
-    完训后课程消耗记录正常，班级成员关系不变
+    为课程安排临时增加学生（临时增员）
+    这些学生不属于该课程安排的班级，仅临时参与本次课程
+    完课后课程消耗记录正常，班级成员关系不变
     """
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
@@ -3973,11 +3973,11 @@ def add_extra_students(
     for student_id in student_ids:
         student = db.query(Student).filter(Student.id == student_id).first()
         if not student:
-            skipped_students.append({"student_id": student_id, "reason": "学员不存在"})
+            skipped_students.append({"student_id": student_id, "reason": "学生不存在"})
             continue
         
         if student_id in class_student_ids:
-            skipped_students.append({"student_id": student_id, "name": student.name, "reason": "该学员已属于此班级"})
+            skipped_students.append({"student_id": student_id, "name": student.name, "reason": "该学生已属于此班级"})
             continue
         
         # 检查是否已存在
@@ -3990,7 +3990,7 @@ def add_extra_students(
         ).scalar()
         
         if existing:
-            skipped_students.append({"student_id": student_id, "name": student.name, "reason": "该学员已在课程安排中"})
+            skipped_students.append({"student_id": student_id, "name": student.name, "reason": "该学生已在课程安排中"})
             continue
         
         association = schedule_student.insert().values(
@@ -4004,10 +4004,10 @@ def add_extra_students(
     
     db.commit()
     
-    log_operation(db, "课程安排", "临时增员", f"课程ID{schedule_id}临时增加{len(added_students)}名学员: {', '.join([s['name'] for s in added_students])}", current_user.username, "INFO")
+    log_operation(db, "课程安排", "临时增员", f"课程ID{schedule_id}临时增加{len(added_students)}名学生: {', '.join([s['name'] for s in added_students])}", current_user.username, "INFO")
     
     return {
-        "message": f"成功添加{len(added_students)}名临时学员",
+        "message": f"成功添加{len(added_students)}名临时学生",
         "added_students": added_students,
         "skipped_students": skipped_students
     }
@@ -4021,7 +4021,7 @@ def remove_extra_student(
     current_user: User = Depends(get_current_course_admin_user)
 ):
     """
-    移除课程安排中的临时增员学员
+    移除课程安排中的临时增员学生
     """
     db_schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
     if not db_schedule:
@@ -4039,11 +4039,11 @@ def remove_extra_student(
     result = db.execute(stmt)
     
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="未找到该临时增员学员记录")
+        raise HTTPException(status_code=404, detail="未找到该临时增员学生记录")
     
     db.commit()
     
     student = db.query(Student).filter(Student.id == student_id).first()
-    log_operation(db, "课程安排", "移除临时增员", f"课程ID{schedule_id}移除临时学员: {student.name if student else student_id}", current_user.username, "INFO")
+    log_operation(db, "课程安排", "移除临时增员", f"课程ID{schedule_id}移除临时学生: {student.name if student else student_id}", current_user.username, "INFO")
     
-    return {"message": "临时增员学员已移除"}
+    return {"message": "临时增员学生已移除"}

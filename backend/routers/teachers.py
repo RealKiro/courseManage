@@ -26,20 +26,20 @@ def get_teachers(
 ):
     query = db.query(Teacher)
 
-    # 应用导师可见性过滤
+    # 应用教师可见性过滤
     teacher_filter = get_teacher_visibility_filter(db, current_user)
     
     if teacher_filter is not None:
-        # 如果开启了导师可见性限制且用户不是超级导师
+        # 如果开启了教师可见性限制且用户不是超级教师
         if not is_subject_teacher(db, current_user):
-            # 只返回当前导师关联的导师信息
+            # 只返回当前教师关联的教师信息
             if current_user.teacher_id:
                 query = query.filter(Teacher.id == current_user.teacher_id)
             else:
-                # 如果没有关联导师，返回空列表
+                # 如果没有关联教师，返回空列表
                 return {"items": [], "total": 0}
     
-    # 如果指定了teacher_id参数，只返回该导师
+    # 如果指定了teacher_id参数，只返回该教师
     if teacher_id is not None:
         query = query.filter(Teacher.id == teacher_id)
 
@@ -101,8 +101,8 @@ def get_teachers(
 def get_teacher(teacher_id: int, db: Session = Depends(get_db)):
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
-        log_operation(db, "导师管理", "查询导师详情失败", f"导师ID {teacher_id} 不存在", "system", "WARNING")
-        raise HTTPException(status_code=404, detail="导师不存在")
+        log_operation(db, "教师管理", "查询教师详情失败", f"教师ID {teacher_id} 不存在", "system", "WARNING")
+        raise HTTPException(status_code=404, detail="教师不存在")
     
     course_ids = [c.id for c in teacher.courses]
     return TeacherSchema(
@@ -134,14 +134,14 @@ def create_teacher(
 ):
     db_teacher = db.query(Teacher).filter(Teacher.code == teacher.code).first()
     if db_teacher:
-        log_operation(db, "导师管理", "创建导师失败", f"导师代码 {teacher.code} 已存在", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="导师代码已存在")
+        log_operation(db, "教师管理", "创建教师失败", f"教师代码 {teacher.code} 已存在", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail="教师代码已存在")
     
     if not force:
         existing_teacher = db.query(Teacher).filter(Teacher.name == teacher.name).first()
         if existing_teacher:
-            log_operation(db, "导师管理", "创建导师提示", f"同名导师 {teacher.name} 已存在 (ID: {existing_teacher.id}, 代码: {existing_teacher.code})", current_user.username, "WARNING")
-            raise HTTPException(status_code=409, detail=f"同名导师已存在：{existing_teacher.name}（代码：{existing_teacher.code}），请确认是否为不同人员")
+            log_operation(db, "教师管理", "创建教师提示", f"同名教师 {teacher.name} 已存在 (ID: {existing_teacher.id}, 代码: {existing_teacher.code})", current_user.username, "WARNING")
+            raise HTTPException(status_code=409, detail=f"同名教师已存在：{existing_teacher.name}（代码：{existing_teacher.code}），请确认是否为不同人员")
     
     db_teacher = Teacher(
         code=teacher.code,
@@ -162,7 +162,7 @@ def create_teacher(
     )
     db.add(db_teacher)
     db.commit()
-    log_operation(db, "导师管理", "新增", f"成功新增导师: {teacher.code} -{teacher.name}", current_user.username)
+    log_operation(db, "教师管理", "新增", f"成功新增教师: {teacher.code} -{teacher.name}", current_user.username)
     db.refresh(db_teacher)
     
     course_ids = [c.id for c in db_teacher.courses]
@@ -195,15 +195,15 @@ def update_teacher(
 ):
     db_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not db_teacher:
-        log_operation(db, "导师管理", "修改导师失败", f"导师ID {teacher_id} 不存在", current_user.username, "WARNING") 
-        raise HTTPException(status_code=404, detail="导师不存在")
+        log_operation(db, "教师管理", "修改教师失败", f"教师ID {teacher_id} 不存在", current_user.username, "WARNING") 
+        raise HTTPException(status_code=404, detail="教师不存在")
     
-    # 检查是否是导师本人，如果是则禁止修改"无需填写反馈"属性
+    # 检查是否是教师本人，如果是则禁止修改"无需填写反馈"属性
     # 只有当no_feedback_required的值发生改变时，才禁止修改
     if current_user.teacher_id == teacher_id:
         if teacher.no_feedback_required is not None and teacher.no_feedback_required != db_teacher.no_feedback_required:
-            log_operation(db, "导师管理", "修改导师失败", f"导师不能修改自己的'无需填写反馈'属性", current_user.username, "WARNING")
-            raise HTTPException(status_code=403, detail="导师不能修改自己的'无需填写反馈'属性")
+            log_operation(db, "教师管理", "修改教师失败", f"教师不能修改自己的'无需填写反馈'属性", current_user.username, "WARNING")
+            raise HTTPException(status_code=403, detail="教师不能修改自己的'无需填写反馈'属性")
     
     # 检查is_active是否从True变为False
     is_becoming_inactive = (db_teacher.is_active == True and teacher.is_active == False)
@@ -235,16 +235,16 @@ def update_teacher(
     
     # 如果从在职变为离职，检查是否填写了离职日期
     if is_becoming_inactive and db_teacher.end_date is None:
-        log_operation(db, "导师管理", "修改导师失败", f"导师 {db_teacher.code} - {db_teacher.name} 离职时未填写离职日期", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="导师离职时必须填写离职日期")
+        log_operation(db, "教师管理", "修改教师失败", f"教师 {db_teacher.code} - {db_teacher.name} 离职时未填写离职日期", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail="教师离职时必须填写离职日期")
     
     db.commit()
-    log_operation(db, "导师管理", "修改", f"成功更新导师: {db_teacher.code} -{db_teacher.name}", current_user.username)  # 修改这里，使用db_teacher.code而不是teacher.code
+    log_operation(db, "教师管理", "修改", f"成功更新教师: {db_teacher.code} -{db_teacher.name}", current_user.username)  # 修改这里，使用db_teacher.code而不是teacher.code
     db.refresh(db_teacher)
     
     # 如果从在职变为离职，写入日志
     if is_becoming_inactive:
-        log_operation(db, "导师管理", "修改",  f"导师 {db_teacher.name} (ID: {db_teacher.id}) 离职，离职日期: {db_teacher.end_date}")
+        log_operation(db, "教师管理", "修改",  f"教师 {db_teacher.name} (ID: {db_teacher.id}) 离职，离职日期: {db_teacher.end_date}")
 
     course_ids = [c.id for c in db_teacher.courses]
     return TeacherSchema(
@@ -276,14 +276,14 @@ def delete_teacher(
 ):
     db_teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not db_teacher:
-        log_operation(db, "导师管理", "删除导师失败", f"导师ID {teacher_id} 不存在", current_user.username, "WARNING")
-        raise HTTPException(status_code=404, detail="导师不存在")
+        log_operation(db, "教师管理", "删除教师失败", f"教师ID {teacher_id} 不存在", current_user.username, "WARNING")
+        raise HTTPException(status_code=404, detail="教师不存在")
     
     if db_teacher.schedules:
-        log_operation(db, "导师管理", "删除导师失败", f"导师 {db_teacher.code} - {db_teacher.name} 已有课程安排，无法删除", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="该导师已有课程安排，无法删除")
+        log_operation(db, "教师管理", "删除教师失败", f"教师 {db_teacher.code} - {db_teacher.name} 已有课程安排，无法删除", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail="该教师已有课程安排，无法删除")
     
     db.delete(db_teacher)
     db.commit()
-    log_operation(db, "导师管理", "删除", f"成功删除导师: {db_teacher.code} - {db_teacher.name}", current_user.username, "WARNING")
+    log_operation(db, "教师管理", "删除", f"成功删除教师: {db_teacher.code} - {db_teacher.name}", current_user.username, "WARNING")
     return {"message": "删除成功"}

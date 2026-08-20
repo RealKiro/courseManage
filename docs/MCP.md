@@ -3,7 +3,7 @@
 > 让 AstrBot 等第三方框架直接「操作」courseManage
 
 courseManage 内置了一个 **MCP（Model Context Protocol）服务器**，把排课、
-学员、导师、课费、成绩、统计等能力封装成标准工具。任何支持 MCP 的框架
+学生、教师、成绩、评价、统计等能力封装成标准工具。任何支持 MCP 的框架
 （AstrBot、Claude Desktop、Cherry Studio、Dify、Cline、Continue…）接上之后，
 大模型就能自主调用这些工具，用自然语言完成日常课务。
 
@@ -182,8 +182,8 @@ AstrBot 的 MCP 配置入口：**WebUI → 工具 / MCP → 添加 MCP 服务器
 3. 在人格 / 系统提示里加一句引导，效果会明显更好：
 
 ```
-你是课程管理助手，可以调用 coursemanage 工具查询与操作培训机构的排课、
-学员、导师、课费数据。规则：
+你是课程管理助手，可以调用 coursemanage 工具查询与操作中小学的排课、
+学生、教师、成绩数据。规则：
 1. 需要 ID 的操作，先用 list_* 工具按名称查到 ID，不要凭空猜测 ID。
 2. 涉及新建、修改、取消、延期等写操作，必须先向用户复述完整信息并得到确认。
 3. 工具返回什么就说什么，不要编造数据。
@@ -269,10 +269,10 @@ location /mcp {
 | 三年级A班这周的课表 | `list_classes(search="三年级A")` → `list_schedules(...)` |
 | 张三还剩多少课时？ | `list_students(search="张三")` → `list_student_fees(student_id=…)` |
 | 有哪些排课冲突？ | `list_schedule_conflicts()` |
-| 最近 30 天导师工作量排行 | `get_teacher_workload(days=30)` |
-| 哪些学员该催费了？ | `get_fee_alerts()` |
+| 最近 30 天教师工作量排行 | `get_teacher_workload(days=30)` |
+| 哪些学生该催费了？ | `get_fee_alerts()` |
 | 张三的数学成绩趋势 | `get_student_grade_trend(student_id=…)` |
-| 把 128 号课延到下周三 19:00，原因是导师出差 | `postpone_schedule(...)`（需关闭只读） |
+| 把 128 号课延到下周三 19:00，原因是教师出差 | `postpone_schedule(...)`（需关闭只读） |
 | 帮我登记李老师 3 月 5 日请假 | `list_teachers` → `create_leave(...)`（需关闭只读） |
 | 给三年级A班周三 19 点排一节数学课 | `parse_smart_command` → 确认 → `run_smart_command` |
 

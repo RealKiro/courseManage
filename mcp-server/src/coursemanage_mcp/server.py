@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 INSTRUCTIONS = """\
-courseManage 是面向教育培训机构的综合管理平台，覆盖排课、导师/学员/班级/教室、
-请假、课费、成绩、评价与运营统计。
+courseManage 是面向中小学的综合管理平台，覆盖排课、教师/学生/班级/教室、
+请假、成绩、评价与教务统计。
 
 使用建议：
 1. 需要按名字操作某个实体时，先用 list_students / list_teachers / list_courses /
@@ -114,7 +114,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool()
     async def get_site_info() -> Any:
-        """获取机构站点信息（机构名称、LOGO、官网、联系人等全局参数）。"""
+        """获取学校站点信息（学校名称、LOGO、官网、联系人等全局参数）。"""
         return await client.get("/api/settings/site-info")
 
     # ================================================================
@@ -136,12 +136,12 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool()
     async def list_teachers(
-        search: Annotated[str | None, Field(description="按导师代码或姓名模糊搜索")] = None,
+        search: Annotated[str | None, Field(description="按教师代码或姓名模糊搜索")] = None,
         is_active: Annotated[bool | None, Field(description="仅在职(True)/仅离职(False)/全部(None)")] = True,
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
         offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
     ) -> dict[str, Any]:
-        """查询导师列表（含职称、部门、联系方式、可授科目 ID）。"""
+        """查询教师列表（含职称、部门、联系方式、可授科目 ID）。"""
         limit = _cap(limit)
         data = await client.get(
             "/api/teachers", search=search, is_active=is_active, skip=offset, limit=limit
@@ -164,13 +164,13 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool()
     async def list_students(
-        search: Annotated[str | None, Field(description="按学员代码、姓名或联系人模糊搜索")] = None,
-        class_id: Annotated[int | None, Field(description="限定某个班级的学员")] = None,
+        search: Annotated[str | None, Field(description="按学生代码、姓名或联系人模糊搜索")] = None,
+        class_id: Annotated[int | None, Field(description="限定某个班级的学生")] = None,
         is_active: Annotated[bool | None, Field(description="仅在读(True)/仅结业(False)/全部(None)")] = True,
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
         offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
     ) -> dict[str, Any]:
-        """查询学员列表（含所属班级、学校、年级、联系方式）。"""
+        """查询学生列表（含所属班级、学校、年级、联系方式）。"""
         limit = _cap(limit)
         data = await client.get(
             "/api/students",
@@ -184,9 +184,9 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool()
     async def get_student(
-        student_id: Annotated[int, Field(description="学员 ID")],
+        student_id: Annotated[int, Field(description="学生 ID")],
     ) -> Any:
-        """获取单个学员的完整档案。"""
+        """获取单个学生的完整档案。"""
         return fmt.single(await client.get(f"/api/students/{student_id}"), "student")
 
     @tool()
@@ -210,17 +210,17 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     async def list_schedules(
         start_date: Annotated[str | None, Field(description="起始日期 YYYY-MM-DD（含）")] = None,
         end_date: Annotated[str | None, Field(description="截止日期 YYYY-MM-DD（含）")] = None,
-        teacher_id: Annotated[int | None, Field(description="导师 ID")] = None,
+        teacher_id: Annotated[int | None, Field(description="教师 ID")] = None,
         class_id: Annotated[int | None, Field(description="班级 ID")] = None,
         course_id: Annotated[int | None, Field(description="科目 ID")] = None,
         room_id: Annotated[int | None, Field(description="教室 ID")] = None,
-        student_id: Annotated[int | None, Field(description="学员 ID：只看该学员参与的课")] = None,
+        student_id: Annotated[int | None, Field(description="学生 ID：只看该学生参与的课")] = None,
         execution_status: Annotated[
             str | None,
-            Field(description="执行状态：pending 待上课 / completed 已完训 / postponed 已延期 / cancelled 已取消"),
+            Field(description="执行状态：pending 待上课 / completed 已完课 / postponed 已延期 / cancelled 已取消"),
         ] = None,
         schedule_type: Annotated[
-            str | None, Field(description="课程类型：formal 正式课 / trial 试听课")
+            str | None, Field(description="课程类型：formal 正式课 / trial 试读课")
         ] = None,
         has_conflict: Annotated[bool | None, Field(description="只看有冲突的排课")] = None,
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 30,
@@ -256,7 +256,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
             str,
             Field(description="today 今天 / tomorrow 明天 / yesterday 昨天 / week 未来 7 天，或直接给 YYYY-MM-DD"),
         ] = "today",
-        teacher_id: Annotated[int | None, Field(description="只看某位导师")] = None,
+        teacher_id: Annotated[int | None, Field(description="只看某位教师")] = None,
         class_id: Annotated[int | None, Field(description="只看某个班级")] = None,
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
@@ -300,7 +300,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         schedule_id: Annotated[int, Field(description="课程安排 ID")],
         verbose: Annotated[bool, Field(description="返回后端原始字段（含作业、单词检查等）")] = False,
     ) -> Any:
-        """获取单条课程安排详情，含学员出勤明细与冲突原因。"""
+        """获取单条课程安排详情，含学生出勤明细与冲突原因。"""
         data = await client.get(f"/api/schedules/{schedule_id}")
         return fmt.single(data, "schedule", verbose=verbose)
 
@@ -308,7 +308,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     async def list_schedule_conflicts(
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 30,
     ) -> dict[str, Any]:
-        """列出当前所有排课冲突（导师/教室/班级/学员时间撞车）。"""
+        """列出当前所有排课冲突（教师/教室/班级/学生时间撞车）。"""
         limit = _cap(limit)
         data = await client.get("/api/schedules/conflicts")
         return fmt.paginated(data, "conflict", limit=limit)
@@ -317,7 +317,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     async def get_absent_students(
         schedule_id: Annotated[int, Field(description="课程安排 ID")],
     ) -> Any:
-        """查询某次课程的缺席学员（用于补课跟进）。"""
+        """查询某次课程的缺席学生（用于补课跟进）。"""
         return await client.get(f"/api/schedules/{schedule_id}/absent-students")
 
     # ================================================================
@@ -325,9 +325,9 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     # ================================================================
     @tool()
     async def list_leaves(
-        leave_type: Annotated[str | None, Field(description="请假类型：teacher 导师 / student 学员")] = None,
-        teacher_id: Annotated[int | None, Field(description="导师 ID")] = None,
-        student_id: Annotated[int | None, Field(description="学员 ID")] = None,
+        leave_type: Annotated[str | None, Field(description="请假类型：teacher 教师 / student 学生")] = None,
+        teacher_id: Annotated[int | None, Field(description="教师 ID")] = None,
+        student_id: Annotated[int | None, Field(description="学生 ID")] = None,
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
         offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
     ) -> dict[str, Any]:
@@ -358,14 +358,14 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     # ================================================================
     @tool()
     async def get_dashboard_kpi() -> Any:
-        """获取运营大屏核心 KPI（收入、转化率、学员数、导师数、课次、出勤率等）。"""
+        """获取运营大屏核心 KPI（收入、转化率、学生数、教师数、课次、出勤率等）。"""
         return await client.get("/api/statistics/kpi")
 
     @tool()
     async def get_teacher_workload(
         days: Annotated[int, Field(description="统计最近多少天", ge=1, le=1080)] = 30,
     ) -> Any:
-        """统计导师工作量排行。"""
+        """统计教师工作量排行。"""
         return await client.get("/api/statistics/teachers/workload", days=days)
 
     @tool()
@@ -379,48 +379,20 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     async def get_incomplete_schedules(
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 30,
     ) -> Any:
-        """列出已过期但仍未完训的课程安排，用于催办。"""
+        """列出已过期但仍未完课的课程安排，用于催办。"""
         return await client.get("/api/statistics/schedules/incomplete-list", limit=_cap(limit))
-
-    # ================================================================
-    # 课费
-    # ================================================================
-    @tool()
-    async def list_student_fees(
-        student_id: Annotated[int | None, Field(description="学员 ID")] = None,
-        course_id: Annotated[int | None, Field(description="科目 ID")] = None,
-        search: Annotated[str | None, Field(description="按学员姓名/科目模糊搜索")] = None,
-        limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
-        offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
-    ) -> dict[str, Any]:
-        """查询学员课费项（剩余课时、已缴金额、余额）。"""
-        limit = _cap(limit)
-        data = await client.get(
-            "/api/fees/student-fees",
-            student_id=student_id,
-            course_id=course_id,
-            search=search,
-            skip=offset,
-            limit=limit,
-        )
-        return fmt.paginated(data, "student_fee", limit=limit, offset=offset)
-
-    @tool()
-    async def get_fee_alerts() -> Any:
-        """获取收费提醒（剩余课时低于阈值的学员）。"""
-        return await client.get("/api/fees/alerts")
 
     # ================================================================
     # 成绩与评价
     # ================================================================
     @tool()
     async def list_grades(
-        student_id: Annotated[int | None, Field(description="学员 ID")] = None,
+        student_id: Annotated[int | None, Field(description="学生 ID")] = None,
         course_id: Annotated[int | None, Field(description="科目 ID")] = None,
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
         offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
     ) -> dict[str, Any]:
-        """查询学员成绩记录。"""
+        """查询学生成绩记录。"""
         limit = _cap(limit)
         data = await client.get(
             "/api/grades", student_id=student_id, course_id=course_id, skip=offset, limit=limit
@@ -429,16 +401,16 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool()
     async def get_student_grade_trend(
-        student_id: Annotated[int, Field(description="学员 ID")],
+        student_id: Annotated[int, Field(description="学生 ID")],
     ) -> Any:
-        """查询某学员所有科目的成绩变化趋势。"""
+        """查询某学生所有科目的成绩变化趋势。"""
         return await client.get(f"/api/grades/student-trend/{student_id}")
 
     @tool()
     async def get_student_evaluation_profile(
-        student_id: Annotated[int, Field(description="学员 ID")],
+        student_id: Annotated[int, Field(description="学生 ID")],
     ) -> Any:
-        """查询学员综合能力画像（五维/多维评价）。"""
+        """查询学生综合能力画像（五维/多维评价）。"""
         return await client.get(f"/api/evaluations/student/{student_id}/profile")
 
     # ================================================================
@@ -479,7 +451,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     @tool(write=True)
     async def create_schedule(
         course_id: Annotated[int, Field(description="科目 ID")],
-        teacher_id: Annotated[int, Field(description="导师 ID")],
+        teacher_id: Annotated[int, Field(description="教师 ID")],
         class_id: Annotated[int, Field(description="班级 ID")],
         day_of_week: Annotated[int, Field(description="星期几，1=周一 … 7=周日", ge=1, le=7)],
         start_time: Annotated[str, Field(description="开始时间 HH:MM")],
@@ -491,10 +463,10 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
             str, Field(description="offline_physical 线下物理教室 / online_virtual 线上虚拟教室")
         ] = "offline_physical",
         meeting_link: Annotated[str | None, Field(description="会议室链接（线上课必填）")] = None,
-        schedule_type: Annotated[str, Field(description="formal 正式课 / trial 试听课")] = "formal",
+        schedule_type: Annotated[str, Field(description="formal 正式课 / trial 试读课")] = "formal",
         send_notification: Annotated[bool, Field(description="是否发送企业微信/邮件通知")] = False,
     ) -> Any:
-        """新建一条课程安排。系统会自动检测导师/教室/班级/学员时间冲突。"""
+        """新建一条课程安排。系统会自动检测教师/教室/班级/学生时间冲突。"""
         if room_type == "offline_physical" and not room_id:
             raise ToolError("线下课程必须提供 room_id，可先用 list_rooms 查询可用教室。")
         if room_type == "online_virtual" and not meeting_link:
@@ -525,15 +497,15 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
             Field(description="课程反馈，建议格式：内容：…|作业：…|注意：…（用 | 分隔）"),
         ],
         renewal_intention: Annotated[
-            str | None, Field(description="续报意愿：high / medium / low / none")
+            str | None, Field(description="续读意愿：high / medium / low / none")
         ] = None,
         student_attendance: Annotated[
             dict[str, str] | None,
-            Field(description='出勤字典，键为学员 ID 字符串，值为 present/absent/leave，如 {"12":"present"}'),
+            Field(description='出勤字典，键为学生 ID 字符串，值为 present/absent/leave，如 {"12":"present"}'),
         ] = None,
-        send_notification: Annotated[bool, Field(description="是否发送完训通知")] = False,
+        send_notification: Annotated[bool, Field(description="是否发送完课通知")] = False,
     ) -> Any:
-        """把课程标记为已完训，并填写课后反馈与出勤。"""
+        """把课程标记为已完课，并填写课后反馈与出勤。"""
         payload: dict[str, Any] = {
             "content_feedback": content_feedback,
             "renewal_intention": renewal_intention,
@@ -583,13 +555,13 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         schedule_id: Annotated[int, Field(description="课程安排 ID")],
         student_attendance: Annotated[
             dict[str, str],
-            Field(description="出勤字典，键为学员 ID 字符串，值为 present/absent/leave"),
+            Field(description="出勤字典，键为学生 ID 字符串，值为 present/absent/leave"),
         ],
         absence_reasons: Annotated[
-            dict[str, str] | None, Field(description="缺勤原因字典，键为学员 ID 字符串")
+            dict[str, str] | None, Field(description="缺勤原因字典，键为学生 ID 字符串")
         ] = None,
     ) -> Any:
-        """更新某次课程的学员签到状态（出席/请假/缺席）。"""
+        """更新某次课程的学生签到状态（出席/请假/缺席）。"""
         payload: dict[str, Any] = {
             "student_attendance": {int(k): v for k, v in student_attendance.items()}
         }
@@ -602,18 +574,18 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     # ================================================================
     @tool(write=True)
     async def create_leave(
-        leave_type: Annotated[str, Field(description="请假类型：teacher 导师请假 / student 学员请假")],
+        leave_type: Annotated[str, Field(description="请假类型：teacher 教师请假 / student 学生请假")],
         start_date: Annotated[str, Field(description="开始日期 YYYY-MM-DD")],
         end_date: Annotated[str, Field(description="结束日期 YYYY-MM-DD")],
-        teacher_id: Annotated[int | None, Field(description="导师 ID（导师请假必填）")] = None,
-        student_id: Annotated[int | None, Field(description="学员 ID（学员请假必填）")] = None,
+        teacher_id: Annotated[int | None, Field(description="教师 ID（教师请假必填）")] = None,
+        student_id: Annotated[int | None, Field(description="学生 ID（学生请假必填）")] = None,
         reason: Annotated[str | None, Field(description="请假原因")] = None,
     ) -> Any:
         """登记一条请假记录，后续排课会自动规避该时间段。"""
         if leave_type == "teacher" and not teacher_id:
-            raise ToolError("导师请假必须提供 teacher_id。")
+            raise ToolError("教师请假必须提供 teacher_id。")
         if leave_type == "student" and not student_id:
-            raise ToolError("学员请假必须提供 student_id。")
+            raise ToolError("学生请假必须提供 student_id。")
         return fmt.single(
             await client.post(
                 "/api/leaves",
@@ -631,17 +603,17 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool(write=True)
     async def create_student(
-        code: Annotated[str, Field(description="学员代码，机构内唯一")],
-        name: Annotated[str, Field(description="学员姓名")],
+        code: Annotated[str, Field(description="学生代码，学校内唯一")],
+        name: Annotated[str, Field(description="学生姓名")],
         class_ids: Annotated[list[int] | None, Field(description="所属班级 ID 列表")] = None,
         school: Annotated[str | None, Field(description="就读学校")] = None,
         grade: Annotated[str | None, Field(description="年级")] = None,
         contact_person: Annotated[str | None, Field(description="联系人（家长）")] = None,
         contact_phone: Annotated[str | None, Field(description="联系电话")] = None,
         email: Annotated[str | None, Field(description="电子邮箱，用于课程提醒邮件")] = None,
-        enrollment_date: Annotated[str | None, Field(description="进入机构日期 YYYY-MM-DD")] = None,
+        enrollment_date: Annotated[str | None, Field(description="进入学校日期 YYYY-MM-DD")] = None,
     ) -> Any:
-        """新增一名学员档案。"""
+        """新增一名学生档案。"""
         return fmt.single(
             await client.post(
                 "/api/students",
@@ -663,7 +635,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool(write=True)
     async def create_course(
-        code: Annotated[str, Field(description="科目代码，机构内唯一")],
+        code: Annotated[str, Field(description="科目代码，学校内唯一")],
         name: Annotated[str, Field(description="科目名称")],
         parent_course_id: Annotated[int | None, Field(description="父科目 ID（用于建立科目层级）")] = None,
     ) -> Any:
@@ -685,7 +657,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     async def notify_schedule(
         schedule_id: Annotated[int, Field(description="课程安排 ID")],
     ) -> Any:
-        """按当前状态向关联导师群/班级群推送课程安排通知（企业微信 / 邮件）。
+        """按当前状态向关联教师群/班级群推送课程安排通知（企业微信 / 邮件）。
 
         仅当部署时设置 COURSEMANAGE_MCP_ALLOW_NOTIFICATIONS=true 才会注册此工具。
         """
@@ -705,7 +677,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @mcp.resource("coursemanage://site-info", mime_type="application/json")
     async def site_info_resource() -> Any:
-        """机构站点信息（只读资源）。"""
+        """学校站点信息（只读资源）。"""
         return await client.get("/api/settings/site-info")
 
     @mcp.prompt()
@@ -713,11 +685,10 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         """生成当日课务简报的提示词。"""
         return (
             f"请使用 get_schedules_by_day(day='{scope}') 获取课程安排，"
-            "并结合 list_schedule_conflicts 与 get_fee_alerts（若已授权）"
+            "并结合 list_schedule_conflicts 与 get_incomplete_schedules"
             "生成一份中文课务简报，包含：\n"
-            "1. 今日课次总数、按时段列出的课表（时间 / 科目 / 导师 / 班级 / 教室）\n"
-            "2. 存在冲突或未完训的课程，并给出处理建议\n"
-            "3. 需要催缴课费的学员提醒\n"
+            "1. 今日课次总数、按时段列出的课表（时间 / 科目 / 教师 / 班级 / 教室）\n"
+            "2. 存在冲突或未完课的课程，并给出处理建议\n"
             "输出使用简洁的中文列表，不要编造数据。"
         )
 
@@ -726,9 +697,9 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         """生成排课冲突排查的提示词。"""
         return (
             "请调用 list_schedule_conflicts 获取全部排课冲突，"
-            "对每条冲突说明冲突主体（导师/教室/班级/学员）、冲突时间，"
-            "并给出可行的调整方案（改时间、换教室或换导师）。"
-            "如需候选教室请调用 list_rooms，如需导师工作量请调用 get_teacher_workload。"
+            "对每条冲突说明冲突主体（教师/教室/班级/学生）、冲突时间，"
+            "并给出可行的调整方案（改时间、换教室或换教师）。"
+            "如需候选教室请调用 list_rooms，如需教师工作量请调用 get_teacher_workload。"
         )
 
     return mcp

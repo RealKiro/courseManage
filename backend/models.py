@@ -31,7 +31,7 @@ schedule_student = Table(
     Column('makeup_status', String(20), nullable=True, comment="补课状态：pending-待补课, completed-已补课, declined-不补课"),
     Column('makeup_schedule_id', Integer, nullable=True, comment="补课课程ID（关联到schedules表的id）"),
     Column('declined_reason', Text, nullable=True, comment="不补课原因"),
-    Column('is_extra', Boolean, default=False, comment="是否为临时增员学员"),
+    Column('is_extra', Boolean, default=False, comment="是否为临时增员学生"),
     Column('created_at', DateTime, default=datetime.now, comment="记录创建时间")
 )
 
@@ -55,7 +55,7 @@ class Teacher(Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), unique=True, index=True, nullable=False)
     name = Column(String(100), nullable=False)
-    join_date = Column(Date, nullable=True, comment="进入机构日期")
+    join_date = Column(Date, nullable=True, comment="进入学校日期")
     title = Column(String(50))
     department = Column(String(100))
     max_weekly_hours = Column(Integer, default=40)
@@ -101,7 +101,7 @@ class Student(Base):
     name = Column(String(100), nullable=False)
     school = Column(String(100))
     grade = Column(String(50))
-    enrollment_date = Column(Date, nullable=True, comment="进入机构日期")
+    enrollment_date = Column(Date, nullable=True, comment="进入学校日期")
     # 删除 class_id = Column(Integer, ForeignKey("classes.id"))
     available_days = Column(Text, default="1,2,3,4,5,6,7")
     available_time_slots = Column(Text, default="08:00-10:00,10:00-12:00,13:30-15:30,15:30-17:30,17:30-19:30,19:00-21:00,19:30-21:30,14:00-16:00,16:00-18:00,18:00-20:00,20:00-22:00,14:30-16:30,16:30-18:30,18:30-20:30,20:30-22:30")
@@ -181,17 +181,17 @@ class Schedule(Base):
     end_date = Column(Date, nullable=False)
     has_conflict = Column(Boolean, default=False)
     conflict_reason = Column(Text)
-    execution_status = Column(String(20), default="pending", comment="执行状态：pending-待执行, completed-完训, postponed-延期, cancelled-取消")
+    execution_status = Column(String(20), default="pending", comment="执行状态：pending-待执行, completed-完课, postponed-延期, cancelled-取消")
     content_feedback = Column(Text, default="", comment="课程反馈：内容|作业|注意|；格式说明：用|分隔，如：内容：我是谁？我来自哪里？我往那里去？|作业：今天布置的10道题|注意：注意第三题的解题思路")
     word_check = Column(Text, default="", comment="单词检查反馈")
-    renewal_intention = Column(String(20), default="", comment="续报意愿：high-高, medium-中, low-低, none-无")
+    renewal_intention = Column(String(20), default="", comment="续读意愿：high-高, medium-中, low-低, none-无")
     cancel_reason = Column(Text, default="", comment="取消原因")
     postpone_reason = Column(Text, default="", comment="延期原因")
     homework_regular = Column(Text, default="", comment="常规作业")
     homework_images = Column(Text, default="", comment="作业图片URL，用逗号分隔")
     room_type = Column(String(20), default="offline_physical", nullable=False, comment="教室类型：offline_physical-线下物理, online_virtual-线上虚拟")
     meeting_link = Column(Text, default=None, comment="会议室链接（线上虚拟课程必填）")
-    schedule_type = Column(String(20), default="formal", nullable=False, comment="课程类型：formal-正式课, trial-试听课")
+    schedule_type = Column(String(20), default="formal", nullable=False, comment="课程类型：formal-正式课, trial-试读课")
     course = relationship("Course", back_populates="schedules")
     teacher = relationship("Teacher", back_populates="schedules")
     class_ = relationship("Class", back_populates="schedules")
@@ -279,7 +279,7 @@ class FeeLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False, comment="学生ID")
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False, comment="科目ID")
-    schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=True, comment="课程安排ID（完训消耗时关联）")
+    schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=True, comment="课程安排ID（完课消耗时关联）")
     log_type = Column(String(20), nullable=False, comment="日志类型：payment-缴费, refund-退费, consume-消耗")
     amount = Column(Float, nullable=False, comment="金额（正数表示增加，负数表示减少）")
     receivable_amount = Column(Float, default=0.0, comment="应收金额（缴费时记录）")
@@ -373,11 +373,11 @@ class CourseEvaluationTemplate(Base):
     course = relationship("Course", backref="evaluation_templates")
 
 class StudentComprehensiveEvaluation(Base):
-    """学员综合能力评价表"""
+    """学生综合能力评价表"""
     __tablename__ = "student_comprehensive_evaluations"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, comment="学员ID")
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, comment="学生ID")
     eval_period = Column(String(50), nullable=False, comment="评价周期，如：2026年春季")
     profile_type = Column(String(50), default="academic", comment="画像类型：academic-学习态度/知识掌握/实践能力/创新思维/协作素养，virtue-德智体美劳")
     attitude_score = Column(Float, nullable=True, comment="学习态度/德 (1-5)")
@@ -386,7 +386,7 @@ class StudentComprehensiveEvaluation(Base):
     innovation_score = Column(Float, nullable=True, comment="创新思维/美 (1-5)")
     collaboration_score = Column(Float, nullable=True, comment="协作素养/劳 (1-5)")
     overall_comment = Column(Text, comment="综合评语")
-    evaluator_id = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="评价导师ID")
+    evaluator_id = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="评价教师ID")
     eval_date = Column(DateTime, nullable=True, comment="评价日期")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -394,11 +394,11 @@ class StudentComprehensiveEvaluation(Base):
     evaluator = relationship("Teacher", backref="given_comprehensive_evaluations")
 
 class StudentSubjectEvaluation(Base):
-    """学员单科能力评价表"""
+    """学生单科能力评价表"""
     __tablename__ = "student_subject_evaluations"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, comment="学员ID")
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, comment="学生ID")
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False, comment="科目ID")
     template_id = Column(Integer, ForeignKey("course_evaluation_templates.id"), nullable=True, comment="评价模板ID")
     eval_period = Column(String(50), nullable=False, comment="评价周期")
@@ -407,7 +407,7 @@ class StudentSubjectEvaluation(Base):
     comment = Column(Text, comment="单科评语")
     strengths = Column(Text, comment="优势/亮点")
     improvements = Column(Text, comment="待提升方面")
-    evaluator_id = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="评价导师ID")
+    evaluator_id = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="评价教师ID")
     eval_date = Column(DateTime, nullable=True, comment="评价日期")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -439,7 +439,7 @@ class DailyWord(Base):
     date = Column(Date, nullable=False, index=True, comment="日期")
     words = Column(JSONB, nullable=False, comment='单词列表，如 [{"word":"apple","meaning":"苹果","phonetic":"/ˈæpl/"}]')
     phrases = Column(JSONB, nullable=True, default=[], comment='短语列表，如 [{"phrase":"look up","meaning":"查找","phrase_type":"动词短语","syntactic_role":"谓语"}]')
-    created_by = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="创建人导师ID")
+    created_by = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="创建人教师ID")
     creator = relationship("Teacher", backref="created_daily_words")
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -450,12 +450,12 @@ class WordCheck(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     schedule_id = Column(Integer, ForeignKey("schedules.id"), nullable=False, index=True, comment="课程安排ID")
-    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True, comment="学员ID")
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True, comment="学生ID")
     daily_word_id = Column(Integer, ForeignKey("daily_words.id"), nullable=True, comment="关联的每日单词ID")
     completion_status = Column(String(20), default="incomplete", comment="完成状态：completed-已完成, partial-部分完成, incomplete-未完成")
     attention_words = Column(JSONB, default=[], comment='须注意的单词列表，如 ["word1","word2"]')
     notes = Column(Text, default="", comment="备注")
-    checked_by = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="检查人导师ID")
+    checked_by = Column(Integer, ForeignKey("teachers.id"), nullable=True, comment="检查人教师ID")
     schedule = relationship("Schedule", backref="word_checks")
     student = relationship("Student", backref="word_checks")
     daily_word = relationship("DailyWord", backref="word_checks")

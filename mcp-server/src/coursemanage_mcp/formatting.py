@@ -16,12 +16,12 @@ WEEKDAYS = {1: "周一", 2: "周二", 3: "周三", 4: "周四", 5: "周五", 6: 
 
 EXECUTION_STATUS = {
     "pending": "待上课",
-    "completed": "已完训",
+    "completed": "已完课",
     "postponed": "已延期",
     "cancelled": "已取消",
 }
 
-SCHEDULE_TYPE = {"formal": "正式课", "trial": "试听课"}
+SCHEDULE_TYPE = {"formal": "正式课", "trial": "试读课"}
 
 ATTENDANCE = {"present": "出席", "absent": "缺席", "leave": "请假"}
 
@@ -173,23 +173,6 @@ def holiday(item: Mapping[str, Any]) -> dict[str, Any]:
     )
 
 
-def student_fee(item: Mapping[str, Any]) -> dict[str, Any]:
-    return _drop_empty(
-        {
-            "id": item.get("id"),
-            "student": item.get("student_name") or _name_of(item.get("student")),
-            "course": item.get("course_name") or _name_of(item.get("course")),
-            "hourly_fee": item.get("hourly_fee"),
-            "total_lessons": item.get("lesson_count") or item.get("total_lessons"),
-            "used_lessons": item.get("used_lesson_count") or item.get("consumed_lessons"),
-            "remaining_lessons": item.get("remaining_lessons"),
-            "total_amount": item.get("total_amount"),
-            "paid_amount": item.get("paid_amount"),
-            "balance": item.get("balance"),
-            "alert_threshold": item.get("alert_threshold"),
-            "active": item.get("is_active"),
-        }
-    )
 
 
 def grade(item: Mapping[str, Any]) -> dict[str, Any]:
@@ -218,7 +201,6 @@ PROJECTORS: dict[str, Callable[[Mapping[str, Any]], dict[str, Any]]] = {
     "schedule": schedule,
     "leave": leave,
     "holiday": holiday,
-    "student_fee": student_fee,
     "grade": grade,
 }
 

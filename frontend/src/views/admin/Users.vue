@@ -94,7 +94,7 @@
             <el-option :label="t('users.teachingAssistant')" value="teaching_assistant" />
           </el-select>
         </el-form-item>
-        <!-- 导师绑定 -->
+        <!-- 教师绑定 -->
         <el-form-item :label="t('users.relatedTeacher')" prop="teacher_id" v-if="form.role === 'course_admin' || form.role === 'teaching_assistant'">
           <el-select 
             v-model="form.teacher_id" 
@@ -219,23 +219,23 @@ const fetchUsers = async () => {
   }
 }
 
-// 获取导师列表
+// 获取教师列表
 const fetchTeachers = async () => {
   try {
     const res = await api.get('/teachers', { params: { is_active: true, skip: 0, limit: 100000 } })
     teachers.value = res.data.items || res.data || []
   } catch (error) {
-    window.logger.error('获取导师列表失败:', error)
+    window.logger.error('获取教师列表失败:', error)
   }
 }
 
-// 根据 ID 获取导师姓名
+// 根据 ID 获取教师姓名
 const getTeacherName = (teacherId) => {
   const teacher = teachers.value.find(t => t.id === teacherId)
   return teacher ? teacher.name : `ID:${teacherId}`
 }
 
-// 监听角色变化，如果切换到非导师角色，清空 teacher_id
+// 监听角色变化，如果切换到非教师角色，清空 teacher_id
 const handleRoleChange = (val) => {
   if (val !== 'course_admin' && val !== 'teaching_assistant') {
     form.teacher_id = null
@@ -252,7 +252,7 @@ const showAddDialog = () => {
     teacher_id: null
   })
   dialogVisible.value = true
-  fetchTeachers() // 打开对话框时加载导师列表
+  fetchTeachers() // 打开对话框时加载教师列表
 }
 
 const showEditDialog = (row) => {
@@ -265,7 +265,7 @@ const showEditDialog = (row) => {
     teacher_id: row.teacher_id || null
   })
   dialogVisible.value = true
-  fetchTeachers() // 打开对话框时加载导师列表
+  fetchTeachers() // 打开对话框时加载教师列表
 }
 
 const handleSubmit = async () => {
@@ -368,7 +368,7 @@ const getRoleText = (role) => {
  
 onMounted(() => {
   fetchUsers()
-  fetchTeachers() // 初始化时也加载一次导师列表，用于表格显示
+  fetchTeachers() // 初始化时也加载一次教师列表，用于表格显示
 })
 
 </script>

@@ -76,5 +76,5 @@ def is_holiday(date_obj: datetime) -> bool:
 
 def can_schedule_on_holiday(teacher_allow: bool, student_allow: bool) -> bool:
     """判断是否可以在节假日排课"""
-    # 导师和学员都必须允许节假日排课
+    # 教师和学生都必须允许节假日排课
     return teacher_allow and student_allow

@@ -203,20 +203,20 @@ def _preview_add_course(params: dict, db: Session, preview: dict):
         teacher = db.query(Teacher).filter(Teacher.name == teacher_name).first()
         if teacher:
             preview['fields'].append({
-                'label': '关联导师',
+                'label': '关联教师',
                 'value': f'{teacher.name} (ID: {teacher.id})',
                 'type': 'text'
             })
         else:
-            # 查找相似导师
+            # 查找相似教师
             similar_teachers = _find_similar_items(db, Teacher, 'name', teacher_name)
             if similar_teachers:
-                preview['warnings'].append(f'未找到导师"{teacher_name}"，建议从以下相似导师中选择：')
+                preview['warnings'].append(f'未找到教师"{teacher_name}"，建议从以下相似教师中选择：')
                 preview['suggestions'] = [{'type': 'teacher', 'items': similar_teachers}]
             else:
-                preview['warnings'].append(f'导师"{teacher_name}"不存在，将先创建该导师')
+                preview['warnings'].append(f'教师"{teacher_name}"不存在，将先创建该教师')
                 preview['fields'].append({
-                    'label': '新导师姓名',
+                    'label': '新教师姓名',
                     'value': teacher_name,
                     'type': 'text',
                     'warning': '将自动创建'
@@ -267,13 +267,13 @@ def _preview_update_course(params: dict, db: Session, preview: dict):
         teacher = db.query(Teacher).filter(Teacher.name == updates['teacher_name']).first()
         if teacher:
             preview['fields'].append({
-                'label': '新关联导师',
+                'label': '新关联教师',
                 'value': f'{teacher.name} (ID: {teacher.id})',
                 'type': 'text',
                 'changed': True
             })
         else:
-            preview['errors'].append(f'导师"{updates["teacher_name"]}"不存在')
+            preview['errors'].append(f'教师"{updates["teacher_name"]}"不存在')
 
 
 def _preview_complete_schedule(params: dict, db: Session, preview: dict):
@@ -305,7 +305,7 @@ def _preview_complete_schedule(params: dict, db: Session, preview: dict):
     preview['fields'] = [
         {'label': '排课ID', 'value': str(schedule.id), 'type': 'id'},
         {'label': '科目', 'value': course.name if course else '未知', 'type': 'text'},
-        {'label': '导师', 'value': teacher.name if teacher else '未知', 'type': 'text'},
+        {'label': '教师', 'value': teacher.name if teacher else '未知', 'type': 'text'},
         {'label': '班级', 'value': class_obj.name if class_obj else '未知', 'type': 'text'},
         {'label': '教室', 'value': room.name if room else '未知', 'type': 'text'},
         {'label': '时间', 'value': f'{weekday_name} {schedule.start_time}-{schedule.end_time}', 'type': 'text'},
@@ -354,7 +354,7 @@ def _preview_cancel_schedule(params: dict, db: Session, preview: dict):
     preview['fields'] = [
         {'label': '排课ID', 'value': str(schedule.id), 'type': 'id'},
         {'label': '科目', 'value': course.name if course else '未知', 'type': 'text'},
-        {'label': '导师', 'value': teacher.name if teacher else '未知', 'type': 'text'},
+        {'label': '教师', 'value': teacher.name if teacher else '未知', 'type': 'text'},
         {'label': '班级', 'value': class_obj.name if class_obj else '未知', 'type': 'text'},
         {'label': '取消原因', 'value': cancel_reason or '未提供', 'type': 'textarea'},
     ]
@@ -392,7 +392,7 @@ def _preview_postpone_schedule(params: dict, db: Session, preview: dict):
     preview['fields'] = [
         {'label': '原排课ID', 'value': str(schedule.id), 'type': 'id'},
         {'label': '科目', 'value': course.name if course else '未知', 'type': 'text'},
-        {'label': '导师', 'value': teacher.name if teacher else '未知', 'type': 'text'},
+        {'label': '教师', 'value': teacher.name if teacher else '未知', 'type': 'text'},
         {'label': '班级', 'value': class_obj.name if class_obj else '未知', 'type': 'text'},
         {'label': '新开始日期', 'value': start_date or '未提供', 'type': 'date'},
         {'label': '新结束日期', 'value': end_date or '未提供', 'type': 'date'},
@@ -414,7 +414,7 @@ def _preview_postpone_schedule(params: dict, db: Session, preview: dict):
 
 
 def _preview_add_teacher(params: dict, db: Session, preview: dict):
-    """预览添加导师"""
+    """预览添加教师"""
     # 兼容两种字段命名方式
     name = params.get('name') or params.get('teacher_name', '')
     phone = params.get('phone') or params.get('contact_phone')
@@ -423,17 +423,17 @@ def _preview_add_teacher(params: dict, db: Session, preview: dict):
     department = params.get('department')
     
     if not name:
-        preview['errors'].append('缺少导师姓名')
+        preview['errors'].append('缺少教师姓名')
         return
     
     existing_teacher = db.query(Teacher).filter(Teacher.name == name).first()
     
     preview['fields'] = [
-        {'label': '导师姓名', 'value': name, 'type': 'text'},
+        {'label': '教师姓名', 'value': name, 'type': 'text'},
     ]
     
     if existing_teacher:
-        preview['warnings'].append(f'导师"{name}"已存在（ID: {existing_teacher.id}），将创建重复记录')
+        preview['warnings'].append(f'教师"{name}"已存在（ID: {existing_teacher.id}），将创建重复记录')
     
     if phone:
         preview['fields'].append({'label': '联系电话', 'value': phone, 'type': 'phone'})
@@ -448,7 +448,7 @@ def _preview_add_teacher(params: dict, db: Session, preview: dict):
     preview['fields'].append({'label': '自动生成代码', 'value': code, 'type': 'code'})
 
 def _preview_update_teacher(params: dict, db: Session, preview: dict):
-    """预览更新导师"""
+    """预览更新教师"""
     teacher_identifier = params.get('teacher_identifier')
     updates = params.get('updates', {})
     
@@ -461,14 +461,14 @@ def _preview_update_teacher(params: dict, db: Session, preview: dict):
     if not teacher:
         similar_teachers = _find_similar_items(db, Teacher, 'name', teacher_identifier)
         if similar_teachers:
-            preview['warnings'].append(f'未找到导师"{teacher_identifier}"，建议从以下相似导师中选择：')
+            preview['warnings'].append(f'未找到教师"{teacher_identifier}"，建议从以下相似教师中选择：')
             preview['suggestions'] = [{'type': 'teacher', 'items': similar_teachers}]
         else:
-            preview['errors'].append(f'导师"{teacher_identifier}"不存在')
+            preview['errors'].append(f'教师"{teacher_identifier}"不存在')
         return
     
     preview['fields'] = [
-        {'label': '导师标识', 'value': f'{teacher.name} (ID: {teacher.id})', 'type': 'text'},
+        {'label': '教师标识', 'value': f'{teacher.name} (ID: {teacher.id})', 'type': 'text'},
     ]
     
     field_labels = {
@@ -492,7 +492,7 @@ def _preview_update_teacher(params: dict, db: Session, preview: dict):
 
 
 def _preview_add_student(params: dict, db: Session, preview: dict):
-    """预览添加学员"""
+    """预览添加学生"""
     # 兼容两种字段命名方式
     name = params.get('name') or params.get('student_name', '')
     phone = params.get('phone') or params.get('contact_phone')
@@ -503,17 +503,17 @@ def _preview_add_student(params: dict, db: Session, preview: dict):
     class_name = params.get('class_name')
     
     if not name:
-        preview['errors'].append('缺少学员姓名')
+        preview['errors'].append('缺少学生姓名')
         return
     
     existing_student = db.query(Student).filter(Student.name == name).first()
     
     preview['fields'] = [
-        {'label': '学员姓名', 'value': name, 'type': 'text'},
+        {'label': '学生姓名', 'value': name, 'type': 'text'},
     ]
     
     if existing_student:
-        preview['warnings'].append(f'学员"{name}"已存在（ID: {existing_student.id}），将创建重复记录')
+        preview['warnings'].append(f'学生"{name}"已存在（ID: {existing_student.id}），将创建重复记录')
     
     if phone:
         preview['fields'].append({'label': '联系电话', 'value': phone, 'type': 'phone'})
@@ -547,7 +547,7 @@ def _preview_add_student(params: dict, db: Session, preview: dict):
 
 
 def _preview_update_student(params: dict, db: Session, preview: dict):
-    """预览更新学员"""
+    """预览更新学生"""
     student_identifier = params.get('student_identifier')
     updates = params.get('updates', {})
     
@@ -560,14 +560,14 @@ def _preview_update_student(params: dict, db: Session, preview: dict):
     if not student:
         similar_students = _find_similar_items(db, Student, 'name', student_identifier)
         if similar_students:
-            preview['warnings'].append(f'未找到学员"{student_identifier}"，建议从以下相似学员中选择：')
+            preview['warnings'].append(f'未找到学生"{student_identifier}"，建议从以下相似学生中选择：')
             preview['suggestions'] = [{'type': 'student', 'items': similar_students}]
         else:
-            preview['errors'].append(f'学员"{student_identifier}"不存在')
+            preview['errors'].append(f'学生"{student_identifier}"不存在')
         return
     
     preview['fields'] = [
-        {'label': '学员标识', 'value': f'{student.name} (ID: {student.id})', 'type': 'text'},
+        {'label': '学生标识', 'value': f'{student.name} (ID: {student.id})', 'type': 'text'},
     ]
     
     field_labels = {
@@ -753,7 +753,7 @@ def _preview_add_leave(params: dict, db: Session, preview: dict):
     reason = params.get('reason', '个人原因')
     
     preview['fields'] = [
-        {'label': '人员类型', 'value': '导师' if is_teacher else '学员', 'type': 'text'},
+        {'label': '人员类型', 'value': '教师' if is_teacher else '学生', 'type': 'text'},
         {'label': '人员姓名', 'value': person_name, 'type': 'text'},
         {'label': '开始日期', 'value': start_date or '未提供', 'type': 'date'},
         {'label': '结束日期', 'value': end_date or '未提供', 'type': 'date'},
@@ -767,10 +767,10 @@ def _preview_add_leave(params: dict, db: Session, preview: dict):
     if not person:
         similar_persons = _find_similar_items(db, model_class, 'name', person_name)
         if similar_persons:
-            preview['warnings'].append(f'未找到{"导师" if is_teacher else "学员"}"{person_name}"，建议从以下相似人员中选择：')
+            preview['warnings'].append(f'未找到{"教师" if is_teacher else "学生"}"{person_name}"，建议从以下相似人员中选择：')
             preview['suggestions'] = [{'type': 'teacher' if is_teacher else 'student', 'items': similar_persons}]
         else:
-            preview['errors'].append(f'{"导师" if is_teacher else "学员"}"{person_name}"不存在')
+            preview['errors'].append(f'{"教师" if is_teacher else "学生"}"{person_name}"不存在')
     
     if not start_date or not end_date:
         preview['warnings'].append('请提供开始日期和结束日期')
@@ -814,7 +814,7 @@ def _preview_collect_fee(params: dict, db: Session, preview: dict):
     payment_date = params.get('payment_date')
     
     preview['fields'] = [
-        {'label': '学员姓名', 'value': person_name, 'type': 'text'},
+        {'label': '学生姓名', 'value': person_name, 'type': 'text'},
         {'label': '缴费金额', 'value': f'{amount}元' if amount else '未提供', 'type': 'money'},
     ]
     
@@ -825,15 +825,15 @@ def _preview_collect_fee(params: dict, db: Session, preview: dict):
     if payment_date:
         preview['fields'].append({'label': '缴费日期', 'value': payment_date, 'type': 'date'})
     
-    # 查找学员
+    # 查找学生
     student = db.query(Student).filter(Student.name == person_name).first()
     if not student:
         similar_students = _find_similar_items(db, Student, 'name', person_name)
         if similar_students:
-            preview['warnings'].append(f'未找到学员"{person_name}"，建议从以下相似学员中选择：')
+            preview['warnings'].append(f'未找到学生"{person_name}"，建议从以下相似学生中选择：')
             preview['suggestions'] = [{'type': 'student', 'items': similar_students}]
         else:
-            preview['errors'].append(f'学员"{person_name}"不存在')
+            preview['errors'].append(f'学生"{person_name}"不存在')
     else:
         # 查找StudentFee
         if course_name:
@@ -857,7 +857,7 @@ def _preview_collect_fee(params: dict, db: Session, preview: dict):
                         'highlight': True
                     })
                 else:
-                    preview['warnings'].append(f'学员"{person_name}"在科目"{course_name}"下没有课时费记录，需要先设置课时费标准')
+                    preview['warnings'].append(f'学生"{person_name}"在科目"{course_name}"下没有课时费记录，需要先设置课时费标准')
     
     if not course_name:
         preview['warnings'].append('请提供科目名称')
@@ -873,7 +873,7 @@ def _preview_refund_fee(params: dict, db: Session, preview: dict):
     refund_date = params.get('refund_date')
     
     preview['fields'] = [
-        {'label': '学员姓名', 'value': person_name, 'type': 'text'},
+        {'label': '学生姓名', 'value': person_name, 'type': 'text'},
         {'label': '退费金额', 'value': f'{amount}元' if amount else '未提供', 'type': 'money'},
     ]
     
@@ -882,7 +882,7 @@ def _preview_refund_fee(params: dict, db: Session, preview: dict):
     if refund_date:
         preview['fields'].append({'label': '退费日期', 'value': refund_date, 'type': 'date'})
     
-    # 查找学员和课时费记录
+    # 查找学生和课时费记录
     student = db.query(Student).filter(Student.name == person_name).first()
     if student and course_name:
         course = db.query(Course).filter(Course.name == course_name).first()
@@ -905,7 +905,7 @@ def _preview_refund_fee(params: dict, db: Session, preview: dict):
                     'highlight': True
                 })
             else:
-                preview['errors'].append(f'学员"{person_name}"在科目"{course_name}"下没有课时费记录')
+                preview['errors'].append(f'学生"{person_name}"在科目"{course_name}"下没有课时费记录')
 
 
 def _preview_add_grade(params: dict, db: Session, preview: dict):
@@ -920,7 +920,7 @@ def _preview_add_grade(params: dict, db: Session, preview: dict):
     description = params.get('description')
     
     preview['fields'] = [
-        {'label': '学员姓名', 'value': student_name, 'type': 'text'},
+        {'label': '学生姓名', 'value': student_name, 'type': 'text'},
         {'label': '科目', 'value': course_name or '未提供', 'type': 'text'},
         {'label': '成绩', 'value': f'{score}/{total_score}' if score and total_score else '未提供', 'type': 'text'},
         {'label': '考试日期', 'value': exam_date or '今天', 'type': 'date'},
@@ -931,15 +931,15 @@ def _preview_add_grade(params: dict, db: Session, preview: dict):
     if description:
         preview['fields'].append({'label': '备注', 'value': description, 'type': 'textarea'})
     
-    # 查找学员和科目
+    # 查找学生和科目
     student = db.query(Student).filter(Student.name == student_name).first()
     if not student:
         similar_students = _find_similar_items(db, Student, 'name', student_name)
         if similar_students:
-            preview['warnings'].append(f'未找到学员"{student_name}"，建议从以下相似学员中选择：')
+            preview['warnings'].append(f'未找到学生"{student_name}"，建议从以下相似学生中选择：')
             preview['suggestions'] = [{'type': 'student', 'items': similar_students}]
         else:
-            preview['errors'].append(f'学员"{student_name}"不存在')
+            preview['errors'].append(f'学生"{student_name}"不存在')
     
     if course_name:
         course = db.query(Course).filter(Course.name == course_name).first()
@@ -1074,12 +1074,12 @@ def _preview_create_schedule(params: dict, db: Session, preview: dict):
                         inferred_teacher_name = max(teacher_count, key=teacher_count.get)
                         preview['suggestions'].append({
                             'type': 'warning',
-                            'message': f'未找到 {course_name} 的历史记录，但 {inferred_teacher_name} 是该班级最近的授课导师'
+                            'message': f'未找到 {course_name} 的历史记录，但 {inferred_teacher_name} 是该班级最近的授课教师'
                         })
                 else:
                     preview['suggestions'].append({
                         'type': 'warning',
-                        'message': f'未找到 {display_class_name} 的历史排课记录，请手动选择导师'
+                        'message': f'未找到 {display_class_name} 的历史排课记录，请手动选择教师'
                     })
     
     display_teacher_name = teacher_name or inferred_teacher_name
@@ -1098,7 +1098,7 @@ def _preview_create_schedule(params: dict, db: Session, preview: dict):
                 })
         
         preview['fields'].append({
-            'label': '学员列表',
+            'label': '学生列表',
             'value': ', '.join(person_names),
             'type': 'text',
             'detail': student_info_list
@@ -1115,12 +1115,12 @@ def _preview_create_schedule(params: dict, db: Session, preview: dict):
             if inferred_class_name and not class_name:
                 preview['suggestions'].append({
                     'type': 'info',
-                    'message': f'已根据学员"{person_names[0]}"自动推断班级为"{display_class_name}"'
+                    'message': f'已根据学生"{person_names[0]}"自动推断班级为"{display_class_name}"'
                 })
     
     preview['fields'].extend([
         {'label': '科目', 'value': course_name or '未提供', 'type': 'text'},
-        {'label': '导师', 'value': display_teacher_name or '未提供', 'type': 'text'},
+        {'label': '教师', 'value': display_teacher_name or '未提供', 'type': 'text'},
         {'label': '教室', 'value': room_name or '未提供', 'type': 'text'},
         {'label': '星期', 'value': weekday_name, 'type': 'text'},
         {'label': '时间', 'value': f'{start_time or "??"}-{end_time or "??"}', 'type': 'time'},
@@ -1139,7 +1139,7 @@ def _preview_create_schedule(params: dict, db: Session, preview: dict):
     missing_items = []
     
     if not display_class_name and not person_names:
-        missing_items.append('班级或学员')
+        missing_items.append('班级或学生')
     
     if course_name:
         course = db.query(Course).filter(Course.name == course_name).first()
@@ -1156,10 +1156,10 @@ def _preview_create_schedule(params: dict, db: Session, preview: dict):
         if not teacher:
             similar_teachers = _find_similar_items(db, Teacher, 'name', display_teacher_name)
             if similar_teachers:
-                preview['warnings'].append(f'未找到导师"{display_teacher_name}"，建议从以下相似导师中选择：')
+                preview['warnings'].append(f'未找到教师"{display_teacher_name}"，建议从以下相似教师中选择：')
                 preview['suggestions'].append({'type': 'teacher', 'items': similar_teachers})
             else:
-                preview['errors'].append(f'导师"{display_teacher_name}"不存在')
+                preview['errors'].append(f'教师"{display_teacher_name}"不存在')
     
     if room_name:
         room = db.query(Room).filter(Room.name == room_name).first()
@@ -1280,10 +1280,10 @@ def get_action_name(action: str) -> str:
         'complete_schedule': '完成课程',
         'cancel_schedule': '取消课程',
         'postpone_schedule': '延期课程',
-        'add_teacher': '添加导师',
-        'update_teacher': '更新导师',
-        'add_student': '添加学员',
-        'update_student': '更新学员',
+        'add_teacher': '添加教师',
+        'update_teacher': '更新教师',
+        'add_student': '添加学生',
+        'update_student': '更新学生',
         'add_class': '添加班级',
         'update_class': '更新班级',
         'add_room': '添加教室',

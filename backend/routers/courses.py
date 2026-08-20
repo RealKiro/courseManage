@@ -25,17 +25,17 @@ def get_courses(
 ):
     query = db.query(Course)
     
-    # 应用导师可见性过滤
+    # 应用教师可见性过滤
     teacher_filter = get_teacher_visibility_filter(db, current_user)
     
     if teacher_filter is not None:
         if hasattr(teacher_filter, 'compile'):
             query = query.filter(teacher_filter)
         else:
-            # 过滤出该导师教授的科目
+            # 过滤出该教师教授的科目
             query = query.filter(Course.teachers.any(Teacher.id == teacher_filter))
     else:
-        log_operation(db, "科目管理", "查询科目列表", f"导师可见性限制未启用（Filter为None）", current_user.username, "DEBUG")
+        log_operation(db, "科目管理", "查询科目列表", f"教师可见性限制未启用（Filter为None）", current_user.username, "DEBUG")
     
     if search:
         query = query.filter(

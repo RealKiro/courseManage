@@ -63,16 +63,16 @@ def create_leave(
     if leave.leave_type == "teacher" and leave.teacher_id:
         teacher = db.query(Teacher).filter(Teacher.id == leave.teacher_id).first()
         if not teacher:
-            log_operation(db, "假期管理", "创建请假", f"导师ID: {leave.teacher_id} 不存在", current_user.username, "WARNING")
-            raise HTTPException(status_code=404, detail="导师不存在")
+            log_operation(db, "假期管理", "创建请假", f"教师ID: {leave.teacher_id} 不存在", current_user.username, "WARNING")
+            raise HTTPException(status_code=404, detail="教师不存在")
     elif leave.leave_type == "student" and leave.student_id:
         student = db.query(Student).filter(Student.id == leave.student_id).first()
         if not student:
-            log_operation(db, "假期管理", "创建请假", f"学员ID: {leave.student_id} 不存在", current_user.username, "WARNING")
-            raise HTTPException(status_code=404, detail="学员不存在")
+            log_operation(db, "假期管理", "创建请假", f"学生ID: {leave.student_id} 不存在", current_user.username, "WARNING")
+            raise HTTPException(status_code=404, detail="学生不存在")
     else:
-        log_operation(db, "假期管理", "创建请假", f"请假类型和对应的导师/学员ID不匹配, 请假类型: {leave.leave_type}, 导师ID: {leave.teacher_id}, 学员ID: {leave.student_id}", current_user.username, "WARNING")
-        raise HTTPException(status_code=400, detail="请假类型和对应的导师/学员ID不匹配")
+        log_operation(db, "假期管理", "创建请假", f"请假类型和对应的教师/学生ID不匹配, 请假类型: {leave.leave_type}, 教师ID: {leave.teacher_id}, 学生ID: {leave.student_id}", current_user.username, "WARNING")
+        raise HTTPException(status_code=400, detail="请假类型和对应的教师/学生ID不匹配")
     
     db_leave = Leave(
         leave_type=leave.leave_type,

@@ -2,7 +2,7 @@
 # Copyright (C) 2024-2026 courseManage Contributors
 # backend/migrate_add_operation_managers.py
 """
-添加运营管理导师配置字段 (适配 PostgreSQL)
+添加运营管理教师配置字段 (适配 PostgreSQL)
 """
 from database import SessionLocal
 from models import Settings
@@ -26,7 +26,7 @@ def add_operation_managers():
         db.execute(text("ALTER TABLE settings ADD COLUMN operation_managers TEXT DEFAULT '[]'"))
         
         # 3. 添加列注释 (PostgreSQL 需要单独执行)
-        db.execute(text("COMMENT ON COLUMN settings.operation_managers IS '运营管理导师ID列表(JSON格式)'"))
+        db.execute(text("COMMENT ON COLUMN settings.operation_managers IS '运营管理教师ID列表(JSON格式)'"))
         
         db.commit()
         
