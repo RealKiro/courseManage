@@ -9,7 +9,7 @@
 *       @RealKiro
 
 # 关键安全模块 - 任何修改都必须经过审查
-/backend/utils/license.py          @RealKiro
+# 注：backend/utils/license.py 已随高级功能门禁一并移除（见 docs/PREMIUM.md）
 /backend/routers/license.py        @RealKiro
 /backend/optimizer.py              @RealKiro
 /backend/setup_cython.py           @RealKiro

@@ -20,7 +20,7 @@ COPY . .
 
 RUN python setup_cython.py build_ext --inplace
 
-RUN CRITICAL_MODULES="utils/license.py routers/license.py optimizer.py utils/smart_command.py utils/wechat_notifier.py utils/remainder.py" && \
+RUN CRITICAL_MODULES="optimizer.py utils/smart_command.py utils/wechat_notifier.py utils/remainder.py" && \
     for f in $CRITICAL_MODULES; do \
         rm -f "$f" && rm -f "${f%.py}.c"; \
     done

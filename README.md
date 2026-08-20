@@ -1,7 +1,13 @@
 **项目地址**
 
-    Github   https://github.com/daiyu116/courseManage
-    Gitee    https://gitee.com/dhklym/coursemanage
+    本仓库   https://github.com/RealKiro/courseManage
+    上游项目 https://github.com/daiyu116/courseManage  （原作者，Gitee: https://gitee.com/dhklym/coursemanage）
+
+    本仓库是上游项目在 AGPL-3.0 下的自用分支，主要差异：
+      · 已移除高级功能的授权门禁，9 项高级功能全部开放
+      · 已移除向供应商回传机构/联系人/机器码的通道
+      · 新增 MCP 服务器，可对接 AstrBot 等第三方框架
+      · 镜像构建改为多组件矩阵 + 多架构（amd64 / arm64）
 
 **演示地址**
 
@@ -11,7 +17,8 @@
 **项目功能介绍**
     
     本系统是一套面向教育培训机构的综合管理平台，涵盖从排课调度、学员管理到费用统计的全流程业务。
-    功能模块按授权方式分为两类： 默认授权即开即用， 高级授权需在"系统授权管理"中激活后方可使用。
+    上游按授权方式把功能分为「默认授权」与「高级授权」两类；本分支已放开全部高级功能，
+    下文保留分类只是为了说明功能归属，实际使用时无需任何激活操作。
 
     **默认授权 基础功能**
         📚 科目与排课
@@ -46,12 +53,9 @@
             
     **高级授权 增强功能**
 
-    ⚠️ 以下功能需在「系统管理 → 系统授权管理」激活后方可使用。
-       激活流程 = 取机器码 → 申请授权 → 供应商签发 License Key → 粘贴激活。
-       ⚠️ 机器码持久化在数据卷 backup_data 的 /app/backups/.machine_id 里，
-          执行 docker compose down -v 删卷会导致机器码变化、License 立即失效，
-          且系统会自动清空已保存的 License Key。请务必先备份该文件。
-       📖 鉴权机制、fork 自建镜像的处理方式与排查表：docs/PREMIUM.md
+    ✅ 本分支已移除授权门禁，以下功能全部开箱可用，无需激活、无需机器码、无需联网校验。
+       （保留「高级授权」这个分组标题只是沿用上游的功能归类）
+       📖 移除了什么、如何还原门禁：docs/PREMIUM.md
 
         🧠 智能算法排课
             遗传算法：适合大规模排课场景，全局搜索较优解
@@ -208,13 +212,13 @@
         下载 2 个文件：
         # Linux 下载
         **bash**
-          curl -O https://raw.githubusercontent.com/daiyu116/courseManage/main/docker-compose.deploy.yml
-          curl -O https://raw.githubusercontent.com/daiyu116/courseManage/main/.env.example
+          curl -O https://raw.githubusercontent.com/RealKiro/courseManage/main/docker-compose.deploy.yml
+          curl -O https://raw.githubusercontent.com/RealKiro/courseManage/main/.env.example
         
         # Windows 下载
         **powershell**
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/daiyu116/courseManage/main/docker-compose.deploy.yml -OutFile docker-compose.deploy.yml
-          Invoke-WebRequest -Uri https://raw.githubusercontent.com/daiyu116/courseManage/main/.env.example -OutFile .env.example
+          Invoke-WebRequest -Uri https://raw.githubusercontent.com/RealKiro/courseManage/main/docker-compose.deploy.yml -OutFile docker-compose.deploy.yml
+          Invoke-WebRequest -Uri https://raw.githubusercontent.com/RealKiro/courseManage/main/.env.example -OutFile .env.example
 
     步骤 2：配置环境变量
         **bash**
@@ -233,7 +237,8 @@
             参数	说明	怎么改
             ★ POSTGRES_PASSWORD	数据库密码	改成强密码。Linux 执行 tr -dc A-Za-z0-9 </dev/urandom | head -c 24 生成
             ★ SECRET_KEY	应用密钥	执行 openssl rand -hex 32 生成，粘贴进去
-            ★ IMAGE_OWNER	镜像归属	改成镜像所在的 GitHub 用户名（全小写）。用官方镜像则保持 daiyu116
+            ★ IMAGE_OWNER	镜像归属	改成镜像所在的 GitHub 用户名（全小写），本仓库为 realkiro。
+                                        用 scripts/setup-env.sh 生成 .env 时会自动填好。
             可选修改的项：
             
             参数	默认值	何时需要改
@@ -274,7 +279,7 @@
 
       步骤 1：克隆完整仓库
           **bash**
-          git clone https://github.com/daiyu116/courseManage.git
+          git clone https://github.com/RealKiro/courseManage.git
           cd courseManage
       
       步骤 2：配置环境变量
@@ -338,13 +343,15 @@
           步骤 5：下载部署文件
               **bash**
               # 下载 docker-compose 配置
-              curl -O https://raw.githubusercontent.com/daiyu116/courseManage/main/docker-compose.deploy.yml
+              curl -O https://raw.githubusercontent.com/RealKiro/courseManage/main/docker-compose.deploy.yml
               # 下载环境变量模板
-              curl -O https://raw.githubusercontent.com/daiyu116/courseManage/main/.env.example
-              如果 NAS 无法访问 GitHub（国内网络问题），可以用 Gitee 镜像：
+              curl -O https://raw.githubusercontent.com/RealKiro/courseManage/main/.env.example
+              如果 NAS 无法访问 GitHub（国内网络问题），可用 Gitee 镜像：
+              ⚠️ 需先在 GitHub 仓库配置 GITEE_USERNAME / GITEE_TOKEN，
+                 流水线才会把本仓库同步到 Gitee；下面地址中的用户名请换成你自己的。
               **bash**
-              curl -O https://gitee.com/daiyu116/courseManage/raw/main/docker-compose.deploy.yml
-              curl -O https://gitee.com/daiyu116/courseManage/raw/main/.env.example
+              curl -O https://gitee.com/<你的Gitee用户名>/courseManage/raw/main/docker-compose.deploy.yml
+              curl -O https://gitee.com/<你的Gitee用户名>/courseManage/raw/main/.env.example
           步骤 6：配置环境变量
               **bash**
               # 复制模板
@@ -395,8 +402,8 @@
           步骤 1：下载部署文件
               在电脑上下载这两个文件：
               
-              https://raw.githubusercontent.com/daiyu116/courseManage/main/docker-compose.deploy.yml
-              https://raw.githubusercontent.com/daiyu116/courseManage/main/.env.example
+              https://raw.githubusercontent.com/RealKiro/courseManage/main/docker-compose.deploy.yml
+              https://raw.githubusercontent.com/RealKiro/courseManage/main/.env.example
           步骤 2：编辑 .env 文件
               在电脑上用记事本打开 .env.example，按照方式一步骤6 修改配置环境变量参数, 修改后另存为 .env：
           步骤 3：上传文件到 NAS

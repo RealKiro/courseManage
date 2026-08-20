@@ -92,8 +92,9 @@ coursemanage-mcp --transport http      # HTTP 模式，监听 0.0.0.0:8765/mcp
 
 `notify_schedule`
 
-> 费用、成绩、评价、运营大屏、智能指令相关工具依赖 courseManage 的**高级授权**，
-> 未激活时后端返回 403，工具会返回明确的中文提示。
+> 本仓库已移除高级功能门禁（见 [`docs/PREMIUM.md`](../docs/PREMIUM.md)），
+> 费用、成绩、评价、运营大屏、智能指令相关工具**无需激活即可使用**。
+> 若仍收到 403，是所用系统账号的角色权限不足，与授权无关。
 
 **资源**：`coursemanage://today-schedules`、`coursemanage://site-info`
 **提示词**：`daily_briefing`（每日课务简报）、`conflict_review`（排课冲突排查）

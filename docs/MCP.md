@@ -292,7 +292,7 @@ location /mcp {
 | AstrBot 连不上但 curl 正常 | `MCP_BIND_HOST` 还是 `127.0.0.1` | 改成 `0.0.0.0` 后重启 mcp 容器 |
 | AstrBot 版本较老，只认 SSE | 客户端不支持 Streamable HTTP | `MCP_TRANSPORT=sse`，URL 用 `/sse` |
 | 工具列表里看不到写操作工具 | 处于只读模式 | `MCP_READONLY=false` 后重启 |
-| 调用费用/成绩/统计工具报「需要授权」 | courseManage 高级授权未激活 | 在「系统授权管理」激活对应功能；不影响其它工具 |
+| 调用费用/成绩/统计工具报 403 | 所用系统账号角色权限不足（本仓库已移除授权门禁，见 docs/PREMIUM.md） | 给 `MCP_API_USERNAME` 账号授予对应角色 |
 | 模型答非所问、不调工具 | 模型不支持 Function Calling | 换 DeepSeek-V3 / Qwen-Max / GPT-4o 等 |
 | 返回内容被截断，提示"结果已截断" | 超过 `MCP_MAX_ITEMS` | 让模型加筛选条件，或调大 `MCP_MAX_ITEMS` |
 | 群里问一句要等很久 | 后端统计类接口本身较慢 | 调大 `COURSEMANAGE_TIMEOUT`，或避免频繁查大屏 KPI |

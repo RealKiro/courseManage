@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # Copyright (C) 2024-2026 courseManage Contributors
-from fastapi import FastAPI, UploadFile, File, Depends, Request, HTTPException
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse,JSONResponse
 from sqlalchemy import inspect, text
@@ -14,8 +14,6 @@ from routers import evaluations
 from routers import daily_words
 from utils.logger import log_operation
 from routers.auth import get_current_system_admin_user, User
-from routers.license import _check_premium_feature
-from utils.license import FEATURE_NAMES
 import uuid
 import os
 from pathlib import Path
@@ -65,16 +63,6 @@ def monitor_connection_pool_periodically():
 @app.on_event("startup")
 async def startup_event():
     """应用启动时添加日志"""
-    from utils.license import verify_compiled_modules
-    integrity = verify_compiled_modules()
-    if not integrity["valid"]:
-        for mod_name, info in integrity["details"].items():
-            if info.get("warning"):
-                logger.warning(f"Module integrity: {mod_name} - {info['warning']}")
-        logger.warning("Some critical modules are not compiled - running in development mode")
-    else:
-        logger.info("All critical modules verified as compiled binaries")
-
     db = SessionLocal()
     try:
         log_operation(db, "应用系统", "状态变化", "系统启动")
@@ -136,22 +124,17 @@ PREMIUM_PATH_MAP = {
     "/api/evaluations": "student_evaluation",
 }
 
-@app.middleware("http")
-async def premium_feature_guard(request: Request, call_next):
-    path = request.url.path
-    for path_prefix, feature in PREMIUM_PATH_MAP.items():
-        if path.startswith(path_prefix):
-            db = SessionLocal()
-            try:
-                if not _check_premium_feature(feature, db):
-                    return JSONResponse(
-                        status_code=403,
-                        content={"detail": f"功能 '{FEATURE_NAMES.get(feature, feature)}' 需要授权，请在系统授权管理中激活"},
-                    )
-            finally:
-                db.close()
-            break
-    return await call_next(request)
+# ============================================================
+# 高级功能门禁已移除（自用分支）
+#
+# 上游在此处有一个 premium_feature_guard HTTP 中间件，会对上表中的路径
+# 逐一调用 _check_premium_feature()，未授权则返回 403。本分支已放开全部
+# 高级功能，因此中间件整体删除——同时也省掉了每个请求的一次数据库查询
+# 与授权服务器心跳（心跳原本会阻塞最多 5 秒）。
+#
+# PREMIUM_PATH_MAP 保留下来仅作为「哪些接口原属高级功能」的文档，
+# 不再有任何运行时作用。若要恢复门禁，还原本段中间件即可。
+# ============================================================
 
 Base.metadata.create_all(bind=engine)
 migrate_evaluation_managers()

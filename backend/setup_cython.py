@@ -4,9 +4,10 @@ from setuptools import setup, Extension
 from Cython.Build import cythonize
 import os
 
+# 注意：license 相关模块已从本列表移除。
+# 本分支已放开全部高级功能，utils/license.py 已删除，
+# routers/license.py 改为恒真的占位实现，无需再做源码保护。
 CRITICAL_MODULES = [
-    "utils/license.py",
-    "routers/license.py",
     "optimizer.py",
     "utils/smart_command.py",
     "utils/wechat_notifier.py",

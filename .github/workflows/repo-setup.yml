@@ -1,46 +1,97 @@
 name: Repository Setup
 
+# 手动运行一次即可，用于配置 main 分支保护规则。
+#
+# 说明：原先用一串 `gh api -f k=v` 传参，但 `-f` 一律按【字符串】发送，
+# 所以 enforce_admins=true 会变成字符串 "true"、restrictions=null 会变成
+# 字符串 "null"，GitHub 接口并不接受；required_status_checks[contexts][]=
+# 还传了一个空字符串检查项。这里改为直接提交 JSON，类型明确、行为可预期。
+
 on:
   workflow_dispatch:
     inputs:
-      setup_branch_protection:
-        description: 'Set up branch protection rules'
+      required_review_count:
+        description: '合并前需要的批准数（个人仓库建议填 0）'
         required: false
-        default: 'true'
+        default: '0'
+        type: string
+      enforce_admins:
+        description: '规则是否同样约束管理员'
+        required: false
+        default: false
+        type: boolean
+      require_code_owner_reviews:
+        description: '是否要求 CODEOWNERS 审查（个人仓库请保持 false，否则自己的 PR 无法合并）'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
-  setup:
+  branch-protection:
+    name: Configure branch protection
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-
+      contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Apply protection rules to main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_COUNT: ${{ inputs.required_review_count }}
+          ENFORCE_ADMINS: ${{ inputs.enforce_admins }}
+          CODEOWNER_REVIEWS: ${{ inputs.require_code_owner_reviews }}
+        run: |
+          set -euo pipefail
 
-      - name: Configure branch protection
-        if: github.event.inputs.setup_branch_protection == 'true'
+          # 只要求 "CI summary" 这一个检查项：它在 ci.yml 里带 if: always()，
+          # 无论其它 job 成功、失败还是被跳过都一定会上报结论，
+          # 因此不会出现「检查项永不上报导致 PR 永远无法合并」的情况。
+          payload="$(jq -n \
+            --argjson review_count "${REVIEW_COUNT:-0}" \
+            --argjson enforce_admins "${ENFORCE_ADMINS:-false}" \
+            --argjson codeowners "${CODEOWNER_REVIEWS:-false}" \
+            '{
+              required_status_checks: {
+                strict: true,
+                contexts: ["CI summary"]
+              },
+              enforce_admins: $enforce_admins,
+              required_pull_request_reviews: {
+                dismiss_stale_reviews: true,
+                require_code_owner_reviews: $codeowners,
+                required_approving_review_count: $review_count
+              },
+              restrictions: null,
+              required_linear_history: true,
+              allow_force_pushes: false,
+              allow_deletions: false
+            }')"
+
+          echo "将应用如下规则："
+          echo "${payload}" | jq .
+
+          if gh api --method PUT \
+               -H "Accept: application/vnd.github+json" \
+               "/repos/${GITHUB_REPOSITORY}/branches/main/protection" \
+               --input - <<<"${payload}"; then
+            echo "::notice::main 分支保护规则已应用"
+          else
+            echo "::error::应用失败。常见原因：private 仓库的免费套餐不支持分支保护；"
+            echo "::error::或 GITHUB_TOKEN 权限不足（需在 Settings → Actions → General 开启写权限），"
+            echo "::error::也可以到 Settings → Branches 手动配置。"
+            exit 1
+          fi
+
+      - name: Show current protection
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          REPO="${{ github.repository }}"
-
-          echo "Setting branch protection for ${REPO}..."
-
-          gh api \
-            --method PUT \
-            -H "Accept: application/vnd.github+json" \
-            "/repos/${REPO}/branches/main/protection" \
-            -f "required_status_checks[strict]=true" \
-            -f "required_status_checks[contexts][]=" \
-            -f "enforce_admins=true" \
-            -f "required_pull_request_reviews[dismiss_stale_reviews]=true" \
-            -f "required_pull_request_reviews[require_code_owner_reviews]=true" \
-            -f "required_pull_request_reviews[required_approving_review_count]=1" \
-            -f "restrictions=null" \
-            -f "required_linear_history=true" \
-            -f "allow_force_pushes=false" \
-            -f "allow_deletions=false" \
-            || echo "Note: Branch protection may require admin access. Please set manually if this fails."
-
-          echo "Done."
+          gh api "/repos/${GITHUB_REPOSITORY}/branches/main/protection" \
+            --jq '{
+                    checks: .required_status_checks.contexts,
+                    strict: .required_status_checks.strict,
+                    reviews: .required_pull_request_reviews.required_approving_review_count,
+                    codeowners: .required_pull_request_reviews.require_code_owner_reviews,
+                    admins: .enforce_admins.enabled,
+                    linear: .required_linear_history.enabled
+                  }' || echo "尚未配置分支保护"

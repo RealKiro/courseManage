@@ -107,17 +107,22 @@ export function calcTotalPrice(selectedFeatures, licenseType) {
   return total
 }
 
+// 本部署已放开全部高级功能：初始状态即为「已激活 + 全部功能可用」。
+// 这样即使 /license/status 请求失败或后端未就绪，路由守卫与界面也不会误锁功能。
+const ALL_FEATURES_ENABLED = Object.values(FEATURES)
+  .reduce((acc, feature) => { acc[feature] = true; return acc }, {})
+
 export const licenseState = reactive({
-  loaded: false,
-  activated: false,
-  licenseType: '',
+  loaded: true,
+  activated: true,
+  licenseType: 'perpetual',
   licenseTypeName: '',
   organizationName: '',
-  features: {},
+  features: { ...ALL_FEATURES_ENABLED },
   expiryDate: null,
   issuedAt: null,
   machineCode: '',
-  trialAvailable: true,
+  trialAvailable: false,
   deactivatedLicenses: [],
   licenseKey: '',
   referralCode: '',
@@ -137,19 +142,21 @@ export async function loadLicenseStatus() {
   try {
     const response = await api.get('/license/status')
     const d = response.data
-    const mapped = {
+    // 只同步机构/联系人等展示信息；activated 与 features 恒为全开，
+    // 不受后端返回值影响（router/index.js 的守卫直接读这两个字段）。
+    Object.assign(licenseState, {
       loaded: true,
-      activated: d.activated,
-      licenseType: d.license_type || '',
+      activated: true,
+      licenseType: d.license_type || 'perpetual',
       licenseTypeName: d.license_type_name || '',
       organizationName: d.organization_name || '',
-      features: d.features || {},
-      expiryDate: d.expiry_date || null,
+      features: { ...ALL_FEATURES_ENABLED },
+      expiryDate: null,
       issuedAt: d.issued_at || null,
       machineCode: d.machine_code || '',
-      trialAvailable: d.trial_available ?? true,
-      deactivatedLicenses: d.deactivated_licenses || [],
-      licenseKey: d.license_key || '',
+      trialAvailable: false,
+      deactivatedLicenses: [],
+      licenseKey: '',
       referralCode: d.referral_code || '',
       referralActivated: d.referral_activated || false,
       referralThreshold: d.referral_threshold || 0,
@@ -161,16 +168,20 @@ export async function loadLicenseStatus() {
       contactPhone: d.contact_phone || '',
       contactEmail: d.contact_email || '',
       contactWechat: d.contact_wechat || '',
-    }
-    Object.assign(licenseState, mapped)
+    })
   } catch (error) {
+    // 后端不可达时也保持全开，避免误锁
     licenseState.loaded = true
+    licenseState.activated = true
+    licenseState.features = { ...ALL_FEATURES_ENABLED }
   }
 }
 
+// 门禁已移除：恒返回 true。
+// 保留函数签名，因为 App.vue / FloatingSphere.vue / Dashboard.vue 等
+// 十余处模板仍在调用它。
 export function hasFeature(featureName) {
-  if (!licenseState.activated) return false
-  return !!licenseState.features[featureName]
+  return true
 }
 
 export async function activateLicense(licenseKey, selectedFeatures = null, contactInfo = {}) {

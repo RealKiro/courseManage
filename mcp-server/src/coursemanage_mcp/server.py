@@ -39,8 +39,8 @@ courseManage 是面向教育培训机构的综合管理平台，覆盖排课、�
 2. 查询课程安排使用 list_schedules；查「今天 / 明天」直接用 get_schedules_by_day。
 3. 不确定如何组合参数时，可以把用户原话交给 parse_smart_command 解析，
    确认无误后再调用 run_smart_command 执行。
-4. 费用、成绩、评价、运营大屏、智能指令属于高级授权功能，
-   未激活时后端会返回「需要授权」，这不是调用错误。
+4. 本部署已放开全部功能（含费用、成绩、评价、运营大屏、智能指令），
+   无需任何激活即可调用。若仍收到 403，那是账号角色权限不足，不是授权问题。
 5. 日期一律使用 YYYY-MM-DD，时间使用 HH:MM，星期使用 1-7（1=周一）。
 """
 
@@ -354,14 +354,11 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         return fmt.paginated(data, "holiday", limit=limit, offset=offset)
 
     # ================================================================
-    # 运营统计（部分需要高级授权）
+    # 运营统计
     # ================================================================
     @tool()
     async def get_dashboard_kpi() -> Any:
-        """获取运营大屏核心 KPI（收入、转化率、学员数、导师数、课次、出勤率等）。
-
-        属于高级授权功能「运营大屏」。
-        """
+        """获取运营大屏核心 KPI（收入、转化率、学员数、导师数、课次、出勤率等）。"""
         return await client.get("/api/statistics/kpi")
 
     @tool()
@@ -386,7 +383,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         return await client.get("/api/statistics/schedules/incomplete-list", limit=_cap(limit))
 
     # ================================================================
-    # 课费（高级授权：费用管理）
+    # 课费
     # ================================================================
     @tool()
     async def list_student_fees(
@@ -396,7 +393,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
         offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
     ) -> dict[str, Any]:
-        """查询学员课费项（剩余课时、已缴金额、余额）。属于高级授权「费用管理」。"""
+        """查询学员课费项（剩余课时、已缴金额、余额）。"""
         limit = _cap(limit)
         data = await client.get(
             "/api/fees/student-fees",
@@ -410,11 +407,11 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
 
     @tool()
     async def get_fee_alerts() -> Any:
-        """获取收费提醒（剩余课时低于阈值的学员）。属于高级授权「费用管理」。"""
+        """获取收费提醒（剩余课时低于阈值的学员）。"""
         return await client.get("/api/fees/alerts")
 
     # ================================================================
-    # 成绩与评价（高级授权）
+    # 成绩与评价
     # ================================================================
     @tool()
     async def list_grades(
@@ -423,7 +420,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         limit: Annotated[int, Field(description="返回条数", ge=1, le=200)] = 20,
         offset: Annotated[int, Field(description="跳过条数", ge=0)] = 0,
     ) -> dict[str, Any]:
-        """查询学员成绩记录。属于高级授权「学员成绩管理」。"""
+        """查询学员成绩记录。"""
         limit = _cap(limit)
         data = await client.get(
             "/api/grades", student_id=student_id, course_id=course_id, skip=offset, limit=limit
@@ -434,18 +431,18 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     async def get_student_grade_trend(
         student_id: Annotated[int, Field(description="学员 ID")],
     ) -> Any:
-        """查询某学员所有科目的成绩变化趋势。属于高级授权「学员成绩管理」。"""
+        """查询某学员所有科目的成绩变化趋势。"""
         return await client.get(f"/api/grades/student-trend/{student_id}")
 
     @tool()
     async def get_student_evaluation_profile(
         student_id: Annotated[int, Field(description="学员 ID")],
     ) -> Any:
-        """查询学员综合能力画像（五维/多维评价）。属于高级授权「学员评价管理」。"""
+        """查询学员综合能力画像（五维/多维评价）。"""
         return await client.get(f"/api/evaluations/student/{student_id}/profile")
 
     # ================================================================
-    # 智能指令（高级授权：自然语言操作）
+    # 智能指令（自然语言操作）
     # ================================================================
     @tool()
     async def parse_smart_command(
@@ -458,7 +455,6 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
         """解析自然语言指令并返回结构化预览，不会写入数据。
 
         推荐流程：parse_smart_command → 向用户确认 → run_smart_command。
-        属于高级授权「智能指令管理」。
         """
         return await client.post("/api/smart-command/preview", json={"text": text, "use_ai": use_ai})
 
@@ -471,7 +467,7 @@ def build_server(settings: Settings, client: CourseManageClient) -> FastMCP:
     ) -> Any:
         """执行 parse_smart_command 解析出的指令，会真实写入数据。
 
-        务必先让用户确认预览内容。属于高级授权「智能指令管理」。
+        务必先让用户确认预览内容。
         """
         return await client.post(
             "/api/smart-command/execute", json={"parsed_intent": parsed_intent, "confirmed": True}
