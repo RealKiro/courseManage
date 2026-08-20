@@ -42,6 +42,10 @@
           <el-icon><Download /></el-icon>
           {{ t('fee.exportAllFeeLogs') }}
         </el-button>
+        <el-button type="warning" @click="fixDuplicateConsumption">
+          <el-icon><Warning /></el-icon>
+          {{ t('fee.fixDuplicateConsumption') }}
+        </el-button>
         
       </div>
 
@@ -706,7 +710,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Search, Download, Bell } from '@element-plus/icons-vue'
+import { ArrowLeft, Search, Download, Bell, Warning } from '@element-plus/icons-vue'
 import api from '@/utils/api'
 import { useI18n } from 'vue-i18n'
 
@@ -989,6 +993,32 @@ const triggerAutoConsume = async (row) => {
     if (error !== 'cancel') {
       window.logger.error('触发消耗失败:', error)
       ElMessage.error(t('fee.triggerConsumeFailed') + ': ' + (error.response?.data?.detail || error.message))
+    }
+  }
+}
+
+const fixDuplicateConsumption = async () => {
+  try {
+    await ElMessageBox.confirm(t('fee.confirmFixDuplicateConsumption'), t('fee.confirmTitle'), {
+      confirmButtonText: t('fee.confirm'),
+      cancelButtonText: t('fee.cancel'),
+      type: 'warning'
+    })
+    
+    ElMessage.info(t('fee.fixingDuplicateConsumption'))
+    const response = await api.post('/fees/repair/fix-duplicate-consumption')
+    
+    const data = response.data
+    if (data.fixed_groups === 0) {
+      ElMessage.success(t('fee.noDuplicateConsumption'))
+    } else {
+      ElMessage.success(t('fee.fixDuplicateResult', { groups: data.fixed_groups, logs: data.logs_deleted, hours: data.hours_recovered.toFixed(1) }))
+    }
+    fetchStudentFees()
+  } catch (error) {
+    if (error !== 'cancel') {
+      window.logger.error('修复重复消耗失败:', error)
+      ElMessage.error(t('fee.fixDuplicateFailed') + ': ' + (error.response?.data?.detail || error.message))
     }
   }
 }

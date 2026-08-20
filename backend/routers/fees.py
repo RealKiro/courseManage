@@ -988,6 +988,16 @@ def consume_hours(
             log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 的课时费记录未激活，跳过", current_user.username, "WARNING")
             continue
         
+        existing_consume_log = db.query(FeeLog).filter(
+            FeeLog.student_id == student.id,
+            FeeLog.schedule_id == schedule.id,
+            FeeLog.log_type == "consume"
+        ).first()
+        
+        if existing_consume_log:
+            log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 在课程安排ID {schedule.id} 已有消耗记录(ID: {existing_consume_log.id})，跳过重复消耗", current_user.username, "WARNING")
+            continue
+        
         start_time = datetime.strptime(schedule.start_time, "%H:%M")
         end_time = datetime.strptime(schedule.end_time, "%H:%M")
         hours = (end_time - start_time).total_seconds() / 3600
@@ -1694,6 +1704,16 @@ def consume_hours_with_attendance(
             log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 的课时费记录未激活，跳过", current_user.username, "WARNING")
             continue
         
+        existing_consume_log = db.query(FeeLog).filter(
+            FeeLog.student_id == student.id,
+            FeeLog.schedule_id == schedule.id,
+            FeeLog.log_type == "consume"
+        ).first()
+        
+        if existing_consume_log:
+            log_operation(db, "费用管理", "完训消耗课时", f"学员 {student.name} (ID: {student.id}) 在课程安排ID {schedule.id} 已有消耗记录(ID: {existing_consume_log.id})，跳过重复消耗", current_user.username, "WARNING")
+            continue
+        
         start_time = datetime.strptime(schedule.start_time, "%H:%M")
         end_time = datetime.strptime(schedule.end_time, "%H:%M")
         hours = (end_time - start_time).total_seconds() / 3600
@@ -1842,6 +1862,92 @@ def fix_incorrect_consumption(
     return {
         "success": True,
         "fixed_schedules": total_fixed,
+        "logs_deleted": total_logs_deleted,
+        "hours_recovered": total_hours_recovered,
+        "details": details
+    }
+
+@router.post("/repair/fix-duplicate-consumption")
+def fix_duplicate_consumption(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """修复重复消耗记录：同一学员在同一课程安排上有多条consume日志时，只保留最早的一条，删除其余重复记录并回退consumed_hours"""
+    if not check_fee_manager_permission(db, current_user):
+        raise HTTPException(status_code=403, detail="权限不足，需要管理员或费用管理导师权限")
+
+    from sqlalchemy import func as sa_func
+
+    duplicate_groups = db.query(
+        FeeLog.student_id,
+        FeeLog.schedule_id,
+        sa_func.count(FeeLog.id).label("cnt")
+    ).filter(
+        FeeLog.log_type == "consume",
+        FeeLog.schedule_id.isnot(None)
+    ).group_by(
+        FeeLog.student_id,
+        FeeLog.schedule_id
+    ).having(
+        sa_func.count(FeeLog.id) > 1
+    ).all()
+
+    if not duplicate_groups:
+        return {
+            "success": True,
+            "fixed_groups": 0,
+            "logs_deleted": 0,
+            "hours_recovered": 0.0,
+            "details": []
+        }
+
+    hpl = get_hours_per_lesson(db)
+    total_logs_deleted = 0
+    total_hours_recovered = 0.0
+    details = []
+
+    for student_id, schedule_id, cnt in duplicate_groups:
+        all_logs = db.query(FeeLog).filter(
+            FeeLog.student_id == student_id,
+            FeeLog.schedule_id == schedule_id,
+            FeeLog.log_type == "consume"
+        ).order_by(FeeLog.created_at.asc()).all()
+
+        keep_log = all_logs[0]
+        duplicate_logs = all_logs[1:]
+
+        recovered_hours = sum(log.hours for log in duplicate_logs)
+
+        schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+        student = db.query(Student).filter(Student.id == student_id).first()
+
+        for log in duplicate_logs:
+            fee = _find_fee_with_parent_fallback(db, student_id, schedule.course_id if schedule else log.course_id)
+            if fee:
+                fee.consumed_hours -= log.hours
+                fee.remaining_hours = fee.total_lesson_count * hpl - fee.consumed_hours
+            db.delete(log)
+
+        total_logs_deleted += len(duplicate_logs)
+        total_hours_recovered += recovered_hours
+        details.append({
+            "student_id": student_id,
+            "student_name": student.name if student else "",
+            "schedule_id": schedule_id,
+            "schedule_date": str(schedule.start_date) if schedule and schedule.start_date else "",
+            "schedule_time": f"{schedule.start_time}-{schedule.end_time}" if schedule else "",
+            "duplicate_count": len(duplicate_logs),
+            "recovered_hours": recovered_hours,
+            "kept_log_id": keep_log.id
+        })
+
+    db.commit()
+    log_operation(db, "费用管理", "修复重复消耗",
+                  f"修复 {len(duplicate_groups)} 组重复记录，删除 {total_logs_deleted} 条重复日志，恢复 {total_hours_recovered} 小时",
+                  current_user.username, "WARNING")
+    return {
+        "success": True,
+        "fixed_groups": len(duplicate_groups),
         "logs_deleted": total_logs_deleted,
         "hours_recovered": total_hours_recovered,
         "details": details
